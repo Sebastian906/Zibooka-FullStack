@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useContext, useEffect, useState } from 'react'
 import bg from '../assets/bg.png'
 import bgHero from '../assets/bg-hero.png'
 import { Link } from 'react-router-dom'
@@ -6,12 +6,13 @@ import { FaArrowRight } from 'react-icons/fa6'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import 'swiper/css'
 import { Autoplay } from 'swiper/modules'
-import { dummyBooks as books } from '../assets/data'
 import Item from './Item'
+import { ShopContext } from '../context/ShopContext'
 
 const Hero = () => {
 
     const [popularBooks, setPopularBooks] = useState([]);
+    const {books} = useContext(ShopContext)
 
     // Obtener libros más populares
     useEffect(() => {

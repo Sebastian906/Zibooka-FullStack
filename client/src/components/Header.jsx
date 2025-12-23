@@ -1,18 +1,18 @@
 import { Link, useNavigate } from 'react-router-dom'
 import logoImg from '../assets/logo.png'
 import Navbar from './Navbar'
-import { useState } from 'react'
+import { useContext, useState } from 'react'
 import { FaBars, FaBarsStaggered } from 'react-icons/fa6'
 import { FaSearch } from 'react-icons/fa'
 import userImg from '../assets/user.png'
 import { RiUserLine } from 'react-icons/ri'
+import { ShopContext } from '../context/ShopContext'
 
 const Header = () => {
 
     const [menuOpened, setMenuOpened] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
-    const [user, setUser] = useState(true);
-    const navigate = useNavigate();
+    const { navigate, user, setUser } = useContext(ShopContext);
 
     const toggleMenu = () => setMenuOpened(prev => !prev);
 
@@ -90,7 +90,7 @@ const Header = () => {
                                 <img src={userImg} alt='userImg' height={44} width={44} />
                             </div>
                         ) : (
-                            <button className='btn-light gap-x-2'>
+                            <button className='btn-light flexCenter gap-x-2'>
                                 Login <RiUserLine className='text-xl' />
                             </button>
                         )}
