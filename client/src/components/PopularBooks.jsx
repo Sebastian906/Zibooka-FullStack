@@ -6,23 +6,24 @@ import 'swiper/css'
 import { Autoplay } from 'swiper/modules'
 import Item from './Item'
 
-const NewArrivals = () => {
+const PopularBooks = () => {
 
-    const [newArrivals, setNewArrivals] = useState([])
-    const { books } = useContext(ShopContext)
+    const [popularBooks, setPopularBooks] = useState([]);
+    const { books } = useContext(ShopContext);
 
     useEffect(() => {
-        setNewArrivals(books.slice(0, 6))
-    }, [books])
+        const data = books.filter((item) => item.popular)
+        setPopularBooks(data.slice(0, 6))
+    }, [books]);
 
     return (
         <section className='max-padd-container py-16'>
             <Title
-                title1={"New"}
-                title2={"Arrivals"}
-                title1Styles={"pb-4"}
+                title1={"Popular"}
+                title2={"Books"}
+                title1Styles={"pb-6"}
                 paraStyles={"mb-8"}
-                para={"Check out our newest books arriving weekly with fresh ideas, exciting plots, and vibrant voices"}
+                para={"Explore our top-selling books loved for their powerful stories, creative writing, and lasting impact."}
             />
             { /* CONTAINER */}
             {
@@ -53,7 +54,7 @@ const NewArrivals = () => {
                     className='min-h-83.25'
                 >
                     {
-                        newArrivals.map((book) => (
+                        popularBooks.map((book) => (
                             <SwiperSlide key={book._id}>
                                 <Item book={book} />
                             </SwiperSlide>
@@ -65,4 +66,4 @@ const NewArrivals = () => {
     )
 }
 
-export default NewArrivals
+export default PopularBooks
