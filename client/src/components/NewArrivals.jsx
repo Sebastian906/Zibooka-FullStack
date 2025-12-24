@@ -20,7 +20,7 @@ const NewArrivals = () => {
             <Title
                 title1={"New"}
                 title2={"Arrivals"}
-                title1Styles={"pb-6"}
+                title1Styles={"pb-10"}
                 para={"Check out our newest books arriving weekly with fresh ideas, exciting plots, and vibrant voices"}
             />
             { /* CONTAINER */}

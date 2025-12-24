@@ -9,7 +9,7 @@ const Categories = () => {
     const colors = ["bg-[#aedae6]", "bg-[#fff6c9]", "bg-[#fddbdb]"]
 
     return (
-        <section className='max-padd-container pt-16'>
+        <section className='max-padd-container pt-16 pb-4'>
             <Title title1={"Category"} title2={"List"} titleStyles={"pb-6"} paraStyles={"hidden"} />
             { /* LISTA DE CATEGORÍAS */ }
             <div className='flex gap-9 flex-wrap'>
