@@ -5,6 +5,7 @@ import NewArrivals from '../components/NewArrivals'
 import FeaturedBooks from '../components/FeaturedBooks'
 import PopularBooks from '../components/PopularBooks'
 import NewsLetter from '../components/NewsLetter'
+import Achievements from '../components/Achievements'
 
 const Home = () => {
     return (
@@ -14,6 +15,7 @@ const Home = () => {
             <NewArrivals />
             <FeaturedBooks />
             <PopularBooks />
+            <Achievements />
             <NewsLetter />
         </>
     )
