@@ -31,7 +31,7 @@ const Hero = () => {
                     <h3 className='bold-24 text-secondary font-thin'>Explore Books You'll Love</h3>
                     <h1 className='h1 max-w-174.75 font-extrabold! leading-none'>Find Your Next Book</h1>
                     <h2 className='capitalize h2 tracking-wider'>Up to 40% Off This Week</h2>
-                    <p className='max-w-xl pt-5'>Discover the joy of reading with our carefully curated selection of books. Wether you're searching for the latest bestsellers, timeless classics, or hidden gems, we've got something for every reader. Enjoy fast delivery, secure checkout, and unbeatable prices. Your next great read is just a click away!</p>
+                    <p className='max-w-xl text-gray-700 pt-5'>Discover the joy of reading with our carefully curated selection of books. Wether you're searching for the latest bestsellers, timeless classics, or hidden gems, we've got something for every reader. Enjoy fast delivery, secure checkout, and unbeatable prices. Your next great read is just a click away!</p>
                     { /* BOTÓN */}
                     <div className='flex mt-4'>
                         <Link to={'/shop'} className='bg-white text-xs font-medium pl-6 rounded-full flexCenter gap-x-6 group' >

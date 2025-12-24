@@ -18,7 +18,8 @@ const FeaturedBooks = () => {
                     <Title
                         title1={"Featured"}
                         title2={"Books"}
-                        title1Styles={"pb-8"}
+                        title1Styles={"pb-4"}
+                        paraStyles={"mb-4"}
                         para={"Browse featured books carefully selected for quality, imagination, storytelling, and unique characters"}
                     />
                     { /* CARTA DEL LIBRO */ }
