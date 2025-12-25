@@ -39,7 +39,7 @@ const Footer = () => {
                             </Link>
                         </div>
                         <p className="max-w-102.5 mt-6">
-                            Discover stylish clothing and shoes online, crafted for comfort and quality. Shop fashion-forward designs that elevate your look and fit every lifestyle.
+                            Discover the joy of reading with our carefully curated selection of books. Wether you're searching for the latest bestsellers, timeless classics, or hidden gems, we've got something for every reader. Enjoy fast delivery, secure checkout, and unbeatable prices. Your next great read is just a click away!
                         </p>
                     </div>
                     <div className="flex flex-wrap justify-between w-full md:w-[45%] gap-5">
