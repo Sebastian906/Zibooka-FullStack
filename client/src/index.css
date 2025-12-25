@@ -27,27 +27,27 @@ body {
 
 @layer components {
     .btn-white {
-        @apply text-[14px] font-[500] bg-white px-7 py-3 rounded-full cursor-pointer
+        @apply text-[14px] font-medium bg-white px-7 py-3 rounded-full cursor-pointer
     }
 
     .btn-dark {
-        @apply text-[14px] font-[500] bg-black/80 text-white px-7 py-3 rounded-full cursor-pointer
+        @apply text-[14px] font-medium bg-black/80 text-white px-7 py-3 rounded-full cursor-pointer
     }
 
     .btn-light {
-        @apply text-[14px] font-[500] bg-primary px-7 py-3 rounded-full hover:bg-white transition-all duration-300 cursor-pointer
+        @apply text-[14px] font-medium bg-primary px-7 py-3 rounded-full hover:bg-white transition-all duration-300 cursor-pointer
     }
 
     .btn-outline {
-        @apply text-[14px] font-[500] bg-white ring-1 ring-slate-900/10 px-7 py-3 rounded-full hover:bg-primary transition-all duration-300 cursor-pointer
+        @apply text-[14px] font-medium bg-white ring-1 ring-slate-900/10 px-7 py-3 rounded-full hover:bg-primary transition-all duration-300 cursor-pointer
     }
 
     .btn-secondary {
-        @apply text-[14px] font-[500] bg-secondary text-white px-7 py-3 rounded-full transition-all cursor-pointer
+        @apply text-[14px] font-medium bg-secondary text-white px-7 py-3 rounded-full transition-all cursor-pointer
     }
 
     .max-padd-container {
-        @apply mx-auto max-w-[1440px] px-6 lg:px-12;
+        @apply mx-auto max-w-360 px-6 lg:px-12;
     }
 
     .flexCenter {
@@ -96,175 +96,175 @@ body {
 
     /* FONTS */
     .regular-64 {
-        @apply text-[64px] font-[400];
+        @apply text-[64px] font-normal;
     }
 
     .regular-52 {
-        @apply text-[52px] font-[400];
+        @apply text-[52px] font-normal;
     }
 
     .regular-48 {
-        @apply text-[48px] font-[400];
+        @apply text-[48px] font-normal;
     }
 
     .regular-40 {
-        @apply text-[40px] font-[400];
+        @apply text-[40px] font-normal;
     }
 
     .regular-32 {
-        @apply text-[32px] font-[400];
+        @apply text-[32px] font-normal;
     }
 
     .regular-28 {
-        @apply text-[28px] font-[400];
+        @apply text-[28px] font-normal;
     }
 
     .regular-24 {
-        @apply text-[24px] font-[400];
+        @apply text-[24px] font-normal;
     }
 
     .regular-22 {
-        @apply text-[22px] font-[400];
+        @apply text-[22px] font-normal;
     }
 
     .regular-20 {
-        @apply text-[20px] font-[400];
+        @apply text-[20px] font-normal;
     }
 
     .regular-18 {
-        @apply text-[18px] font-[400];
+        @apply text-[18px] font-normal;
     }
 
     .regular-16 {
-        @apply text-[16px] font-[400];
+        @apply text-[16px] font-normal;
     }
 
     .regular-15 {
-        @apply text-[15px] font-[400];
+        @apply text-[15px] font-normal;
     }
 
     .regular-14 {
-        @apply text-[14px] font-[400];
+        @apply text-[14px] font-normal;
     }
 
     .medium-64 {
-        @apply text-[64px] font-[500];
+        @apply text-[64px] font-medium;
     }
 
     .medium-52 {
-        @apply text-[52px] font-[500];
+        @apply text-[52px] font-medium;
     }
 
     .medium-48 {
-        @apply text-[48px] font-[500];
+        @apply text-[48px] font-medium;
     }
 
     .medium-40 {
-        @apply text-[40px] font-[500];
+        @apply text-[40px] font-medium;
     }
 
     .medium-36 {
-        @apply text-[36px] font-[500];
+        @apply text-[36px] font-medium;
     }
 
     .medium-32 {
-        @apply text-[32px] font-[500];
+        @apply text-[32px] font-medium;
     }
 
     .medium-28 {
-        @apply text-[28px] font-[500];
+        @apply text-[28px] font-medium;
     }
 
     .medium-24 {
-        @apply text-[24px] font-[500];
+        @apply text-[24px] font-medium;
     }
 
     .medium-22 {
-        @apply text-[22px] font-[500];
+        @apply text-[22px] font-medium;
     }
 
     .medium-20 {
-        @apply text-[20px] font-[500];
+        @apply text-[20px] font-medium;
     }
 
     .medium-18 {
-        @apply text-[18px] font-[500];
+        @apply text-[18px] font-medium;
     }
 
     .medium-16 {
-        @apply text-[16px] font-[500];
+        @apply text-[16px] font-medium;
     }
 
     .medium-15 {
-        @apply text-[15px] font-[500];
+        @apply text-[15px] font-medium;
     }
 
     .medium-14 {
-        @apply text-[14px] font-[500];
+        @apply text-[14px] font-medium;
     }
 
     .bold-88 {
-        @apply text-[88px] font-[700];
+        @apply text-[88px] font-bold;
     }
 
     .bold-64 {
-        @apply text-[64px] font-[700];
+        @apply text-[64px] font-bold;
     }
 
     .bold-52 {
-        @apply text-[52px] font-[700];
+        @apply text-[52px] font-bold;
     }
 
     .bold-48 {
-        @apply text-[48px] font-[700];
+        @apply text-[48px] font-bold;
     }
 
     .bold-44 {
-        @apply text-[44px] font-[700];
+        @apply text-[44px] font-bold;
     }
 
     .bold-40 {
-        @apply text-[40px] font-[700];
+        @apply text-[40px] font-bold;
     }
 
     .bold-36 {
-        @apply text-[36px] font-[700];
+        @apply text-[36px] font-bold;
     }
 
     .bold-32 {
-        @apply text-[32px] font-[700];
+        @apply text-[32px] font-bold;
     }
 
     .bold-28 {
-        @apply text-[28px] font-[700];
+        @apply text-[28px] font-bold;
     }
 
     .bold-24 {
-        @apply text-[24px] font-[700];
+        @apply text-[24px] font-bold;
     }
 
     .bold-22 {
-        @apply text-[22px] font-[700];
+        @apply text-[22px] font-bold;
     }
 
     .bold-20 {
-        @apply text-[20px] font-[700];
+        @apply text-[20px] font-bold;
     }
 
     .bold-18 {
-        @apply text-[18px] font-[700];
+        @apply text-[18px] font-bold;
     }
 
     .bold-16 {
-        @apply text-[16px] font-[700];
+        @apply text-[16px] font-bold;
     }
 
     .bold-15 {
-        @apply text-[15px] font-[700];
+        @apply text-[15px] font-bold;
     }
 
     .bold-14 {
-        @apply text-[14px] font-[700];
+        @apply text-[14px] font-bold;
     }
 
 }
