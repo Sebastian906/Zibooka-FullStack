@@ -1,7 +1,7 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import logoImg from '../assets/logo.png'
 import Navbar from './Navbar'
-import { useContext, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { FaBars, FaBarsStaggered } from 'react-icons/fa6'
 import { FaSearch } from 'react-icons/fa'
 import userImg from '../assets/user.png'
@@ -12,9 +12,16 @@ const Header = () => {
 
     const [menuOpened, setMenuOpened] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
-    const { navigate, user, setUser } = useContext(ShopContext);
+    const { navigate, user, setUser, searchQuery, setSearchQuery } = useContext(ShopContext);
+    const isShopPage = useLocation().pathname.endsWith('/shop');
 
     const toggleMenu = () => setMenuOpened(prev => !prev);
+
+    useEffect(()=>{
+        if (searchQuery.length > 0 && !isShopPage) {
+            navigate('/shop');
+        }
+    }, [searchQuery]);
 
     return (
         <header className='absolute top-0 left-0 right-0 max-padd-container flexBetween gap-4 py-2'>
@@ -45,6 +52,7 @@ const Header = () => {
                 <div className='relative hidden xl:flex items-center'>
                     <div className={`br-white ring-1 ring-slate-900/10 rounded-full overflow-hidden transition-all duration-300 ease-in-out ${showSearch ? 'w-66.5 opacity-100 px-4 py-2.5' : 'w-0 opacity-0 p-0'}`}>
                         <input 
+                            onChange={(e)=>setSearchQuery(e.target.value)}
                             type="text" 
                             placeholder="Search book..." 
                             className='bg-transparent w-full text-sm outline-none pr-10 placeholder:text-gray-400'

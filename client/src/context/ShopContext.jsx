@@ -9,6 +9,7 @@ const ShopContextProvider = ({ children }) => {
     const navigate = useNavigate()
     const [books, setBooks] = useState([])
     const [user, setUser] = useState(null)
+    const [searchQuery, setSearchQuery] = useState('')
     const currency = import.meta.env.VITE_CURRENCY
 
     // Listar todos los libros
@@ -20,7 +21,7 @@ const ShopContextProvider = ({ children }) => {
         fetchBooks()
     }, [])
 
-    const value = {books, navigate, user, setUser, currency}
+    const value = {books, navigate, user, setUser, currency, searchQuery, setSearchQuery}
 
     return (
         <ShopContext.Provider value={value}>
