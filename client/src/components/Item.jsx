@@ -4,7 +4,7 @@ import { TbShoppingBagPlus } from 'react-icons/tb'
 
 const Item = ({ book, fromHero }) => {
 
-    const { navigate, currency } = useContext(ShopContext)
+    const { navigate, currency, addToCart } = useContext(ShopContext)
 
     return book ? (
         <div 
@@ -25,7 +25,10 @@ const Item = ({ book, fromHero }) => {
                 </div>
                 <div className='flex justify-between items-start gap-2 mt-1'>
                     <p className='line-clamp-1'>{book.description}</p>
-                    <button className='cursor-pointer'>
+                    <button 
+                        onClick={(e) => {addToCart(book._id); e.stopPropagation();}}
+                        className='cursor-pointer'
+                    >
                         <TbShoppingBagPlus className='text-xl' />
                     </button>
                 </div>

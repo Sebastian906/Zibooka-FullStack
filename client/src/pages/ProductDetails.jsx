@@ -9,7 +9,7 @@ import RelatedBooks from '../components/RelatedBooks';
 
 const ProductDetails = () => {
 
-    const { books, currency } = useContext(ShopContext);
+    const { books, currency, addToCart, cartItems } = useContext(ShopContext);
     const { id } = useParams();
 
     const book = books.find((b) => b._id === id);
@@ -20,6 +20,10 @@ const ProductDetails = () => {
             setImage(book.image[0]);
         }
     }, [book])
+
+    useEffect(() => {
+        console.log(cartItems);
+    }, [addToCart])
 
     return (
         book && (
@@ -73,7 +77,10 @@ const ProductDetails = () => {
                         </div>
                         <p className='max-w-138.75'>{book.description}</p>
                         <div className='flex items-center gap-x-4 mt-6'>
-                            <button className='btn-dark sm:w-1/2 flexCenter gap-x-2 capitalize rounded-md!'>
+                            <button 
+                                onClick={() => addToCart(book._id)}
+                                className='btn-dark sm:w-1/2 flexCenter gap-x-2 capitalize rounded-md!'
+                            >
                                 Add to Cart<TbShoppingBag/>
                             </button>
                             <button className='btn-secondary rounded-md!'>
