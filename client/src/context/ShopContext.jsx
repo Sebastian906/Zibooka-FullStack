@@ -11,17 +11,65 @@ const ShopContextProvider = ({ children }) => {
     const [user, setUser] = useState(null)
     const [searchQuery, setSearchQuery] = useState('')
     const currency = import.meta.env.VITE_CURRENCY
+    const [cartItems, setCartItems] = useState({})
 
     // Listar todos los libros
     const fetchBooks = () => {
         setBooks(dummyBooks)
     }
 
+    // Adding items to cart
+    const addToCart = (itemId) => {
+        const cartData = {...cartItems} // Use shallow copy
+        if (cartData[itemId]) {
+            cartData[itemId] += 1
+        } else {
+            cartData[itemId] = 1
+        }
+        setCartItems(cartData)
+    }
+
+    // Getting total cart items
+    const getCartCount = () => {
+        let totalCount = 0
+        for(const itemId in cartItems) {
+            try {
+                if (cartItems[itemId] > 0) {
+                    totalCount += cartItems[itemId]
+                }
+            } catch (error) {
+                console.log(error);
+            }
+        }
+        return totalCount;
+    }
+
+    // Update the quantity of an item
+    const updateQuantity = (itemId, quantity) => {
+        const cartData = {...cartItems}
+        cartData[itemId] = quantity
+        setCartItems(cartData)
+    }
+
+    // Getting total cart amount
+    const getCartAmount = () => {
+        let totalAmount = 0
+        for(const itemId in cartItems) {
+            if (cartItems[itemId] > 0) {
+                let itemInfo = books.find((book) => book._id === itemId)
+                if (itemInfo) {
+                    totalAmount += itemInfo.offerPrice * cartItems[itemId]
+                }
+            }
+        }
+        return totalAmount
+    }
+
     useEffect(() => {
         fetchBooks()
     }, [])
 
-    const value = {books, navigate, user, setUser, currency, searchQuery, setSearchQuery}
+    const value = {books, navigate, user, setUser, currency, searchQuery, setSearchQuery, cartItems, setCartItems, addToCart, getCartCount, getCartAmount, updateQuantity}
 
     return (
         <ShopContext.Provider value={value}>
