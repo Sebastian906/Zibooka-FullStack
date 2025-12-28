@@ -12,6 +12,8 @@ const ShopContextProvider = ({ children }) => {
     const [searchQuery, setSearchQuery] = useState('')
     const currency = import.meta.env.VITE_CURRENCY
     const [cartItems, setCartItems] = useState({})
+    const [method, setMethod] = useState('COD')
+    const delivery_charges = 10
 
     // Listar todos los libros
     const fetchBooks = () => {
@@ -69,7 +71,7 @@ const ShopContextProvider = ({ children }) => {
         fetchBooks()
     }, [])
 
-    const value = {books, navigate, user, setUser, currency, searchQuery, setSearchQuery, cartItems, setCartItems, addToCart, getCartCount, getCartAmount, updateQuantity}
+    const value = {books, navigate, user, setUser, currency, searchQuery, setSearchQuery, cartItems, setCartItems, addToCart, getCartCount, getCartAmount, updateQuantity, method, setMethod, delivery_charges}
 
     return (
         <ShopContext.Provider value={value}>
