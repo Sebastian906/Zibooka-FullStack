@@ -12,7 +12,7 @@ const Header = () => {
 
     const [menuOpened, setMenuOpened] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
-    const { navigate, user, setUser, searchQuery, setSearchQuery, getCartCount } = useContext(ShopContext);
+    const { navigate, user, setUser, searchQuery, setSearchQuery, getCartCount, showUserLogin, setShowUserLogin } = useContext(ShopContext);
     const isShopPage = useLocation().pathname.endsWith('/shop');
 
     const toggleMenu = () => setMenuOpened(prev => !prev);
@@ -98,7 +98,10 @@ const Header = () => {
                                 <img src={userImg} alt='userImg' height={44} width={44} />
                             </div>
                         ) : (
-                            <button className='btn-light flexCenter gap-x-2'>
+                            <button 
+                                onClick={()=>setShowUserLogin(true)}
+                                className='btn-light flexCenter gap-x-2'
+                            >
                                 Login <RiUserLine className='text-xl' />
                             </button>
                         )}
