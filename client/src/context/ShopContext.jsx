@@ -8,7 +8,7 @@ const ShopContextProvider = ({ children }) => {
 
     const navigate = useNavigate()
     const [books, setBooks] = useState([])
-    const [user, setUser] = useState('dummyuser')
+    const [user, setUser] = useState('')
     const [searchQuery, setSearchQuery] = useState('')
     const currency = import.meta.env.VITE_CURRENCY
     const [cartItems, setCartItems] = useState({})
