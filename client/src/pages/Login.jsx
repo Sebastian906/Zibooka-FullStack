@@ -101,7 +101,7 @@ const Login = () => {
                     type='submit'
                     className='bg-secondary w-full rounded py-2.5! text-white cursor-pointer'
                 >
-                    {state === "login" ? "Create Account" : "Login"}
+                    {state === "login" ? "Login" : "Create Account"}
                 </button>
             </form>
         </div>
