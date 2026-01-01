@@ -1,6 +1,6 @@
 import React, { useContext } from 'react'
 import { Toaster } from 'react-hot-toast'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import Home from './pages/Home'
 import Shop from './pages/Shop'
 import CategoryShop from './pages/CategoryShop'
@@ -14,15 +14,21 @@ import AddressForm from './pages/AddressForm'
 import MyOrders from './pages/MyOrders'
 import { ShopContext } from './context/ShopContext'
 import Login from './pages/Login'
+import Sidebar from './components/admin/Sidebar'
+import AdminLogin from './components/admin/AdminLogin'
+import AddProduct from './pages/admin/AddProduct'
+import ProductList from './pages/admin/ProductList'
+import Orders from './pages/admin/Orders'
 
 const App = () => {
 
-  const {showUserLogin} = useContext(ShopContext)
+  const {showUserLogin, isAdmin} = useContext(ShopContext)
+  const isAdminPath = useLocation().pathname.includes('admin')
 
   return (
     <main>
       {showUserLogin && <Login />}
-      <Header />
+      {!isAdminPath && <Header />}
       <Toaster position='bottom-right'/>
       <Routes>
         <Route path='/' element={<Home />} /> 
@@ -34,8 +40,13 @@ const App = () => {
         <Route path='/cart' element={<Cart />} />
         <Route path='/address-form' element={<AddressForm />} />
         <Route path='/my-orders' element={<MyOrders />} />
+        <Route path='/admin' element={isAdmin ? <Sidebar /> : <AdminLogin />}>
+          <Route index element={isAdmin ? <AddProduct /> : null} />
+          <Route path='list' element={<ProductList/>} />
+          <Route path='orders' element={<Orders />} />
+        </Route>
       </Routes>
-      <Footer />
+      {!isAdminPath && <Footer />}
     </main>
   )
 }
