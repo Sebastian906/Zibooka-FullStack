@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { ConfigModule } from '@nestjs/config';
-// import { MongooseModule } from '@nestjs/mongoose';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MongooseModule } from '@nestjs/mongoose';
+import { getMongoConfig } from './config/mongodb.config';
 
 @Module({
   imports: [
@@ -13,7 +14,11 @@ import { ConfigModule } from '@nestjs/config';
     }),
 
     // Configuración de MongoDB
-    // MongooseModule.forRoot(process.env.MONGODB_URI),
+    MongooseModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: getMongoConfig,
+      inject: [ConfigService],
+    }),
   ],
   controllers: [AppController],
   providers: [AppService],
