@@ -5,9 +5,12 @@ import cookieParser from 'cookie-parser';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Permitir múltiples origenes
+  const allowedOrigins = ['http://localhost:5173']; // URL del Frontend
+
   // Configurar CORS
   app.enableCors({
-    origin: 'http://localhost:5173', // URL del Frontend
+    origin: allowedOrigins, 
     credentials: true,
   });
 
