@@ -2,9 +2,19 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import cookieParser from 'cookie-parser';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Enable global validation
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
 
   // Permitir múltiples origenes
   const allowedOrigins = ['http://localhost:5173']; // URL del Frontend
@@ -17,6 +27,9 @@ async function bootstrap() {
 
   // Middleware para cookies
   app.use(cookieParser());
+
+  // Set global prefix
+  app.setGlobalPrefix('api');
 
   // Configuración de Swagger
   const config = new DocumentBuilder()
