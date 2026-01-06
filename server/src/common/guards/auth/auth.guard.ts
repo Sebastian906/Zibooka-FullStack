@@ -1,0 +1,47 @@
+import { 
+  CanActivate, 
+  ExecutionContext, 
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Request } from 'express';
+import * as jwt from 'jsonwebtoken';
+
+// Extender la interfaz Request para incluir userId
+export interface RequestWithUser extends Request {
+  userId?: string;
+}
+
+@Injectable()
+export class AuthGuard implements CanActivate {
+  constructor(private configService: ConfigService) {}
+  
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const request = context.switchToHttp().getRequest<RequestWithUser>();
+    const token = request.cookies?.token;
+
+    if (!token) {
+      throw new UnauthorizedException('Not authorized. Login again');
+    }
+
+    try {
+      const jwtSecret = this.configService.get<string>('JWT_SECRET');
+      if (!jwtSecret) {
+        throw new UnauthorizedException('JWT_SECRET is not configured');
+      }
+
+      const decoded = jwt.verify(token, jwtSecret) as unknown as { id: string };
+
+      if (!decoded.id) {
+        throw new UnauthorizedException('Not authorized. Login again');
+      }
+
+      // Agregar userId al request para usarlo en los controladores
+      request.userId = decoded.id;
+      return true;
+    } catch (error) {
+      throw new UnauthorizedException('Not authorized. Login again');
+    }
+  }
+}
