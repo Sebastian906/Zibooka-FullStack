@@ -132,4 +132,69 @@ describe('User API (e2e)', () => {
                 .expect(401);
         });
     });
+
+    describe('/api/user/logout (POST)', () => {
+        let authToken: string;
+
+        beforeAll(async () => {
+            // Primero hacer login para obtener token
+            const loginResponse = await request(app.getHttpServer())
+                .post('/api/user/login')
+                .send({
+                    email: 'test@example.com',
+                    password: 'password123',
+                    phone: '+1234567890',
+                });
+
+            const cookies = loginResponse.headers['set-cookie'];
+            authToken = cookies[0];
+        });
+
+        it('should logout user successfully', () => {
+            return request(app.getHttpServer())
+                .post('/api/user/logout')
+                .set('Cookie', authToken)
+                .expect(200)
+                .expect((res) => {
+                    expect(res.body.success).toBe(true);
+                    expect(res.body.message).toBe('Successfully logged out');
+                });
+        });
+    });
+
+    describe('/api/user/is-auth (GET)', () => {
+        let authToken: string;
+
+        beforeAll(async () => {
+            // Primero hacer login para obtener token
+            const loginResponse = await request(app.getHttpServer())
+                .post('/api/user/login')
+                .send({
+                    email: 'test@example.com',
+                    password: 'password123',
+                    phone: '+1234567890',
+                });
+
+            const cookies = loginResponse.headers['set-cookie'];
+            authToken = cookies[0];
+        });
+
+        it('should return user data when authenticated', () => {
+            return request(app.getHttpServer())
+                .get('/api/user/is-auth')
+                .set('Cookie', authToken)
+                .expect(200)
+                .expect((res) => {
+                    expect(res.body.success).toBe(true);
+                    expect(res.body.user).toHaveProperty('email');
+                    expect(res.body.user).toHaveProperty('name');
+                });
+        });
+
+        it('should return 401 when not authenticated', () => {
+            return request(app.getHttpServer())
+                .get('/api/user/is-auth')
+                .expect(401);
+        });
+    });
 });

@@ -143,4 +143,39 @@ describe('UserService', () => {
       await expect(service.login(loginDto)).rejects.toThrow(UnauthorizedException);
     });
   });
+
+  describe('getUserById', () => {
+    it('should return user data without password', async () => {
+      const userId = 'mockUserId123';
+
+      const mockUserWithoutPassword = {
+        _id: userId,
+        name: 'John Doe',
+        email: 'john@example.com',
+        phone: '+1234567890',
+      };
+
+      mockUserModel.findById = jest.fn().mockReturnValue({
+        select: jest.fn().mockResolvedValue(mockUserWithoutPassword),
+      });
+
+      const result = await service.getUserById(userId);
+
+      expect(mockUserModel.findById).toHaveBeenCalledWith(userId);
+      expect(result).toEqual({
+        email: mockUserWithoutPassword.email,
+        name: mockUserWithoutPassword.name,
+      });
+    });
+
+    it('should throw NotFoundException if user not found', async () => {
+      const userId = 'nonexistentId';
+
+      mockUserModel.findById = jest.fn().mockReturnValue({
+        select: jest.fn().mockResolvedValue(null),
+      });
+
+      await expect(service.getUserById(userId)).rejects.toThrow();
+    });
+  });
 });

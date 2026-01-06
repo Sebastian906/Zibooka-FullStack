@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, ConflictException, InternalServerErrorException, UnauthorizedException, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument } from './schemas/user.schema';
@@ -97,6 +97,60 @@ export class UserService {
             };
         } catch (error) {
             if (error instanceof UnauthorizedException) {
+                throw error;
+            }
+            throw new InternalServerErrorException(error.message);
+        }
+    }
+
+    async isAuthenticated(userId: string): Promise<{ user: UserResponseDto }> {
+        try {
+            const user = await this.userModel.findById(userId).select('-password');
+
+            if (!user) {
+                throw new NotFoundException('User not found');
+            }
+
+            return {
+                user: {
+                    email: user.email,
+                    name: user.name,
+                },
+            };
+        } catch (error) {
+            if (error instanceof NotFoundException) {
+                throw error;
+            }
+            throw new InternalServerErrorException(error.message);
+        }
+    }
+
+    async logout(): Promise<{ message: string }> {
+        // Aquí podrías agregar lógica adicional en el futuro:
+        // - Invalidar tokens en una blacklist
+        // - Registrar el logout en logs
+        // - Actualizar última actividad del usuario
+        // - Limpiar sesiones activas
+
+        return {
+            message: 'Successfully logged out',
+        };
+    }
+
+    async getUserById(userId: string): Promise<UserResponseDto> {
+        try {
+            const user = await this.userModel.findById(userId).select('-password');
+
+            if (!user) {
+                throw new NotFoundException('User not found');
+            }
+
+            return {
+                email: user.email,
+                name: user.name,
+            };
+        } catch (error) {
+            if (error instanceof NotFoundException) {
                 throw error;
             }
             throw new InternalServerErrorException(error.message);
