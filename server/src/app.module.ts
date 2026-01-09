@@ -7,6 +7,7 @@ import { getMongoConfig } from './config/mongodb.config';
 import { UserModule } from './users/user.module';
 import { AdminModule } from './admin/admin.module';
 import { ProductModule } from './products/product.module';
+import { CartController } from './carts/cart.controller';
 
 @Module({
   imports: [
@@ -27,7 +28,7 @@ import { ProductModule } from './products/product.module';
     AdminModule,
     ProductModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, CartController],
   providers: [AppService],
 })
 export class AppModule {}
