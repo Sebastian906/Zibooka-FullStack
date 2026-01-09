@@ -8,6 +8,8 @@ import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 import { ConfigService } from '@nestjs/config';
 import { UserLoginDto } from './schemas/dto/user-login.dto';
+import { AddToCartDto } from 'src/carts/dto/add-to-cart.dto';
+import { UpdateCartDto } from 'src/carts/dto/update-cart.dto';
 
 @Injectable()
 export class UserService {
@@ -149,6 +151,66 @@ export class UserService {
                 email: user.email,
                 name: user.name,
             };
+        } catch (error) {
+            if (error instanceof NotFoundException) {
+                throw error;
+            }
+            throw new InternalServerErrorException(error.message);
+        }
+    }
+
+    async addToCart(
+        userId: string,
+        addToCartDto: AddToCartDto,
+    ): Promise<{ message: string }> {
+        try {
+            const { itemId } = addToCartDto;
+
+            const userData = await this.userModel.findById(userId);
+
+            if (!userData) {
+                throw new NotFoundException('User not found');
+            }
+
+            const cartData = userData.cartData || {};
+
+            if (cartData[itemId]) {
+                cartData[itemId] += 1;
+            } else {
+                cartData[itemId] = 1;
+            }
+
+            await this.userModel.findByIdAndUpdate(userId, { cartData });
+
+            return { message: 'Added to Cart' };
+        } catch (error) {
+            if (error instanceof NotFoundException) {
+                throw error;
+            }
+            throw new InternalServerErrorException(error.message);
+        }
+    }
+
+    async updateCart(
+        userId: string,
+        updateCartDto: UpdateCartDto,
+    ): Promise<{ message: string }> {
+        try {
+            const { itemId, quantity } = updateCartDto;
+
+            const userData = await this.userModel.findById(userId);
+
+            if (!userData) {
+                throw new NotFoundException('User not found');
+            }
+
+            const cartData = userData.cartData || {};
+
+            cartData[itemId] = quantity;
+
+            await this.userModel.findByIdAndUpdate(userId, { cartData });
+
+            return { message: 'Cart Updated' };
         } catch (error) {
             if (error instanceof NotFoundException) {
                 throw error;
