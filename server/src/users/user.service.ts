@@ -2,12 +2,12 @@ import { Injectable, ConflictException, InternalServerErrorException, Unauthoriz
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument } from './schemas/user.schema';
-import { RegisterUserDto } from './schemas/dto/register-user.dto';
-import { UserResponseDto } from './schemas/dto/user-response.dto';
+import { RegisterUserDto } from './dto/register-user.dto';
+import { UserResponseDto } from './dto/user-response.dto';
 import * as bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 import { ConfigService } from '@nestjs/config';
-import { UserLoginDto } from './schemas/dto/user-login.dto';
+import { UserLoginDto } from './dto/user-login.dto';
 import { AddToCartDto } from 'src/carts/dto/add-to-cart.dto';
 import { UpdateCartDto } from 'src/carts/dto/update-cart.dto';
 

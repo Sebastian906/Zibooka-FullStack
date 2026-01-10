@@ -5,9 +5,9 @@ import { AdminAuthGuard } from 'src/common/guards/admin-auth/admin-auth.guard';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import type { Response } from 'express';
-import { AddProductDto } from './schemas/dto/add-product.dto';
-import { SingleProductDto } from './schemas/dto/single-product.dto';
-import { ChangeStockDto } from './schemas/dto/change-stock.dto';
+import { AddProductDto } from './dto/add-product.dto';
+import { SingleProductDto } from './dto/single-product.dto';
+import { ChangeStockDto } from './dto/change-stock.dto';
 
 @ApiTags('Product')
 @Controller('product')
