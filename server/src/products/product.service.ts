@@ -4,8 +4,8 @@ import { Product, ProductDocument } from './schemas/product.schema';
 import { Model } from 'mongoose';
 import { ConfigService } from '@nestjs/config';
 import { v2 as cloudinary } from 'cloudinary';
-import { AddProductDto } from './schemas/dto/add-product.dto';
-import { ChangeStockDto } from './schemas/dto/change-stock.dto';
+import { AddProductDto } from './dto/add-product.dto';
+import { ChangeStockDto } from './dto/change-stock.dto';
 
 @Injectable()
 export class ProductService {

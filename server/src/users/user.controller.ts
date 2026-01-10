@@ -2,10 +2,10 @@ import { Body, Controller, Get, HttpStatus, Post, Res, UseGuards } from '@nestjs
 import { ApiBody, ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { ConfigService } from '@nestjs/config';
-import { RegisterUserDto } from './schemas/dto/register-user.dto';
-import { UserResponseDto } from './schemas/dto/user-response.dto';
+import { RegisterUserDto } from './dto/register-user.dto';
+import { UserResponseDto } from './dto/user-response.dto';
 import express from 'express';
-import { UserLoginDto } from './schemas/dto/user-login.dto';
+import { UserLoginDto } from './dto/user-login.dto';
 import { AuthGuard } from 'src/common/guards/auth/auth.guard';
 import { UserId } from 'src/common/decorators/users/user-id.decorator';
 
