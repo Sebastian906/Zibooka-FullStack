@@ -1,0 +1,21 @@
+import { ApiProperty } from "@nestjs/swagger";
+import { IsMongoId, IsNotEmpty, IsNumber, Min } from "class-validator";
+
+export class OrderItemDto {
+    @ApiProperty({
+        example: '507f1f77bcf86cd799439011',
+        description: 'Product ID',
+    })
+    @IsNotEmpty()
+    @IsMongoId()
+    product: string;
+
+    @ApiProperty({
+        example: 2,
+        description: 'Quantity of the product',
+    })
+    @IsNotEmpty()
+    @IsNumber()
+    @Min(1)
+    quantity: number;
+}
