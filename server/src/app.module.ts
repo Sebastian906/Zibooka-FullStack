@@ -9,7 +9,6 @@ import { AdminModule } from './admin/admin.module';
 import { ProductModule } from './products/product.module';
 import { CartController } from './carts/cart.controller';
 import { AddressModule } from './addresses/address.module';
-import { OrderModule } from './orders/order.module';
 
 @Module({
   imports: [
@@ -30,7 +29,6 @@ import { OrderModule } from './orders/order.module';
     AdminModule,
     ProductModule,
     AddressModule,
-    OrderModule,
   ],
   controllers: [AppController, CartController],
   providers: [AppService],
