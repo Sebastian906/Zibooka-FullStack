@@ -1,16 +1,28 @@
-import React, { useContext, useEffect, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { ShopContext } from '../../context/ShopContext'
+import toast from 'react-hot-toast'
 
 const AdminLogin = () => {
 
-    const { isAdmin, setIsAdmin, navigate } = useContext(ShopContext);
+    const { isAdmin, setIsAdmin, navigate, axios } = useContext(ShopContext);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [phone, setPhone] = useState("");
 
-    const onSubmitHandler = (event) => {
+    const onSubmitHandler = async (event) => {
         event.preventDefault();
-        setIsAdmin(true);
+        try {
+            const { data } = await axios.post('/api/admin/login', { email, password, phone })
+            if (data.success) {
+                setIsAdmin(true);
+                navigate('/admin');
+                toast.success(data.message);
+            } else {
+                toast.error(data.message);
+            }
+        } catch (error) {
+            toast.error(error.message);
+        }
     }
 
     useEffect(() => {

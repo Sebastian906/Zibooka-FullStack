@@ -1,6 +1,10 @@
 import React, { createContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { dummyBooks } from '../assets/data'
+import axios from 'axios'
+
+axios.defaults.withCredentials = true
+axios.defaults.baseURL = import.meta.env.VITE_BACKEND_URL
 
 export const ShopContext = createContext()
 
@@ -17,9 +21,19 @@ const ShopContextProvider = ({ children }) => {
     const delivery_charges = 10
     const [isAdmin, setIsAdmin] = useState(false)
 
-    // Listar todos los libros
+    // Fetch all books
     const fetchBooks = () => {
         setBooks(dummyBooks)
+    }
+
+    // Fetch Admin
+    const fetchAdmin = async () => {
+        try {
+            const { data } = await axios.get('/api/admin/is-admin')
+            setIsAdmin(data.success)
+        } catch (error) {
+            setIsAdmin(false);
+        }
     }
 
     // Adding items to cart
@@ -71,9 +85,10 @@ const ShopContextProvider = ({ children }) => {
 
     useEffect(() => {
         fetchBooks()
+        fetchAdmin()
     }, [])
 
-    const value = {books, navigate, user, setUser, currency, searchQuery, setSearchQuery, cartItems, setCartItems, addToCart, getCartCount, getCartAmount, updateQuantity, method, setMethod, delivery_charges, showUserLogin, setShowUserLogin, isAdmin, setIsAdmin}
+    const value = {books, navigate, user, setUser, currency, searchQuery, setSearchQuery, cartItems, setCartItems, addToCart, getCartCount, getCartAmount, updateQuantity, method, setMethod, delivery_charges, showUserLogin, setShowUserLogin, isAdmin, setIsAdmin, axios}
 
     return (
         <ShopContext.Provider value={value}>
