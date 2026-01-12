@@ -1,7 +1,7 @@
 import React, { createContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { dummyBooks } from '../assets/data'
 import axios from 'axios'
+import toast from 'react-hot-toast'
 
 axios.defaults.withCredentials = true
 axios.defaults.baseURL = import.meta.env.VITE_BACKEND_URL
@@ -22,8 +22,17 @@ const ShopContextProvider = ({ children }) => {
     const [isAdmin, setIsAdmin] = useState(false)
 
     // Fetch all books
-    const fetchBooks = () => {
-        setBooks(dummyBooks)
+    const fetchBooks = async () => {
+        try {
+            const { data } = await axios.get('/api/product/list')
+            if (data.success) {
+                setBooks(data.products)
+            } else {
+                toast.error(data.message)
+            }
+        } catch (error) {
+            toast.error(error.message)
+        }
     }
 
     // Fetch Admin
@@ -88,7 +97,7 @@ const ShopContextProvider = ({ children }) => {
         fetchAdmin()
     }, [])
 
-    const value = {books, navigate, user, setUser, currency, searchQuery, setSearchQuery, cartItems, setCartItems, addToCart, getCartCount, getCartAmount, updateQuantity, method, setMethod, delivery_charges, showUserLogin, setShowUserLogin, isAdmin, setIsAdmin, axios}
+    const value = {books, navigate, user, setUser, currency, searchQuery, setSearchQuery, cartItems, setCartItems, addToCart, getCartCount, getCartAmount, updateQuantity, method, setMethod, delivery_charges, showUserLogin, setShowUserLogin, isAdmin, setIsAdmin, axios, fetchBooks}
 
     return (
         <ShopContext.Provider value={value}>

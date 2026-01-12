@@ -16,7 +16,7 @@ const Item = ({ book, fromHero }) => {
         >
             { /* IMAGEN */}
             <div className='overflow-hidden rounded-xl shadow-[0px_0px_2px_0px_rgba(0,0,0,0.1)]'>
-                <img src={book.image[0]} alt="book.name" className='rounded-lg' />
+                <img src={book.images[0]} alt="book.name" className='rounded-lg' />
             </div>
             { /* INFO */}
             <div className='pt-4'>

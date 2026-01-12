@@ -17,7 +17,7 @@ const ProductDetails = () => {
 
     useEffect(() => {
         if (book) {
-            setImage(book.image[0]);
+            setImage(book.images[0]);
         }
     }, [book])
 
@@ -39,7 +39,7 @@ const ProductDetails = () => {
                     { /* IMAGEN */ }
                     <div className='flex gap-x-2 max-w-108.25'>
                         <div className='flex-1 flexCenter flex-col gap-1.75 flex-wrap'>
-                            {book.image.map((item, index) => (
+                            {book.images.map((item, index) => (
                                 <div key={index}>
                                     <img
                                         onClick={() => setImage(item)} 

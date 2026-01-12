@@ -28,7 +28,7 @@ const MyOrders = () => {
                             >
                                 <div className='flexCenter rounded-lg overflow-hidden'>
                                     <img
-                                        src={item.book.image[0]}
+                                        src={item.book.images[0]}
                                         alt="orderImg"
                                         className='max-h-20 max-w-32 aspect-square object-contain'
                                     />

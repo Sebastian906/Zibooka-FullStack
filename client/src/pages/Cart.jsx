@@ -40,7 +40,7 @@ const Cart = () => {
                                     <div className='flex items-center md:gap-6 gap-3'>
                                         <div className='flex bg-primary'>
                                             <img
-                                                src={book.image}
+                                                src={book.images[0]}
                                                 alt="bookImage"
                                                 className='w-12 rounded-lg'
                                             />
