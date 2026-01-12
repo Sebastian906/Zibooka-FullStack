@@ -1,8 +1,10 @@
-import React, { useState } from 'react'
+import { useContext, useState } from 'react'
 import upload_icon from '../../assets/upload_icon.png'
+import { ShopContext } from '../../context/ShopContext'
+import toast from 'react-hot-toast'
 
 const AddProduct = () => {
-
+    const { axios } = useContext(ShopContext)
     const [files, setFiles] = useState([])
     const [name, setName] = useState('')
     const [description, setDescription] = useState("")
@@ -13,6 +15,38 @@ const AddProduct = () => {
 
     const onSubmitHandler = (event) => {
         event.preventDefault();
+        try {
+            const formData = new FormData();
+            
+            formData.append('name', name);
+            formData.append('description', description);
+            formData.append('category', category);
+            formData.append('price', price);
+            formData.append('offerPrice', offerPrice);
+            formData.append('popular', popular);
+
+            for (let i = 0; i < files.length; i++) {
+                formData.append("images", files[i]);
+            }
+
+            axios.post('/api/product/add', formData)
+                .then(({ data }) => {
+                    if (data.success) {
+                        toast.success(data.message);
+                        setName('');
+                        setDescription('');
+                        setFiles([]);
+                        setPrice('10');
+                    } else {
+                        toast.error(data.message);
+                    }
+                })
+                .catch((error) => {
+                    toast.error(error.message);
+                });
+        } catch (error) {
+            toast.error(error.message);
+        }
     }
 
     return (
@@ -81,10 +115,11 @@ const AddProduct = () => {
                         </div>
                     </div>
                 </div>
-                { /* IMÁGENES */ }
+                { /* IMÁGENES */}
                 <div className='flex gap-2 mt-2'>
-                    {Array(4).fill("").map((_, index)=>(
-                        <label 
+                    {Array(4).fill("").map((_, index) => (
+                        <label
+                            key={index}
                             htmlFor={`image${index}`}
                             className='ring-1 ring-slate-900/10 overflow-hidden rounded'
                         >
@@ -92,15 +127,19 @@ const AddProduct = () => {
                                 onChange={(e) => {
                                     const updatedFiles = [...files]
                                     updatedFiles[index] = e.target.files[0]
-                                    setFiles()
+                                    setFiles(updatedFiles)
                                 }}
                                 type="file"
                                 id={`image${index}`}
                                 hidden
                             />
-                            <img 
-                                src={files[index] ? URL.createObjectURL(files[index]) : upload_icon} 
-                                alt="uploadArea" 
+                            <img
+                                src={
+                                    files[index]
+                                        ? URL.createObjectURL(files[index])
+                                        : upload_icon
+                                }
+                                alt="uploadArea"
                                 height={67}
                                 width={67}
                                 className='bg-white overflow-hidden aspect-square object-cover'
@@ -115,14 +154,14 @@ const AddProduct = () => {
                         type="checkbox"
                         id='popular'
                     />
-                    <label 
+                    <label
                         htmlFor="popular"
                         className='cursor-pointer'
                     >
                         Add to Popular
                     </label>
                 </div>
-                <button 
+                <button
                     type="submit"
                     className='btn-dark mt-3 max-w-44 sm:w-full rounded'
                 >
