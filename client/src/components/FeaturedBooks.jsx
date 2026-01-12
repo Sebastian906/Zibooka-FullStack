@@ -26,7 +26,7 @@ const FeaturedBooks = () => {
                     <div className='flex gap-3 sm:gap-8 sm:bg-white sm:p-4 rounded-2xl'>
                         <div className='min-w-40'>
                             <img 
-                                src={book?.image} 
+                                src={book?.images[0]} 
                                 alt={book?.title}
                                 className='h-64 w-44 object-cover rounded-xl shadow-[0px_0px_6px_0px_rgba(0,0,0,0.1)]' 
                             />
