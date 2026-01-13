@@ -72,14 +72,14 @@ export class UserService {
             const user = await this.userModel.findOne({ email });
 
             if (!user) {
-                throw new InternalServerErrorException('Invalid credentials');
+                throw new UnauthorizedException('Invalid credentials');
             }
 
             // Compare passwords
             const isPasswordValid = await bcrypt.compare(password, user.password);
 
             if (!isPasswordValid) {
-                throw new InternalServerErrorException('Invalid credentials');
+                throw new UnauthorizedException('Invalid credentials');
             }
 
             // Generate JWT token

@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 
 const AdminLogin = () => {
 
-    const { isAdmin, setIsAdmin, navigate, axios } = useContext(ShopContext);
+    const { isAdmin, setIsAdmin, navigate, axios, fetchAdmin } = useContext(ShopContext);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [phone, setPhone] = useState("");
@@ -15,6 +15,7 @@ const AdminLogin = () => {
             const { data } = await axios.post('/api/admin/login', { email, password, phone })
             if (data.success) {
                 setIsAdmin(true);
+                await fetchAdmin();
                 navigate('/admin');
                 toast.success(data.message);
             } else {
@@ -57,7 +58,7 @@ const AdminLogin = () => {
                 <div className='w-full'>
                     <p className='medium-14'>Password</p>
                     <input
-                        type="text"
+                        type="password"
                         onChange={(e) => setPassword(e.target.value)}
                         value={password}
                         placeholder='Type here...'

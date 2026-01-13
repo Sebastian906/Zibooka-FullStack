@@ -1,17 +1,41 @@
-import React, { useContext, useState } from 'react'
+import { useContext, useState } from 'react'
 import { ShopContext } from '../context/ShopContext'
+import toast from 'react-hot-toast'
 
 const Login = () => {
 
-    const { showUserLogin, navigate, setShowUserLogin } = useContext(ShopContext);
+    const { showUserLogin, navigate, setShowUserLogin, axios, fetchUser } = useContext(ShopContext);
     const [state, setState] = useState('login');
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [phone, setPhone] = useState("");
 
-    const onSubmitHandler = (event) => {
+    const onSubmitHandler = async (event) => {
         event.preventDefault();
+        try {
+            let payload;
+            if (state === "login") {
+                payload = { email, password, phone };
+            } else {
+                payload = { name, email, password, phone };
+            }
+            const { data } = await axios.post(`/api/user/${state}`, payload);
+            if (data.success) {
+                toast.success(`${state === "login" ? "Login Successfully" : "Account Created"}`);
+                navigate('/');
+                await fetchUser();
+                setShowUserLogin(false);
+            } else {
+                toast.error(data.message);
+            }
+        } catch (error) {
+            if (error.response && error.response.status === 401) {
+                toast.error(error.response.data.message || 'Invalid credentials');
+            } else {
+                toast.error(error.message);
+            }
+        }
     }
 
     return (
@@ -55,7 +79,7 @@ const Login = () => {
                 <div className='w-full'>
                     <p className='medium-14'>Password</p>
                     <input
-                        type="text"
+                        type="password"
                         onChange={(e) => setPassword(e.target.value)}
                         value={password}
                         placeholder='Type here...'

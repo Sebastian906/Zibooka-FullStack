@@ -35,19 +35,64 @@ const ShopContextProvider = ({ children }) => {
         }
     }
 
+    // Fetch User
+    const fetchUser = async () => {
+        try {
+            const { data } = await axios.get('/api/user/is-auth')
+            if (data.success) {
+                setUser(data.user)
+                setCartItems(data.user.cartData)
+            } else {
+                setUser(null)
+                setCartItems({})
+            }
+        } catch (error) {
+            if (error.response && error.response.status === 401) {
+                setUser(null);
+                setCartItems({});
+            } else {
+                setUser(null);
+                setCartItems({});
+                toast.error(error.message);
+            }
+        }
+    }
+
     // Fetch Admin
     const fetchAdmin = async () => {
         try {
             const { data } = await axios.get('/api/admin/is-admin')
             setIsAdmin(data.success)
         } catch (error) {
-            setIsAdmin(false);
+            if (error.response && error.response.status === 401) {
+                setIsAdmin(false);
+            } else {
+                setIsAdmin(false);
+                toast.error(error.message);
+            }
+        }
+    }
+
+    // User Logout
+    const logoutUser = async () => {
+        try {
+            const { data } = await axios.post('/api/user/logout')
+            if (data.success) {
+                toast.success(data.message)
+                setUser(null)
+                setCartItems({})
+                navigate('/')
+            } else {
+                toast.error(data.message)
+            }
+        } catch (error) {
+            toast.error(error.message)
         }
     }
 
     // Adding items to cart
     const addToCart = (itemId) => {
-        const cartData = {...cartItems} // Use shallow copy
+        const cartData = { ...cartItems } // Use shallow copy
         if (cartData[itemId]) {
             cartData[itemId] += 1
         } else {
@@ -59,7 +104,7 @@ const ShopContextProvider = ({ children }) => {
     // Getting total cart items
     const getCartCount = () => {
         let totalCount = 0
-        for(const itemId in cartItems) {
+        for (const itemId in cartItems) {
             try {
                 if (cartItems[itemId] > 0) {
                     totalCount += cartItems[itemId]
@@ -73,7 +118,7 @@ const ShopContextProvider = ({ children }) => {
 
     // Update the quantity of an item
     const updateQuantity = (itemId, quantity) => {
-        const cartData = {...cartItems}
+        const cartData = { ...cartItems }
         cartData[itemId] = quantity
         setCartItems(cartData)
     }
@@ -81,7 +126,7 @@ const ShopContextProvider = ({ children }) => {
     // Getting total cart amount
     const getCartAmount = () => {
         let totalAmount = 0
-        for(const itemId in cartItems) {
+        for (const itemId in cartItems) {
             if (cartItems[itemId] > 0) {
                 let itemInfo = books.find((book) => book._id === itemId)
                 if (itemInfo) {
@@ -94,10 +139,11 @@ const ShopContextProvider = ({ children }) => {
 
     useEffect(() => {
         fetchBooks()
+        fetchUser()
         fetchAdmin()
     }, [])
 
-    const value = {books, navigate, user, setUser, currency, searchQuery, setSearchQuery, cartItems, setCartItems, addToCart, getCartCount, getCartAmount, updateQuantity, method, setMethod, delivery_charges, showUserLogin, setShowUserLogin, isAdmin, setIsAdmin, axios, fetchBooks}
+    const value = { books, navigate, user, setUser, currency, searchQuery, setSearchQuery, cartItems, setCartItems, addToCart, getCartCount, getCartAmount, updateQuantity, method, setMethod, delivery_charges, showUserLogin, setShowUserLogin, isAdmin, setIsAdmin, axios, fetchBooks, fetchUser, logoutUser }
 
     return (
         <ShopContext.Provider value={value}>
