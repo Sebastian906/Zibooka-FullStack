@@ -6,7 +6,7 @@ import featuredBooksImg from '../assets/featured-books.png'
 
 const FeaturedBooks = () => {
 
-    const { books, currency } = useContext(ShopContext)
+    const { books, currency, addToCart } = useContext(ShopContext)
     const book = books[21]
 
     return (
@@ -48,7 +48,10 @@ const FeaturedBooks = () => {
                                 <p><span className='font-medium text-gray-700'>Stock:</span> In Stock</p>
                             </div>
                             <p className='mt-1 sm:mt-4 text-sm line-clamp-3'>{book?.description}</p>
-                            <button className='btn-secondary max-sm:text-xs mt-1 sm:mt-5 w-fit px-5 py-2 flex items-center gap-2 text-sm font-medium'>
+                            <button
+                                onClick={() => addToCart(book?._id)}
+                                className='btn-secondary max-sm:text-xs mt-1 sm:mt-5 w-fit px-5 py-2 flex items-center gap-2 text-sm font-medium'
+                            >
                                 <TbShoppingBagPlus className='text-lg'/>
                                 Add to Cart
                             </button>

@@ -12,7 +12,7 @@ const Header = () => {
 
     const [menuOpened, setMenuOpened] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
-    const { navigate, user, setUser, searchQuery, setSearchQuery, getCartCount, showUserLogin, setShowUserLogin } = useContext(ShopContext);
+    const { navigate, user, setUser, searchQuery, setSearchQuery, getCartCount, showUserLogin, setShowUserLogin, logoutUser } = useContext(ShopContext);
     const isShopPage = useLocation().pathname.endsWith('/shop');
 
     const toggleMenu = () => setMenuOpened(prev => !prev);
@@ -110,7 +110,10 @@ const Header = () => {
                     {user && (
                         <ul className='bg-white p-2 w-32 ring-1 ring-slate-900/5 rounded absolute right-0 top-10 hidden group-hover:flex flex-col medium-14 shadow-md z-50'>
                             <li onClick={() => navigate('/my-orders')} className='p-2 rounded-md hover:bg-primary cursor-pointer'>Orders</li>
-                            <li className='p-2 rounded-md hover:bg-primary cursor-pointer'>Logout</li>
+                            <li
+                                onClick={logoutUser}
+                                className='p-2 rounded-md hover:bg-primary cursor-pointer'
+                            >Logout</li>
                         </ul>
                     )}
                 </div>
