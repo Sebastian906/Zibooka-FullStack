@@ -41,18 +41,15 @@ const ShopContextProvider = ({ children }) => {
             const { data } = await axios.get('/api/user/is-auth')
             if (data.success) {
                 setUser(data.user)
-                setCartItems(data.user.cartData)
+                setCartItems(data.user.cartData || {})
             } else {
                 setUser(null)
                 setCartItems({})
             }
         } catch (error) {
-            if (error.response && error.response.status === 401) {
-                setUser(null);
-                setCartItems({});
-            } else {
-                setUser(null);
-                setCartItems({});
+            setUser(null);
+            setCartItems({});
+            if (!(error.response && error.response.status === 401)) {
                 toast.error(error.message);
             }
         }
@@ -91,7 +88,7 @@ const ShopContextProvider = ({ children }) => {
     }
 
     // Adding items to cart
-    const addToCart = (itemId) => {
+    const addToCart = async (itemId) => {
         const cartData = { ...cartItems } // Use shallow copy
         if (cartData[itemId]) {
             cartData[itemId] += 1
@@ -99,6 +96,14 @@ const ShopContextProvider = ({ children }) => {
             cartData[itemId] = 1
         }
         setCartItems(cartData)
+        if (user) {
+            try {
+                const { data } = await axios.post('/api/cart/add', { itemId }) 
+                data.success ? toast.success(data.message) : toast.error(data.message)
+            } catch (error) {
+                toast.error(error.message)
+            }
+        }
     }
 
     // Getting total cart items
@@ -117,10 +122,19 @@ const ShopContextProvider = ({ children }) => {
     }
 
     // Update the quantity of an item
-    const updateQuantity = (itemId, quantity) => {
+    const updateQuantity = async (itemId, quantity) => {
         const cartData = { ...cartItems }
         cartData[itemId] = quantity
         setCartItems(cartData)
+
+        if (user) {
+            try {
+                const { data } = await axios.post('/api/cart/update', { itemId, quantity })
+                data.success ? toast.success(data.message) : toast.error(data.message)
+            } catch (error) {
+                toast.error(error.message)
+            }
+        }
     }
 
     // Getting total cart amount
