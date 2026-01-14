@@ -1,11 +1,12 @@
-import React, { useContext, useState } from 'react'
+import React, { useContext, useState, useEffect } from 'react'
 import Title from '../components/Title'
 import CartTotal from '../components/CartTotal'
 import { ShopContext } from '../context/ShopContext'
+import toast from 'react-hot-toast'
 
 const AddressForm = () => {
 
-    const { navigate, user, method, setMethod } = useContext(ShopContext);
+    const { navigate, user, method, setMethod, axios } = useContext(ShopContext);
     const [address, setAddress] = useState({
         firstName: "",
         lastName: "",
@@ -25,9 +26,26 @@ const AddressForm = () => {
         console.log(address);
     }
 
-    const onSubmitHandler = (e) => {
+    const onSubmitHandler = async (e) => {
         e.preventDefault();
+        try {
+            const { data } = await axios.post('/api/address/add', { address })
+            if (data.success) {
+                toast.success(data.message)
+                navigate('/cart')
+            } else {
+                toast.error(data.message)
+            }
+        } catch (error) {
+            toast.error(error.message)
+        }
     }
+
+    useEffect(() => {
+        if (!user) {
+            navigate('/cart')
+        }
+    }, []);
 
     return (
         <div className='max-padd-container py-16 pt-28'>
