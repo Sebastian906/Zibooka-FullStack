@@ -1,13 +1,12 @@
 import React, { useContext, useState } from 'react'
 import { ShopContext } from '../context/ShopContext';
-import { dummyAddress } from '../assets/data';
 
 const CartTotal = () => {
 
     const { navigate, books, currency, cartItems, setCartItems, method, setMethod, getCartAmount, getCartCount, delivery_charges, user } = useContext(ShopContext);
-    const [addresses, setAddresses] = useState(dummyAddress);
+    const [addresses, setAddresses] = useState([]);
     const [showAddress, setShowAddress] = useState(false);
-    const [selectedAddress, setSelectedAddress] = useState(dummyAddress[0]);
+    const [selectedAddress, setSelectedAddress] = useState(null);
 
     return (
         <div>
