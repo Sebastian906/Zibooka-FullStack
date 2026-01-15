@@ -1,12 +1,35 @@
-import React, { useContext, useState } from 'react'
+import React, { useContext, useState, useEffect } from 'react'
 import { ShopContext } from '../context/ShopContext';
+import toast from 'react-hot-toast';
 
 const CartTotal = () => {
 
-    const { navigate, books, currency, cartItems, setCartItems, method, setMethod, getCartAmount, getCartCount, delivery_charges, user } = useContext(ShopContext);
+    const { navigate, books, currency, cartItems, setCartItems, method, setMethod, getCartAmount, getCartCount, delivery_charges, user, axios } = useContext(ShopContext);
     const [addresses, setAddresses] = useState([]);
     const [showAddress, setShowAddress] = useState(false);
     const [selectedAddress, setSelectedAddress] = useState(null);
+
+    const getAddress = async () => {
+        try {
+            const { data } = await axios.get('/api/address/get')
+            if (data.success) {
+                setAddresses(data.addresses)
+                if (data.addresses.length > 0) {
+                    setSelectedAddress(data.addresses[0])
+                }
+            } else {
+                toast.error(data.message)
+            }
+        } catch (error) {
+            toast.error(error.message)
+        }
+    }
+
+    useEffect(() => {
+        if (user) {
+            getAddress();
+        }
+    }, [user]);
 
     return (
         <div>

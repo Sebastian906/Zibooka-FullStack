@@ -28,7 +28,7 @@ export class AddressService {
 
     async getAddresses(userId: string): Promise<Address[]> {
         try {
-            const addresses = await this.addressModel.find({ userId });
+            const addresses = await this.addressModel.find({ userId }).sort({ createdAt: -1 });
             return addresses;
         } catch (error) {
             throw new InternalServerErrorException(error.message);
