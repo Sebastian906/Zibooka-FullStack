@@ -25,6 +25,38 @@ const CartTotal = () => {
         }
     }
 
+    const placeOrder = async () => {
+        try {
+            if (!selectedAddress) {
+                return toast.error("Please select an address")
+            }
+            let orderItems = []
+            for (const itemId in cartItems) {
+                const book = books.find((item) => item._id === itemId)
+                book.quantity = cartItems[itemId]
+                orderItems.push(book)
+            }
+            // Convert orderItems to items array for backend
+            let items = orderItems.map((item) => ({
+                product: item._id,
+                quantity: item.quantity,
+            }))
+            // Place Order using COD
+            if (method === "COD") {
+                const { data } = await axios.post('/api/order/cod', { items, address: selectedAddress._id })
+                if (data.success) {
+                    toast.success(data.message)
+                    setCartItems({})
+                    navigate('/my-orders')
+                } else {
+                    toast.error(data.message)
+                }
+            }
+        } catch (error) {
+            
+        }
+    }
+
     useEffect(() => {
         if (user) {
             getAddress();
@@ -122,7 +154,10 @@ const CartTotal = () => {
                     </p>
                 </div>
             </div>
-            <button className='btn-dark w-full mt-8 rounded-md!'>
+            <button 
+                onClick={placeOrder}
+                className='btn-dark w-full mt-8 rounded-md!'
+            >
                 Proceed to Order
             </button>
         </div>
