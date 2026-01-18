@@ -79,9 +79,12 @@ export class OrderService {
                     userId,
                     $or: [{ paymentMethod: 'COD' }, { isPaid: true }],
                 })
-                .populate('items.product')
+                .populate({
+                    path: 'items.product',
+                    model: 'Product',
+                })
                 .populate('address')
-                .sort({ createdAt: 1 });
+                .sort({ createdAt: -1 });
 
             return orders;
         } catch (error) {
