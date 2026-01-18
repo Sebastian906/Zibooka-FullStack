@@ -1,11 +1,27 @@
-import React, { useContext } from 'react'
+import { useContext, useState, useEffect } from 'react'
 import { ShopContext } from '../context/ShopContext'
 import Title from '../components/Title';
-import { dummyOrders } from '../assets/data';
 
 const MyOrders = () => {
 
-    const { currency, user } = useContext(ShopContext);
+    const { currency, user, axios, books } = useContext(ShopContext);
+    const [orders, setOrders] = useState([])
+
+    const loadOrderData = async () => {
+        if (!user) return
+        try {
+            const { data } = await axios.post('/api/order/user-orders')
+            if (data.success) {
+                setOrders(data.orders)
+            }
+        } catch (error) {
+            console.log(error);
+        }
+    }
+
+    useEffect(() => {
+        loadOrderData()
+    }, [user])
 
     return (
         <div className='max-padd-container py-16 pt-28'>
@@ -14,40 +30,43 @@ const MyOrders = () => {
                 title2={"List"}
                 title1Styles={"pb-4"}
             />
-            {(Array.isArray(dummyOrders) && dummyOrders.length > 0) ? dummyOrders.map((order) => (
+            {(Array.isArray(orders) && orders.length > 0) ? orders.map((order) => (
                 <div
                     key={order?._id}
                     className='bg-primary p-2 mt-3 rounded-lg'
                 >
                     {/* LISTA DE LIBROS */}
                     <div className='flex flex-col lg:flex-row gap-4 mb-3'>
-                        {(Array.isArray(order?.items) && order.items.length > 0) ? order.items.map((item, index) => (
-                            <div
-                                key={index}
-                                className='flex gap-x-3'
-                            >
-                                <div className='flexCenter rounded-lg overflow-hidden'>
-                                    <img
-                                        src={item?.book?.image?.[0] || ''}
-                                        alt="orderImg"
-                                        className='max-h-20 max-w-32 aspect-square object-contain'
-                                    />
-                                </div>
-                                <div className='w-full block'>
-                                    <h5 className='h5 capitalize line-clamp-1'>{item?.book?.name || 'No name'}</h5>
-                                    <div className='flex flex-wrap gap-3 max-sm:gap-y-1 mt-1'>
-                                        <div className='flex items-center gap-x-2'>
-                                            <h5 className='medium-14'>Price:</h5>
-                                            <p>{currency}{item?.book?.offerPrice ?? '-'}</p>
-                                        </div>
-                                        <div className='flex items-center gap-x-2'>
-                                            <h5 className='medium-14'>Quantity:</h5>
-                                            <p>{item?.quantity ?? '-'}</p>
+                        {(Array.isArray(order?.items) && order.items.length > 0) ? order.items.map((item, index) => {
+                            const book = books.find(b => b._id === item.product);
+                            return (
+                                <div
+                                    key={index}
+                                    className='flex gap-x-3'
+                                >
+                                    <div className='flexCenter rounded-lg overflow-hidden'>
+                                        <img
+                                            src={item?.product?.images?.[0] || ''}
+                                            alt={'orderImg'}
+                                            className='max-h-20 max-w-32 aspect-square object-contain'
+                                        />
+                                    </div>
+                                    <div className='w-full block'>
+                                        <h5 className='h5 capitalize line-clamp-1'>{item?.product.name || 'No name'}</h5>
+                                        <div className='flex flex-wrap gap-3 max-sm:gap-y-1 mt-1'>
+                                            <div className='flex items-center gap-x-2'>
+                                                <h5 className='medium-14'>Price:</h5>
+                                                <p>{currency}{item?.product.offerPrice ?? '-'}</p>
+                                            </div>
+                                            <div className='flex items-center gap-x-2'>
+                                                <h5 className='medium-14'>Quantity:</h5>
+                                                <p>{item?.quantity ?? '-'}</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        )) : <p>No items found</p>}
+                            );
+                        }) : <p>No items found</p>}
                     </div>
                     {/* RESUMEN DEL PEDIDO */}
                     <div className='flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-t border-gray-300 pt-3'>
