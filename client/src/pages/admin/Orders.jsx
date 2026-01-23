@@ -1,14 +1,37 @@
-import React, { useContext, useEffect, useState } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { ShopContext } from '../../context/ShopContext'
-import { dummyOrders } from '../../assets/data'
+import toast from 'react-hot-toast'
 
 const Orders = () => {
 
-    const { currency } = useContext(ShopContext)
+    const { currency, axios, books } = useContext(ShopContext)
     const [orders, setOrders] = useState([])
 
-    const fetchAllOrders = () => {
-        setOrders(dummyOrders)
+    const fetchAllOrders = async () => {
+        try {
+            const { data } = await axios.post('/api/order/list')
+            if (data.success) {
+                setOrders(data.orders)
+            } else {
+                toast.error(data.message)
+            }
+        } catch (error) {
+            console.log(error);
+        }
+    }
+
+    const statusHandler = async (event, orderId) => {
+        try {
+            const { data } = await axios.post('/api/order/status', { orderId, status: event.target.value })
+            if (data.success) {
+                await fetchAllOrders()
+                toast.success(data.message)
+            } else {
+                toast.error(data.message)
+            }
+        } catch (error) {
+            console.log(error);
+        }
     }
 
     useEffect(() => {
@@ -25,33 +48,43 @@ const Orders = () => {
                 >
                     { /* LISTA DE LIBROS */}
                     <div className='flex flex-col lg:flex-row gap-4 mb-3'>
-                        {order.items.map((item, index) => (
-                            <div
-                                key={index}
-                                className='flex gap-x-3'
-                            >
-                                <div className='flexCenter rounded-lg overflow-hidden'>
-                                    <img
-                                        src={item.book.images[0]}
-                                        alt="orderImg"
-                                        className='max-h-20 max-w-32 aspect-square object-contain'
-                                    />
-                                </div>
-                                <div className='w-full block'>
-                                    <h5 className='h5 capitalize line-clamp-1'>{item.book.name}</h5>
-                                    <div className='flex flex-wrap gap-3 max-sm:gap-y-1 mt-1'>
-                                        <div className='flex items-center gap-x-2'>
-                                            <h5 className='medium-14'>Price:</h5>
-                                            <p>{currency}{item.book.offerPrice}</p>
-                                        </div>
-                                        <div className='flex items-center gap-x-2'>
-                                            <h5 className='medium-14'>Quantity:</h5>
-                                            <p>{item.quantity}</p>
+                        {order.items?.map((item, index) => {
+                            // item.product may be populated (object with _id) or just an id string
+                            const productId = item.product && item.product._id ? item.product._id : item.product
+                            const product = books.find(b => b._id == productId)
+
+                            return (
+                                <div
+                                    key={index}
+                                    className='flex gap-x-3'
+                                >
+                                    <div className='flexCenter rounded-lg overflow-hidden'>
+                                        {product?.images?.[0] ? (
+                                            <img
+                                                src={product.images[0]}
+                                                alt={product?.name || 'orderImg'}
+                                                className='max-h-20 max-w-32 aspect-square object-contain'
+                                            />
+                                        ) : (
+                                            <div className='w-20 h-20 bg-gray-100 flex items-center justify-center text-xs text-gray-500'>No Image</div>
+                                        )}
+                                    </div>
+                                    <div className='w-full block'>
+                                        <h5 className='h5 capitalize line-clamp-1'>{product?.name || 'Unknown product'}</h5>
+                                        <div className='flex flex-wrap gap-3 max-sm:gap-y-1 mt-1'>
+                                            <div className='flex items-center gap-x-2'>
+                                                <h5 className='medium-14'>Price:</h5>
+                                                <p>{currency}{product?.offerPrice ?? '0'}</p>
+                                            </div>
+                                            <div className='flex items-center gap-x-2'>
+                                                <h5 className='medium-14'>Quantity:</h5>
+                                                <p>{item.quantity}</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            )
+                        })}
                     </div>
                     { /* RESUMEN DEL PEDIDO */}
                     <div className='flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-t border-gray-300 pt-3'>
@@ -63,17 +96,17 @@ const Orders = () => {
                             <div className='flex gap-4'>
                                 <div className='flex items-center gap-x-2'>
                                     <h5 className='medium-14'>Customer:</h5>
-                                    <p className='text-xs'>{order.address.firstName} {order.address.lastName}</p>
+                                    <p className='text-xs'>{order.address?.firstName || '-'} {order.address?.lastName || ''}</p>
                                 </div>
                                 <div className='flex items-center gap-x-2'>
                                     <h5 className='medium-14'>Phone:</h5>
-                                    <p className='text-xs'>{order.address.phone}</p>
+                                    <p className='text-xs'>{order.address?.phone || '-'}</p>
                                 </div>
                             </div>
                             <div className='flex items-center gap-x-2'>
                                 <h5 className='medium-14'>Address:</h5>
                                 <p className='text-xs'>
-                                    {order.address.street}, {order.address.city}, {order.address.state}, {order.address.country}, {order.address.zipcode}
+                                    {order.address?.street || '-'}, {order.address?.city || '-'}, {order.address?.state || '-'}, {order.address?.country || '-'}, {order.address?.zipcode || '-'}
                                 </p>
                             </div>
                             <div className='flex gap-4'>
@@ -89,18 +122,19 @@ const Orders = () => {
                             <div className='flex gap-4'>
                                 <div className='flex items-center gap-x-2'>
                                     <h5 className='medium-14'>Date:</h5>
-                                    <p className='text-gray-400 text-sm'>{new Date(order.createdAt).toDateString()}</p>
+                                    <p className='text-gray-400 text-sm'>{order.createdAt ? new Date(order.createdAt).toDateString() : '-'}</p>
                                 </div>
                                 <div className='flex items-center gap-x-2'>
                                     <h5 className='medium-14'>Amount:</h5>
-                                    <p className='text-gray-400 text-sm'>{currency}{order.amount}</p>
+                                    <p className='text-gray-400 text-sm'>{currency}{order.amount ?? '0'}</p>
                                 </div>
                             </div>
                         </div>
                         <div className='flex items-center gap-2'>
                             <h5 className='medium-14'>Status:</h5>
-                            <select 
-                                value={order.status}
+                            <select
+                                onChange={(event)=>statusHandler(event, order._id)}
+                                defaultValue={order.status || 'Order Placed'}
                                 className='text-xs font-semibold p-1 ring-slate-900/5 rounded max-w-36 bg-primary'
                             >
                                 <option value="Order Placed">Order Placed</option>

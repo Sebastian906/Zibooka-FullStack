@@ -124,7 +124,11 @@ const ShopContextProvider = ({ children }) => {
     // Update the quantity of an item
     const updateQuantity = async (itemId, quantity) => {
         const cartData = { ...cartItems }
-        cartData[itemId] = quantity
+        if (quantity <= 0) {
+            delete cartData[itemId] // Remove item entirely if quantity is zero or less
+        } else {
+            cartData[itemId] = quantity
+        }
         setCartItems(cartData)
 
         if (user) {
