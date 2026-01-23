@@ -8,7 +8,7 @@ import { PlaceOrderCODDto } from './dto/place-order-cod.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import Stripe from 'stripe';
 import { ConfigService } from '@nestjs/config';
-import { PlaceOrderStripeDto } from './dto/place-order-stripe';
+import { PlaceOrderStripeDto } from './dto/place-order-stripe.dto';
 
 @Injectable()
 export class OrderService {

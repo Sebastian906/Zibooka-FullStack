@@ -7,7 +7,7 @@ import { UserId } from 'src/common/decorators/users/user-id.decorator';
 import type { Response } from 'express';
 import { AdminAuthGuard } from 'src/common/guards/admin-auth/admin-auth.guard';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
-import { PlaceOrderStripeDto } from './dto/place-order-stripe';
+import { PlaceOrderStripeDto } from './dto/place-order-stripe.dto';
 
 @ApiTags('Orders')
 @Controller('order')
