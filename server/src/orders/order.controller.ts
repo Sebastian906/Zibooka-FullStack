@@ -1,5 +1,5 @@
-import { Body, Controller, HttpStatus, Post, Res, UseGuards } from '@nestjs/common';
-import { ApiBody, ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Headers, HttpStatus, Post, Res, UseGuards } from '@nestjs/common';
+import { ApiBody, ApiCookieAuth, ApiHeader, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { OrderService } from './order.service';
 import { AuthGuard } from 'src/common/guards/auth/auth.guard';
 import { PlaceOrderCODDto } from './dto/place-order-cod.dto';
@@ -7,6 +7,7 @@ import { UserId } from 'src/common/decorators/users/user-id.decorator';
 import type { Response } from 'express';
 import { AdminAuthGuard } from 'src/common/guards/admin-auth/admin-auth.guard';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import { PlaceOrderStripeDto } from './dto/place-order-stripe.dto';
 
 @ApiTags('Orders')
 @Controller('order')
@@ -37,6 +38,54 @@ export class OrderController {
                 success: true,
                 message: result.message,
             });
+        } catch (error) {
+            return res
+                .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
+                .json({
+                    success: false,
+                    message: error.message,
+                });
+        }
+    }
+
+    // For Payment - Place Order using Stripe
+    @Post('stripe')
+    @UseGuards(AuthGuard)
+    @ApiCookieAuth('token')
+    @ApiOperation({ summary: 'Place order using Stripe payment' })
+    @ApiHeader({
+        name: 'origin',
+        description: 'Frontend origin URL',
+        required: true,
+    })
+    @ApiBody({ type: PlaceOrderStripeDto })
+    @ApiResponse({
+        status: 200,
+        description: 'Stripe checkout session created successfully',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                url: { type: 'string', example: 'https://checkout.stripe.com/...' }
+            }
+        }
+    })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Product not found' })
+    async placeOrderStripe(
+        @Body() placeOrderDto: PlaceOrderStripeDto,
+        @UserId() userId: string,
+        @Headers('origin') origin: string,
+        @Res() res: Response,
+    ) {
+        try {
+            const result = await this.orderService.placeOrderStripe(
+                userId,
+                placeOrderDto,
+                origin,
+            );
+
+            return res.status(HttpStatus.OK).json(result);
         } catch (error) {
             return res
                 .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
