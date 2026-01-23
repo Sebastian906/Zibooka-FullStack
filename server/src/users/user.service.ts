@@ -206,7 +206,11 @@ export class UserService {
 
             const cartData = userData.cartData || {};
 
-            cartData[itemId] = quantity;
+            if (quantity <= 0) {
+                delete cartData[itemId];
+            } else {
+                cartData[itemId] = quantity;
+            }
 
             await this.userModel.findByIdAndUpdate(userId, { cartData });
 

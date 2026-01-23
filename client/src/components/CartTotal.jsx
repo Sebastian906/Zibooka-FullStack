@@ -51,6 +51,13 @@ const CartTotal = () => {
                 } else {
                     toast.error(data.message)
                 }
+            } else {
+                const { data } = await axios.post('/api/order/stripe', { items, address: selectedAddress._id })
+                if (data.success) {
+                    window.location.replace(data.url)
+                } else {
+                    toast.error(data.message)
+                }
             }
         } catch (error) {
             toast.error(error.message)

@@ -14,7 +14,7 @@ import { PlaceOrderStripeDto } from './dto/place-order-stripe.dto';
 export class OrderService {
 
     // Global variables for payment
-    private readonly currency = 'cop';
+    private readonly currency = 'usd';
     private readonly deliveryCharges = 10; // 10 Dollars
     private readonly taxPercentage = 0.02; // 2% tax
     private stripe: Stripe;
