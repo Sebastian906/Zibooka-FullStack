@@ -104,7 +104,11 @@ const MyOrders = () => {
                                     <p>{order?.status ?? '-'}</p>
                                 </div>
                             </div>
-                            <button className='btn-secondary py-1! text-xs! rounded-sm'>Track Order</button>
+                            <button
+                                onClick={loadOrderData}
+                                className='btn-secondary py-1! text-xs! rounded-sm'>
+                                Track Order
+                            </button>
                         </div>
                     </div>
                 </div>
