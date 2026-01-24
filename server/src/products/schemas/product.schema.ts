@@ -23,7 +23,7 @@ export class Product {
     @Prop({ required: true })
     category: string;
 
-    @Prop({ type: Boolean })
+    @Prop({ type: Boolean, default: false })
     popular?: boolean;
 
     @Prop({ type: Boolean, default: true })
