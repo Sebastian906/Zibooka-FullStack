@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsBoolean, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
 export class AddProductDto {
     @ApiProperty({ example: 'Product Name', description: 'Name of the product' })
@@ -37,19 +37,29 @@ export class AddProductDto {
         example: false,
         description: 'Is this a popular product',
         required: false,
+        default: false,
     })
     @IsOptional()
-    @Type(() => Boolean)
+    @Transform(({ value }) => {
+        if (value === 'true' || value === true) return true;
+        if (value === 'false' || value === false) return false;
+        return false; // Por defecto false
+    })
     @IsBoolean()
-    popular?: boolean;
+    popular?: boolean = false; // Valor por defecto
 
     @ApiProperty({
         example: true,
         description: 'Is the product in stock',
         required: false,
+        default: true,
     })
     @IsOptional()
-    @Type(() => Boolean)
+    @Transform(({ value }) => {
+        if (value === 'true' || value === true) return true;
+        if (value === 'false' || value === false) return false;
+        return true; // Por defecto true
+    })
     @IsBoolean()
-    inStock?: boolean;
+    inStock?: boolean = true;
 }

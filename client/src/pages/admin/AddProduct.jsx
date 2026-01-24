@@ -23,7 +23,7 @@ const AddProduct = () => {
             formData.append('category', category);
             formData.append('price', price);
             formData.append('offerPrice', offerPrice);
-            formData.append('popular', popular);
+            formData.append('popular', popular.toString());
 
             for (let i = 0; i < files.length; i++) {
                 formData.append("images", files[i]);
@@ -37,6 +37,8 @@ const AddProduct = () => {
                         setDescription('');
                         setFiles([]);
                         setPrice('10');
+                        setCategory('Academic');
+                        setPopular(false);
                     } else {
                         toast.error(data.message);
                     }

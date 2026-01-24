@@ -40,6 +40,8 @@ export class ProductService {
             await this.productModel.create({
                 ...productData,
                 images: imagesUrl,
+                popular: productData.popular ?? false, 
+                inStock: productData.inStock ?? true,              
             });
 
             return { message: 'Product added' };
