@@ -10,7 +10,7 @@ const Navbar = ({ containerStyles, setMenuOpened }) => {
         { to: '/', label: 'Home', icon: <TbHome /> },
         { to: '/shop', label: 'Shop', icon: <IoLibraryOutline /> },
         { to: '/blog', label: 'Blog', icon: <TbBrandBlogger /> },
-        { to: 'mailto:infozibooka.com', label: 'Contact', icon: <PiEnvelopeDuotone /> },
+        { to: '/contact', label: 'Contact', icon: <PiEnvelopeDuotone /> },
     ]
 
     return (
