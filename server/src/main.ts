@@ -5,7 +5,9 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    rawBody: true,
+  });
 
   // Enable global validation
   app.useGlobalPipes(
@@ -39,6 +41,7 @@ async function bootstrap() {
     .addTag('Backend')
     .addBearerAuth() // Para autenticación con JWT
     .addCookieAuth('token') // Para autenticación con cookies
+    .addCookieAuth('adminToken') // Para autenticación admin
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
@@ -50,5 +53,6 @@ async function bootstrap() {
   await app.listen(port);
   console.log(`Server is running on http://localhost:${port}`);
   console.log(`Swagger docs available at http://localhost:${port}/api/docs`);
+  console.log(`Stripe webhook endpoint: http://localhost:${port}/api/stripe`);
 }
 bootstrap();

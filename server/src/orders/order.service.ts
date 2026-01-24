@@ -256,4 +256,92 @@ export class OrderService {
             throw new InternalServerErrorException(error.message);
         }
     }
+
+    async handleStripeWebhook(
+        rawBody: Buffer,
+        signature: string,
+    ): Promise<void> {
+        const webhookSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET');
+
+        if (!webhookSecret) {
+            throw new Error('STRIPE_WEBHOOK_SECRET is not defined');
+        }
+
+        let event: Stripe.Event;
+
+        try {
+            // Construct and verify the webhook event
+            event = this.stripe.webhooks.constructEvent(
+                rawBody,
+                signature,
+                webhookSecret,
+            );
+        } catch (error) {
+            throw new Error(`Webhook signature verification failed: ${error.message}`);
+        }
+
+        // Handle the event based on type
+        switch (event.type) {
+            case 'checkout.session.completed': {
+                const session = event.data.object as Stripe.Checkout.Session;
+
+                // Get metadata from the session
+                if (!session.metadata || !('orderId' in session.metadata) || !('userId' in session.metadata)) {
+                    throw new Error('Missing metadata in checkout session');
+                }
+                const orderId = (session.metadata as any).orderId;
+                const userId = (session.metadata as any).userId;
+
+                if (!orderId || !userId) {
+                    throw new Error('Missing metadata in checkout session');
+                }
+
+                // Mark order as paid
+                await this.orderModel.findByIdAndUpdate(orderId, { isPaid: true });
+
+                // Clear user cart
+                await this.userModel.findByIdAndUpdate(userId, { cartData: {} });
+
+                console.log(`Payment succeeded for order ${orderId}`);
+                break;
+            }
+
+            case 'checkout.session.expired': {
+                const session = event.data.object as Stripe.Checkout.Session;
+
+                const { orderId } = session.metadata || {};
+
+                if (orderId) {
+                    // Delete order if checkout session expired
+                    await this.orderModel.findByIdAndDelete(orderId);
+                    console.log(`Checkout expired, order ${orderId} deleted`);
+                }
+                break;
+            }
+
+            case 'payment_intent.payment_failed': {
+                const paymentIntent = event.data.object as Stripe.PaymentIntent;
+
+                // Get the checkout session associated with this payment intent
+                const sessions = await this.stripe.checkout.sessions.list({
+                    payment_intent: paymentIntent.id,
+                });
+
+                if (sessions.data.length > 0) {
+                    const { orderId } = sessions.data[0].metadata || {};
+
+                    if (orderId) {
+                        // Delete order if payment failed
+                        await this.orderModel.findByIdAndDelete(orderId);
+                        console.log(`Payment failed, order ${orderId} deleted`);
+                    }
+                }
+                break;
+            }
+
+            default:
+                console.log(`Unhandled event type: ${event.type}`);
+                break;
+        }
+    }
 }
