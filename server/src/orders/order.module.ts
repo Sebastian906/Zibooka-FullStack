@@ -5,6 +5,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Order, OrderSchema } from './schemas/order.schema';
 import { Product, ProductSchema } from 'src/products/schemas/product.schema';
 import { User, UserSchema } from 'src/users/schemas/user.schema';
+import { StripeWebhookController } from './stripe-webhook.controller';
 
 @Module({
   imports: [
@@ -15,7 +16,7 @@ import { User, UserSchema } from 'src/users/schemas/user.schema';
     ]),
   ],
   providers: [OrderService],
-  controllers: [OrderController],
+  controllers: [OrderController, StripeWebhookController],
   exports: [OrderService]
 })
 export class OrderModule {}
