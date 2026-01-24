@@ -1,8 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 
 export class AddProductDto {
+    @ApiProperty({
+        example: '978-0-306-40615-7',
+        description: 'ISBN-13 of the book',
+        required: false,
+    })
+    @IsOptional()
+    @IsString()
+    isbn?: string;
+
     @ApiProperty({ example: 'Product Name', description: 'Name of the product' })
     @IsNotEmpty()
     @IsString()
@@ -16,6 +25,15 @@ export class AddProductDto {
     @IsString()
     description: string;
 
+    @ApiProperty({
+        example: 'J.K. Rowling',
+        description: 'Author of the book',
+        required: false,
+    })
+    @IsOptional()
+    @IsString()
+    author?: string;
+
     @ApiProperty({ example: 100, description: 'Price of the product' })
     @IsNotEmpty()
     @Type(() => Number)
@@ -27,6 +45,39 @@ export class AddProductDto {
     @Type(() => Number)
     @IsNumber()
     offerPrice: number;
+
+    @ApiProperty({
+        example: 350,
+        description: 'Number of pages',
+        required: false,
+    })
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    @Min(1)
+    @Max(5000)
+    pageCount?: number;
+
+    @ApiProperty({
+        example: 'Penguin Books',
+        description: 'Publisher name',
+        required: false,
+    })
+    @IsOptional()
+    @IsString()
+    publisher?: string;
+
+    @ApiProperty({
+        example: 2023,
+        description: 'Year of publication',
+        required: false,
+    })
+    @IsOptional()
+    @Type(() => Number)
+    @IsNumber()
+    @Min(1800)
+    @Max(new Date().getFullYear())
+    publicationYear?: number;
 
     @ApiProperty({ example: 'Electronics', description: 'Category of the product' })
     @IsNotEmpty()
