@@ -1,5 +1,5 @@
-import { Body, Controller, Get, HttpStatus, Post, Res, UseGuards } from '@nestjs/common';
-import { ApiBody, ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, HttpStatus, Post, Put, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { ApiBody, ApiConsumes, ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { ConfigService } from '@nestjs/config';
 import { RegisterUserDto } from './dto/register-user.dto';
@@ -8,6 +8,9 @@ import express from 'express';
 import { UserLoginDto } from './dto/user-login.dto';
 import { AuthGuard } from 'src/common/guards/auth/auth.guard';
 import { UserId } from 'src/common/decorators/users/user-id.decorator';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @ApiTags('Users')
 @Controller('user')
@@ -152,6 +155,92 @@ export class UserController {
 
             return res.status(HttpStatus.OK).json({
                 success: true,
+                user: result.user,
+            });
+        } catch (error) {
+            return res.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).json({
+                success: false,
+                message: error.message,
+            });
+        }
+    }
+
+    @Get('profile')
+    @UseGuards(AuthGuard)
+    @ApiCookieAuth('token')
+    @ApiOperation({ summary: 'Get user profile' })
+    @ApiResponse({
+        status: 200,
+        description: 'Profile retrieved successfully'
+    })
+    @ApiResponse({ status: 401, description: 'Not authenticated' })
+    async getProfile(
+        @UserId() userId: string,
+        @Res() res: express.Response,
+    ) {
+        try {
+            const result = await this.userService.getProfile(userId);
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                user: result.user,
+            });
+        } catch (error) {
+            return res.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).json({
+                success: false,
+                message: error.message,
+            });
+        }
+    }
+
+    @Put('update-profile')
+    @UseGuards(AuthGuard)
+    @ApiCookieAuth('token')
+    @UseInterceptors(
+        FileInterceptor('profileImage', {
+            storage: diskStorage({}),
+        }),
+    )
+    @ApiOperation({ summary: 'Update user profile' })
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                name: { type: 'string', example: 'John Doe' },
+                email: { type: 'string', example: 'user@example.com' },
+                phone: { type: 'string', example: '+1234567890' },
+                currentPassword: { type: 'string', example: 'currentPassword123' },
+                newPassword: { type: 'string', example: 'newPassword123' },
+                profileImage: {
+                    type: 'string',
+                    format: 'binary',
+                },
+            },
+        },
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'Profile updated successfully'
+    })
+    @ApiResponse({ status: 401, description: 'Not authenticated' })
+    @ApiResponse({ status: 409, description: 'Email already in use' })
+    async updateProfile(
+        @UserId() userId: string,
+        @Body() updateProfileDto: UpdateProfileDto,
+        @UploadedFile() profileImage: Express.Multer.File,
+        @Res() res: express.Response,
+    ) {
+        try {
+            const result = await this.userService.updateProfile(
+                userId,
+                updateProfileDto,
+                profileImage,
+            );
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                message: result.message,
                 user: result.user,
             });
         } catch (error) {

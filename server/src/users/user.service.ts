@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, InternalServerErrorException, UnauthorizedException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, InternalServerErrorException, UnauthorizedException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument } from './schemas/user.schema';
@@ -10,13 +10,22 @@ import { ConfigService } from '@nestjs/config';
 import { UserLoginDto } from './dto/user-login.dto';
 import { AddToCartDto } from 'src/carts/dto/add-to-cart.dto';
 import { UpdateCartDto } from 'src/carts/dto/update-cart.dto';
+import { v2 as cloudinary } from 'cloudinary';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Injectable()
 export class UserService {
     constructor(
         @InjectModel(User.name) private userModel: Model<UserDocument>,
         private configService: ConfigService,
-    ) { }
+    ) { 
+        // Configure cloudinary
+        cloudinary.config({
+            cloud_name: this.configService.get<string>('CLDN_NAME'),
+            api_key: this.configService.get<string>('CLDN_API_KEY'),
+            api_secret: this.configService.get<string>('CLDN_SECRET_KEY'),
+        });
+    }
 
     async register(registerUserDto: RegisterUserDto): Promise<{ token: string, user: UserResponseDto }> {
         try {
@@ -153,6 +162,120 @@ export class UserService {
             };
         } catch (error) {
             if (error instanceof NotFoundException) {
+                throw error;
+            }
+            throw new InternalServerErrorException(error.message);
+        }
+    }
+
+    async getProfile(userId: string): Promise<{ user: any }> {
+        try {
+            const user = await this.userModel.findById(userId).select('-password');
+
+            if (!user) {
+                throw new NotFoundException('User not found');
+            }
+
+            return {
+                user: {
+                    name: user.name,
+                    email: user.email,
+                    phone: user.phone,
+                    profileImage: user.profileImage,
+                },
+            };
+        } catch (error) {
+            if (error instanceof NotFoundException) {
+                throw error;
+            }
+            throw new InternalServerErrorException(error.message);
+        }
+    }
+
+    async updateProfile(
+        userId: string,
+        updateProfileDto: UpdateProfileDto,
+        profileImage?: Express.Multer.File,
+    ): Promise<{ message: string; user: any }> {
+        try {
+            const user = await this.userModel.findById(userId);
+
+            if (!user) {
+                throw new NotFoundException('User not found');
+            }
+
+            // Check if email is being changed and if it's already taken
+            if (updateProfileDto.email !== user.email) {
+                const emailExists = await this.userModel.findOne({
+                    email: updateProfileDto.email,
+                    _id: { $ne: userId }
+                });
+
+                if (emailExists) {
+                    throw new ConflictException('Email already in use');
+                }
+            }
+
+            // Handle password change
+            if (updateProfileDto.newPassword) {
+                if (!updateProfileDto.currentPassword) {
+                    throw new BadRequestException('Current password is required to change password');
+                }
+
+                const isPasswordValid = await bcrypt.compare(
+                    updateProfileDto.currentPassword,
+                    user.password
+                );
+
+                if (!isPasswordValid) {
+                    throw new UnauthorizedException('Current password is incorrect');
+                }
+
+                user.password = await bcrypt.hash(updateProfileDto.newPassword, 10);
+            }
+
+            // Handle profile image upload
+            if (profileImage) {
+                // Delete old image from cloudinary if exists
+                if (user.profileImage) {
+                    const publicId = user.profileImage.split('/').pop()?.split('.')[0];
+                    if (publicId) {
+                        await cloudinary.uploader.destroy(publicId);
+                    }
+                }
+
+                // Upload new image
+                const result = await cloudinary.uploader.upload(profileImage.path, {
+                    resource_type: 'image',
+                    folder: 'profile_images',
+                });
+
+                user.profileImage = result.secure_url;
+            }
+
+            // Update other fields
+            user.name = updateProfileDto.name;
+            user.email = updateProfileDto.email;
+            user.phone = updateProfileDto.phone;
+
+            await user.save();
+
+            return {
+                message: 'Profile updated successfully',
+                user: {
+                    name: user.name,
+                    email: user.email,
+                    phone: user.phone,
+                    profileImage: user.profileImage,
+                },
+            };
+        } catch (error) {
+            if (
+                error instanceof NotFoundException ||
+                error instanceof ConflictException ||
+                error instanceof BadRequestException ||
+                error instanceof UnauthorizedException
+            ) {
                 throw error;
             }
             throw new InternalServerErrorException(error.message);

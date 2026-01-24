@@ -17,6 +17,9 @@ export class User {
     @Prop({ required: true })
     phone: string;
 
+    @Prop({ type: String, default: null })
+    profileImage: string | null;
+
     @Prop({ type: Object, default: {} })
     cartData: Record<string, any>;
 }
