@@ -20,6 +20,7 @@ import AddProduct from './pages/admin/AddProduct'
 import ProductList from './pages/admin/ProductList'
 import Orders from './pages/admin/Orders'
 import Loading from './pages/Loading'
+import Profile from './pages/Profile'
 
 const App = () => {
 
@@ -41,7 +42,8 @@ const App = () => {
         <Route path='/cart' element={<Cart />} />
         <Route path='/address-form' element={<AddressForm />} />
         <Route path='/my-orders' element={<MyOrders />} />
-        <Route path='/loader' element={<Loading/> } />
+        <Route path='/loader' element={<Loading />} />
+        <Route path='/profile' element={<Profile />} />
         <Route path='/admin' element={isAdmin ? <Sidebar /> : <AdminLogin />}>
           <Route index element={isAdmin ? <AddProduct /> : null} />
           <Route path='list' element={<ProductList/>} />

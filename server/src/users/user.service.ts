@@ -63,6 +63,7 @@ export class UserService {
                 user: {
                     email: user.email,
                     name: user.name,
+                    profileImage: user.profileImage ?? '',
                 },
             };
         } catch (error) {
@@ -104,6 +105,7 @@ export class UserService {
                 user: {
                     email: user.email,
                     name: user.name,
+                    profileImage: user.profileImage ?? '',
                 },
             };
         } catch (error) {
@@ -126,6 +128,7 @@ export class UserService {
                 user: {
                     email: user.email,
                     name: user.name,
+                    profileImage: user.profileImage ?? '',
                 },
             };
         } catch (error) {
@@ -159,6 +162,7 @@ export class UserService {
             return {
                 email: user.email,
                 name: user.name,
+                profileImage: user.profileImage ?? '',
             };
         } catch (error) {
             if (error instanceof NotFoundException) {
@@ -181,7 +185,7 @@ export class UserService {
                     name: user.name,
                     email: user.email,
                     phone: user.phone,
-                    profileImage: user.profileImage,
+                    profileImage: user.profileImage ?? '',
                 },
             };
         } catch (error) {
