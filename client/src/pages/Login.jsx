@@ -9,6 +9,7 @@ const Login = () => {
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const [phone, setPhone] = useState("");
 
     const onSubmitHandler = async (event) => {
@@ -77,9 +78,20 @@ const Login = () => {
                     />
                 </div>
                 <div className='w-full'>
-                    <p className='medium-14'>Password</p>
+                    <div className='flex justify-between items-center mb-1'>
+                        <p className='medium-14'>Password</p>
+                        <label className='flex items-center gap-1 medium-14 cursor-pointer text-gray-600'>
+                            <input
+                                type="checkbox"
+                                checked={showPassword}
+                                onChange={(e) => setShowPassword(e.target.checked)}
+                                className='cursor-pointer'
+                            />
+                            <span className='font-light'>Show</span>
+                        </label>
+                    </div>
                     <input
-                        type="password"
+                        type={showPassword ? "text" : "password"}
                         onChange={(e) => setPassword(e.target.value)}
                         value={password}
                         placeholder='Type here...'

@@ -1,9 +1,9 @@
-import React from 'react'
 import { FaEnvelope, FaPhone, FaMapMarkerAlt, FaClock } from 'react-icons/fa'
 import { RiCustomerService2Fill } from 'react-icons/ri'
 import { TbTargetArrow } from 'react-icons/tb'
 import { MdVisibility } from 'react-icons/md'
 import blog6 from '../assets/blogs/blog8.jpg'
+import Title from '../components/Title'
 
 const Contact = () => {
     const contactInfo = [
@@ -54,40 +54,45 @@ const Contact = () => {
     return (
         <div className='max-padd-container py-16 pt-28'>
             {/* HEADER */}
-            <div className='text-center mb-12'>
-                <h2 className='h2 mb-3'>Get In Touch</h2>
-                <p className='max-w-xl mx-auto'>
-                    We'd love to hear from you! Whether you have questions about our books, 
-                    need assistance, or just want to share your reading experience, we're here to help.
-                </p>
-            </div>
+            <Title
+                title1={"Get In"}
+                title2={"Touch"}
+                title1Styles={"pb-2"}
+                paraStyles={"pb-6"}
+                para={"We'd love to hear from you! Whether you have questions about our books, need assistance, or just want to share your reading experience, we're here to help."}
+            />
 
             {/* CONTENIDO */}
-            <div className='flex flex-col lg:flex-row gap-10 mb-16'>
+            <div className='flex flex-col lg:flex-row items-stretch gap-10 mb-16'>
                 {/* IZQUIERDA - IMAGEN */}
-                <div className='flex-1 lg:max-w-md'>
-                    <div className='h-full min-h-120 rounded-xl overflow-hidden shadow-lg'>
-                        <img 
-                            src={blog6} 
-                            alt="Bookstore" 
-                            className='w-full h-full object-cover'
+                <div className='flex-1 lg:max-w-md lg:flex-initial'>
+                    <div className='rounded-xl overflow-hidden shadow-lg h-auto lg:h-full'>
+                        <img
+                            src={blog6}
+                            alt="Bookstore"
+                            className='w-full block object-cover object-center h-auto lg:h-full'
                         />
                     </div>
                 </div>
 
                 {/* DERECHA */}
-                <div className='flex-1'>
+                <div className='flex-1 lg:h-full'>
                     {/* SOBRE NOSOTROS */}
                     <div className='bg-primary p-6 rounded-xl mb-6'>
-                        <h3 className='h3 mb-4'>About Zibooka</h3>
+                        <Title
+                            title1={"About"}
+                            title2={"Zibooka"}
+                            title1Styles={"pb-4"}
+                            paraStyles={"hidden"}
+                        />
                         <p className='mb-4'>
-                            Welcome to Zibooka, your trusted destination for discovering amazing books. 
-                            We are passionate about connecting readers with stories that inspire, educate, 
+                            Welcome to Zibooka, your trusted destination for discovering amazing books.
+                            We are passionate about connecting readers with stories that inspire, educate,
                             and entertain.
                         </p>
                         <p>
-                            Founded with a love for literature, we carefully curate our collection to bring 
-                            you the best titles across all genres. From timeless classics to the latest 
+                            Founded with a love for literature, we carefully curate our collection to bring
+                            you the best titles across all genres. From timeless classics to the latest
                             bestsellers, we have something for every reader.
                         </p>
                     </div>
@@ -95,7 +100,7 @@ const Contact = () => {
                     {/* CARACTERÍSTICAS */}
                     <div className='grid grid-cols-1 gap-4 mb-6'>
                         {features.map((feature, index) => (
-                            <div 
+                            <div
                                 key={index}
                                 className='bg-white p-5 rounded-xl ring-1 ring-slate-900/5 hover:shadow-md transition-all duration-300'
                             >
@@ -119,28 +124,28 @@ const Contact = () => {
                             <li className='flex items-start gap-3'>
                                 <span className='h-2 w-2 rounded-full bg-secondary mt-2'></span>
                                 <p className='flex-1'>
-                                    <span className='font-semibold'>Curated Selection:</span> Every book is 
+                                    <span className='font-semibold'>Curated Selection:</span> Every book is
                                     handpicked for quality and reader satisfaction
                                 </p>
                             </li>
                             <li className='flex items-start gap-3'>
                                 <span className='h-2 w-2 rounded-full bg-secondary mt-2'></span>
                                 <p className='flex-1'>
-                                    <span className='font-semibold'>Fast Delivery:</span> Get your books 
+                                    <span className='font-semibold'>Fast Delivery:</span> Get your books
                                     delivered quickly and securely to your doorstep
                                 </p>
                             </li>
                             <li className='flex items-start gap-3'>
                                 <span className='h-2 w-2 rounded-full bg-secondary mt-2'></span>
                                 <p className='flex-1'>
-                                    <span className='font-semibold'>Expert Recommendations:</span> Our team 
+                                    <span className='font-semibold'>Expert Recommendations:</span> Our team
                                     of book lovers helps you discover your next great read
                                 </p>
                             </li>
                             <li className='flex items-start gap-3'>
                                 <span className='h-2 w-2 rounded-full bg-secondary mt-2'></span>
                                 <p className='flex-1'>
-                                    <span className='font-semibold'>Competitive Prices:</span> Enjoy amazing 
+                                    <span className='font-semibold'>Competitive Prices:</span> Enjoy amazing
                                     deals and discounts on your favorite titles
                                 </p>
                             </li>
@@ -151,10 +156,15 @@ const Contact = () => {
 
             {/* INFORMACIÓN DE CONTACTO */}
             <div className='mb-12'>
-                <h3 className='h3 text-center mb-8'>Contact Information</h3>
+                <Title
+                    title1={"Contact"}
+                    title2={"Information"}
+                    title1Styles={"pb-6"}
+                    paraStyles={"hidden"}
+                />
                 <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6'>
                     {contactInfo.map((info, index) => (
-                        <div 
+                        <div
                             key={index}
                             className='bg-primary p-6 rounded-xl text-center hover:shadow-lg transition-all duration-300 hover:-translate-y-1'
                         >
@@ -177,10 +187,10 @@ const Contact = () => {
             <div className='bg-linear-to-r from-secondary/10 via-primary to-tertiary/10 p-8 rounded-2xl text-center'>
                 <h3 className='h3 mb-3'>Have Questions?</h3>
                 <p className='mb-6 max-w-2xl mx-auto'>
-                    We're here to help! Send us an email and our team will get back to you within 24 hours. 
+                    We're here to help! Send us an email and our team will get back to you within 24 hours.
                     Whether it's about an order, a recommendation, or just a chat about books, we'd love to hear from you.
                 </p>
-                <a 
+                <a
                     href="mailto:info@zibooka.com"
                     className='btn-secondary inline-block'
                 >

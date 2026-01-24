@@ -21,6 +21,34 @@ const ShopContextProvider = ({ children }) => {
     const delivery_charges = 10
     const [isAdmin, setIsAdmin] = useState(false)
 
+    // Profile states
+    const [profileData, setProfileData] = useState({
+        name: '',
+        email: '',
+        phone: '',
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+    })
+    const [profileImage, setProfileImage] = useState(null)
+    const [imagePreview, setImagePreview] = useState(null)
+    const [profileLoading, setProfileLoading] = useState(false)
+
+    // Country codes for phone selection
+    const countryCodes = [
+        { code: '+1', country: 'US/CA' },
+        { code: '+44', country: 'UK' },
+        { code: '+57', country: 'CO' },
+        { code: '+52', country: 'MX' },
+        { code: '+34', country: 'ES' },
+        { code: '+54', country: 'AR' },
+        { code: '+56', country: 'CL' },
+        { code: '+51', country: 'PE' },
+    ]
+
+    const [selectedCountryCode, setSelectedCountryCode] = useState('+1')
+    const [phoneNumber, setPhoneNumber] = useState('')
+
     // Fetch all books
     const fetchBooks = async () => {
         try {
@@ -155,13 +183,170 @@ const ShopContextProvider = ({ children }) => {
         return totalAmount
     }
 
+    // Load user profile data
+    const loadProfileData = async () => {
+        if (!user) {
+            navigate('/');
+            return;
+        }
+
+        try {
+            const { data } = await axios.get('/api/user/profile');
+            if (data.success) {
+                setProfileData({
+                    name: data.user.name || '',
+                    email: data.user.email || '',
+                    phone: data.user.phone || '',
+                    currentPassword: '',
+                    newPassword: '',
+                    confirmPassword: '',
+                });
+
+                // Parse phone number if exists
+                if (data.user.phone) {
+                    const matchedCode = countryCodes.find(c => data.user.phone.startsWith(c.code));
+                    if (matchedCode) {
+                        setSelectedCountryCode(matchedCode.code);
+                        setPhoneNumber(data.user.phone.replace(matchedCode.code, ''));
+                    } else {
+                        setPhoneNumber(data.user.phone);
+                    }
+                }
+
+                // Set profile image if exists
+                if (data.user.profileImage) {
+                    setImagePreview(data.user.profileImage);
+                }
+            }
+        } catch (error) {
+            toast.error(error.message);
+        }
+    }
+
+    // Handle profile image change
+    const handleProfileImageChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setProfileImage(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImagePreview(reader.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    // Handle phone number change
+    const handlePhoneChange = (e) => {
+        const value = e.target.value.replace(/\D/g, ''); // Only numbers
+        setPhoneNumber(value);
+    }
+
+    // Update profile data field
+    const updateProfileField = (field, value) => {
+        setProfileData(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    }
+
+    // Submit profile update
+    const submitProfileUpdate = async (e) => {
+        e.preventDefault();
+        setProfileLoading(true);
+
+        try {
+            // Validate passwords if trying to change
+            if (profileData.newPassword || profileData.confirmPassword) {
+                if (!profileData.currentPassword) {
+                    toast.error('Please enter your current password');
+                    setProfileLoading(false);
+                    return;
+                }
+                if (profileData.newPassword !== profileData.confirmPassword) {
+                    toast.error('New passwords do not match');
+                    setProfileLoading(false);
+                    return;
+                }
+                if (profileData.newPassword.length < 8) {
+                    toast.error('New password must be at least 8 characters');
+                    setProfileLoading(false);
+                    return;
+                }
+            }
+
+            const formData = new FormData();
+            formData.append('name', profileData.name);
+            formData.append('email', profileData.email);
+            formData.append('phone', selectedCountryCode + phoneNumber);
+
+            if (profileData.currentPassword && profileData.newPassword) {
+                formData.append('currentPassword', profileData.currentPassword);
+                formData.append('newPassword', profileData.newPassword);
+            }
+
+            if (profileImage) {
+                formData.append('profileImage', profileImage);
+            }
+
+            const { data } = await axios.put('/api/user/update-profile', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            if (data.success) {
+                toast.success('Profile updated successfully');
+                await fetchUser();
+
+                // Clear password fields
+                setProfileData(prev => ({
+                    ...prev,
+                    currentPassword: '',
+                    newPassword: '',
+                    confirmPassword: '',
+                }));
+
+                // Clear profile image file (keep preview)
+                setProfileImage(null);
+            } else {
+                toast.error(data.message);
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || error.message);
+        } finally {
+            setProfileLoading(false);
+        }
+    }
+
+    // Cancel profile update
+    const cancelProfileUpdate = () => {
+        navigate('/');
+    }
+
+    // Reset profile form
+    const resetProfileForm = () => {
+        setProfileData({
+            name: '',
+            email: '',
+            phone: '',
+            currentPassword: '',
+            newPassword: '',
+            confirmPassword: '',
+        });
+        setProfileImage(null);
+        setImagePreview(null);
+        setSelectedCountryCode('+1');
+        setPhoneNumber('');
+    }
+
     useEffect(() => {
         fetchBooks()
         fetchUser()
         fetchAdmin()
     }, [])
 
-    const value = { books, navigate, user, setUser, currency, searchQuery, setSearchQuery, cartItems, setCartItems, addToCart, getCartCount, getCartAmount, updateQuantity, method, setMethod, delivery_charges, showUserLogin, setShowUserLogin, isAdmin, setIsAdmin, axios, fetchBooks, fetchUser, logoutUser }
+    const value = { books, navigate, user, setUser, currency, searchQuery, setSearchQuery, cartItems, setCartItems, addToCart, getCartCount, getCartAmount, updateQuantity, method, setMethod, delivery_charges, showUserLogin, setShowUserLogin, isAdmin, setIsAdmin, axios, fetchBooks, fetchUser, logoutUser, profileData, setProfileData, profileImage, setProfileImage, imagePreview, setImagePreview, profileLoading, setProfileLoading, countryCodes, selectedCountryCode, setSelectedCountryCode, phoneNumber, setPhoneNumber, loadProfileData, handleProfileImageChange, handlePhoneChange, updateProfileField, submitProfileUpdate, cancelProfileUpdate, resetProfileForm }
 
     return (
         <ShopContext.Provider value={value}>

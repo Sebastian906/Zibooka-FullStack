@@ -4,7 +4,7 @@ import Navbar from './Navbar'
 import { useContext, useEffect, useState } from 'react'
 import { FaBars, FaBarsStaggered } from 'react-icons/fa6'
 import { FaSearch } from 'react-icons/fa'
-import userImg from '../assets/user.png'
+import defaultUserImg from '../assets/user.png'
 import { RiUserLine } from 'react-icons/ri'
 import { ShopContext } from '../context/ShopContext'
 
@@ -12,15 +12,19 @@ const Header = () => {
 
     const [menuOpened, setMenuOpened] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
-    const { navigate, user, setUser, searchQuery, setSearchQuery, getCartCount, showUserLogin, setShowUserLogin, logoutUser } = useContext(ShopContext);
+    const { navigate, user, setUser, searchQuery, setSearchQuery, getCartCount, showUserLogin, setShowUserLogin, logoutUser, fetchUser } = useContext(ShopContext);
     const isShopPage = useLocation().pathname.endsWith('/shop');
 
-    const toggleMenu = () => setMenuOpened(prev => !prev);
+    const toggleMenu = async () => setMenuOpened(prev => !prev);
 
-    useEffect(()=>{
-        if (searchQuery.length > 0 && !isShopPage) {
-            navigate('/shop');
-        }
+    useEffect(() => {
+        const handleSearch = async () => {
+            if (searchQuery.length > 0 && !isShopPage) {
+                navigate('/shop');
+                await fetchUser();
+            }
+        };
+        handleSearch();
     }, [searchQuery]);
 
     return (
@@ -94,12 +98,18 @@ const Header = () => {
                 <div className='group relative'>
                     <div className=''>
                         {user ? (
-                            <div className='flex gap-2 items-center cursor-pointer rounded-full bg-white'>
-                                <img src={userImg} alt='userImg' height={44} width={44} />
+                            <div className='flex gap-2 items-center cursor-pointer rounded-full bg-white overflow-hidden'>
+                                <img
+                                    src={user?.profileImage || defaultUserImg}
+                                    alt='userImg'
+                                    height={44}
+                                    width={44}
+                                    className='w-11 h-11 object-cover rounded-full'
+                                />
                             </div>
                         ) : (
-                            <button 
-                                onClick={()=>setShowUserLogin(true)}
+                            <button
+                                onClick={() => setShowUserLogin(true)}
                                 className='btn-light flexCenter gap-x-2'
                             >
                                 Login <RiUserLine className='text-xl' />
@@ -108,7 +118,8 @@ const Header = () => {
                     </div>
                     { /* MENÜ DESPLEGABLE */}
                     {user && (
-                        <ul className='bg-white p-2 w-32 ring-1 ring-slate-900/5 rounded absolute right-0 top-10 hidden group-hover:flex flex-col medium-14 shadow-md z-50'>
+                        <ul className='bg-white p-2 w-32 ring-1 ring-slate-900/15 rounded absolute right-0 top-10 hidden group-hover:flex flex-col medium-14 shadow-md z-50'>
+                            <li onClick={() => navigate('/profile')} className='p-2 rounded-md hover:bg-primary cursor-pointer'>Profile</li>
                             <li onClick={() => navigate('/my-orders')} className='p-2 rounded-md hover:bg-primary cursor-pointer'>Orders</li>
                             <li
                                 onClick={logoutUser}

@@ -6,4 +6,7 @@ export class UserResponseDto {
 
     @ApiProperty({ example: 'John Doe' })
     name: string;
+
+    @ApiProperty({ example: 'https://example.com/profile-image.jpg' })
+    profileImage: string;
 }
