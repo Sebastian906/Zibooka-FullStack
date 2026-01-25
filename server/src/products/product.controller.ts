@@ -1,5 +1,5 @@
-import { Body, Controller, Get, HttpStatus, Post, Res, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
-import { ApiBody, ApiConsumes, ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, HttpStatus, Post, Query, Res, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
+import { ApiBody, ApiConsumes, ApiCookieAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ProductService } from './product.service';
 import { AdminAuthGuard } from 'src/common/guards/admin-auth/admin-auth.guard';
 import { FilesInterceptor } from '@nestjs/platform-express';
@@ -127,6 +127,166 @@ export class ProductController {
         }
     }
 
+    /**
+    * Obtiene el Inventario Ordenado por ISBN
+    */
+    @Get('sorted-inventory')
+    @ApiOperation({
+        summary: 'Get sorted inventory by ISBN',
+        description: 'Returns the sorted inventory maintained for binary search operations'
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'Sorted inventory retrieved successfully'
+    })
+    async getSortedInventory(@Res() res: Response) {
+        try {
+            const products = this.productService.getSortedInventory();
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                count: products.length,
+                products,
+            });
+        } catch (error) {
+            return res
+                .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
+                .json({
+                    success: false,
+                    message: error.message,
+                });
+        }
+    }
+
+    /**
+     * Búsqueda Lineal por título o autor
+     */
+    @Post('search/linear')
+    @ApiOperation({
+        summary: 'Linear search by title or author',
+        description: 'Searches in the unsorted general inventory using linear search algorithm (O(n))'
+    })
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                searchTerm: {
+                    type: 'string',
+                    example: 'Harry Potter',
+                    description: 'Term to search for'
+                },
+                searchBy: {
+                    type: 'string',
+                    enum: ['title', 'author'],
+                    example: 'title',
+                    description: 'Field to search in',
+                    default: 'title'
+                }
+            },
+            required: ['searchTerm']
+        }
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'Search completed successfully',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                searchTerm: { type: 'string', example: 'Harry' },
+                searchBy: { type: 'string', example: 'title' },
+                count: { type: 'number', example: 3 },
+                results: { type: 'array', items: { type: 'object' } }
+            }
+        }
+    })
+    async linearSearch(
+        @Body() body: { searchTerm: string; searchBy?: 'title' | 'author' },
+        @Res() res: Response
+    ) {
+        try {
+            const { searchTerm, searchBy = 'title' } = body;
+
+            const results = await this.productService.searchByTitleOrAuthor(
+                searchTerm,
+                searchBy
+            );
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                searchTerm,
+                searchBy,
+                count: results.length,
+                results,
+            });
+        } catch (error) {
+            return res
+                .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
+                .json({
+                    success: false,
+                    message: error.message,
+                });
+        }
+    }
+
+    /**
+     * Búsqueda Binaria por ISBN (CRÍTICO)
+     */
+    @Post('search/binary')
+    @ApiOperation({
+        summary: 'Binary search by ISBN (CRITICAL)',
+        description: 'Searches in the sorted inventory using binary search algorithm (O(log n)). Used to verify pending reservations when returning books.'
+    })
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                isbn: {
+                    type: 'string',
+                    example: '978-0-306-40615-7',
+                    description: 'ISBN to search for'
+                }
+            },
+            required: ['isbn']
+        }
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'Search completed successfully',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                isbn: { type: 'string', example: '978-0-306-40615-7' },
+                found: { type: 'boolean', example: true },
+                product: { type: 'object' }
+            }
+        }
+    })
+    async binarySearch(
+        @Body() body: { isbn: string },
+        @Res() res: Response
+    ) {
+        try {
+            const { isbn } = body;
+            const result = this.productService.searchByISBN(isbn);
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                isbn,
+                found: result.found,
+                product: result.product,
+            });
+        } catch (error) {
+            return res
+                .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
+                .json({
+                    success: false,
+                    message: error.message,
+                });
+        }
+    }
+
     @Post('stock')
     @UseGuards(AdminAuthGuard)
     @ApiCookieAuth('adminToken')
@@ -145,6 +305,58 @@ export class ProductController {
             return res.status(HttpStatus.OK).json({
                 success: true,
                 message: result.message,
+            });
+        } catch (error) {
+            return res
+                .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
+                .json({
+                    success: false,
+                    message: error.message,
+                });
+        }
+    }
+
+    /**
+ * Genera Reporte Global ordenado por valor (Merge Sort)
+ */
+    @Get('reports/value')
+    @ApiOperation({
+        summary: 'Generate value report (Merge Sort)',
+        description: 'Generates a global inventory report sorted by offer price using merge sort algorithm (O(n log n))'
+    })
+    @ApiQuery({
+        name: 'ascending',
+        required: false,
+        type: Boolean,
+        description: 'Sort in ascending order (true) or descending (false)',
+        example: true
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'Report generated successfully',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                sortOrder: { type: 'string', example: 'ascending' },
+                count: { type: 'number', example: 42 },
+                products: { type: 'array', items: { type: 'object' } }
+            }
+        }
+    })
+    async generateValueReport(
+        @Query('ascending') ascending: string,
+        @Res() res: Response
+    ) {
+        try {
+            const isAscending = ascending !== 'false';
+            const products = await this.productService.generateValueReport(isAscending);
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                sortOrder: isAscending ? 'ascending' : 'descending',
+                count: products.length,
+                products,
             });
         } catch (error) {
             return res

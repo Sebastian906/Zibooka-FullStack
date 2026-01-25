@@ -10,6 +10,9 @@ import { generateISBN, estimatePageCount, assignDefaultAuthor, assignDefaultPubl
 
 @Injectable()
 export class ProductService {
+    // Inventario Ordenado - Se mantiene siempre ordenado por ISBN (ascendente)
+    private sortedInventory: Product[] = [];
+
     constructor(
         @InjectModel(Product.name) private productModel: Model<ProductDocument>,
         private configService: ConfigService,
@@ -20,6 +23,8 @@ export class ProductService {
             api_key: this.configService.get<string>('CLDN_API_KEY'),
             api_secret: this.configService.get<string>('CLDN_SECRET_KEY'),
         });
+
+        this.initializeSortedInventory();
     }
 
     /**
@@ -56,7 +61,7 @@ export class ProductService {
             const isbn = productData.isbn || generateISBN();
 
             // Create new product
-            await this.productModel.create({
+            const newProduct = await this.productModel.create({
                 ...productData,
                 images: imagesUrl,
                 isbn,
@@ -68,6 +73,9 @@ export class ProductService {
                 publicationYear: productData.publicationYear || generatePublicationYear(),
             });
 
+            // Insertar en inventario ordenado usando Insertion Sort
+            this.insertIntoSortedInventory(newProduct);
+
             return { message: 'Product added' };
         } catch (error) {
             throw new InternalServerErrorException(error.message);
@@ -75,7 +83,7 @@ export class ProductService {
     }
 
     /**
-     * Lista los productos que hay en el sistema
+     * Lista los productos que hay en el sistema (Inventario General)
      * @returns Lista de productos existentes
      */
     async listProducts(): Promise<Product[]> {
@@ -88,7 +96,7 @@ export class ProductService {
     }
 
     /**
-     * Lista UN SOLO producto existente
+     * Lista UN SOLO producto existente (Inventario General)
      * @returns Identificador de un producto
      */
     async getSingleProduct(productId: string): Promise<Product> {
@@ -105,6 +113,232 @@ export class ProductService {
             }
             throw new InternalServerErrorException(error.message);
         }
+    }
+
+    /**
+     * Inicializa el inventario ordenado cargando productos con ISBN
+     */
+    private async initializeSortedInventory(): Promise<void> {
+        try {
+            const products = await this.productModel.find({
+                isbn: { $exists: true, $ne: null, $nin: [''] }
+            }).exec();
+
+            this.sortedInventory = this.insertionSortByISBN(products);
+            console.log(`[ProductService] Sorted inventory initialized with ${this.sortedInventory.length} products`);
+        } catch (error) {
+            console.error('[ProductService] Error initializing sorted inventory:', error);
+        }
+    }
+
+    /**
+     * INSERTION SORT - Ordena productos por ISBN (ascendente)
+     * Complejidad: O(n²) peor caso, O(n) mejor caso
+     * Se usa para mantener el Inventario Ordenado
+     */
+    private insertionSortByISBN(products: Product[]): Product[] {
+        const arr = [...products];
+
+        for (let i = 1; i < arr.length; i++) {
+            const key = arr[i];
+            const keyISBN = key.isbn || '';
+            let j = i - 1;
+
+            while (j >= 0 && (arr[j].isbn || '') > keyISBN) {
+                arr[j + 1] = arr[j];
+                j--;
+            }
+            arr[j + 1] = key;
+        }
+
+        return arr;
+    }
+
+    /**
+     * Inserta un producto en el inventario ordenado manteniendo el orden
+     */
+    private insertIntoSortedInventory(product: Product): void {
+        if (!product.isbn) {
+            console.warn('[ProductService] Product without ISBN cannot be added to sorted inventory');
+            return;
+        }
+
+        // Encontrar posición correcta usando Insertion Sort
+        let position = this.sortedInventory.length;
+
+        for (let i = this.sortedInventory.length - 1; i >= 0; i--) {
+            if ((this.sortedInventory[i].isbn || '') > product.isbn) {
+                this.sortedInventory[i + 1] = this.sortedInventory[i];
+                position = i;
+            } else {
+                break;
+            }
+        }
+
+        this.sortedInventory[position] = product;
+        console.log(`[ProductService] Product inserted at position ${position} in sorted inventory`);
+    }
+
+    /**
+     * BÚSQUEDA LINEAL - Busca por título o autor en Inventario General (desordenado)
+     * Complejidad: O(n)
+     */
+    private linearSearch(
+        products: Product[],
+        searchTerm: string,
+        searchBy: 'title' | 'author'
+    ): Product[] {
+        const results: Product[] = [];
+        const searchLower = searchTerm.toLowerCase();
+
+        for (let i = 0; i < products.length; i++) {
+            const product = products[i];
+
+            if (searchBy === 'title') {
+                if (product.name.toLowerCase().includes(searchLower)) {
+                    results.push(product);
+                }
+            } else if (searchBy === 'author') {
+                if (product.author?.toLowerCase().includes(searchLower)) {
+                    results.push(product);
+                }
+            }
+        }
+
+        return results;
+    }
+
+    /**
+     * BÚSQUEDA BINARIA - Busca por ISBN en Inventario Ordenado
+     * Complejidad: O(log n)
+     * CRÍTICO: Se usa para verificar reservas pendientes al devolver libros
+     */
+    private binarySearchByISBN(isbn: string): { found: boolean; index: number; product?: Product } {
+        if (!isbn || this.sortedInventory.length === 0) {
+            return { found: false, index: -1 };
+        }
+
+        let start = 0;
+        let end = this.sortedInventory.length - 1;
+
+        while (start <= end) {
+            const middle = Math.floor((start + end) / 2);
+            const middleISBN = this.sortedInventory[middle].isbn || '';
+
+            if (middleISBN === isbn) {
+                return {
+                    found: true,
+                    index: middle,
+                    product: this.sortedInventory[middle]
+                };
+            }
+
+            if (isbn < middleISBN) {
+                end = middle - 1;
+            } else {
+                start = middle + 1;
+            }
+        }
+
+        return { found: false, index: -1 };
+    }
+
+    /**
+     * MERGE SORT - Ordena productos por valor (precio de oferta)
+     * Complejidad: O(n log n)
+     * Se usa para generar Reporte Global de inventario por valor
+     */
+    private mergeSortByValue(products: Product[], ascending: boolean = true): Product[] {
+        if (products.length <= 1) {
+            return [...products];
+        }
+
+        const middle = Math.floor(products.length / 2);
+        const left = products.slice(0, middle);
+        const right = products.slice(middle);
+
+        return this.merge(
+            this.mergeSortByValue(left, ascending),
+            this.mergeSortByValue(right, ascending),
+            ascending
+        );
+    }
+
+    /**
+     * Función auxiliar para Merge Sort
+     */
+    private merge(left: Product[], right: Product[], ascending: boolean): Product[] {
+        const result: Product[] = [];
+        let leftIndex = 0;
+        let rightIndex = 0;
+
+        while (leftIndex < left.length && rightIndex < right.length) {
+            const leftValue = left[leftIndex].offerPrice;
+            const rightValue = right[rightIndex].offerPrice;
+
+            const shouldTakeLeft = ascending
+                ? leftValue <= rightValue
+                : leftValue >= rightValue;
+
+            if (shouldTakeLeft) {
+                result.push(left[leftIndex]);
+                leftIndex++;
+            } else {
+                result.push(right[rightIndex]);
+                rightIndex++;
+            }
+        }
+
+        while (leftIndex < left.length) {
+            result.push(left[leftIndex]);
+            leftIndex++;
+        }
+
+        while (rightIndex < right.length) {
+            result.push(right[rightIndex]);
+            rightIndex++;
+        }
+
+        return result;
+    }
+
+    /**
+     * Obtiene Inventario Ordenado por ISBN
+     */
+    getSortedInventory(): Product[] {
+        return [...this.sortedInventory];
+    }
+
+    /**
+     * Búsqueda lineal por título o autor
+     */
+    async searchByTitleOrAuthor(
+        searchTerm: string,
+        searchBy: 'title' | 'author' = 'title'
+    ): Promise<Product[]> {
+        try {
+            const products = await this.listProducts();
+            const results = this.linearSearch(products, searchTerm, searchBy);
+
+            console.log(`[ProductService] Linear search "${searchTerm}" by ${searchBy}: ${results.length} results`);
+            return results;
+        } catch (error) {
+            throw new InternalServerErrorException(error.message);
+        }
+    }
+
+    /**
+     * Búsqueda binaria por ISBN (CRÍTICO)
+     * Usado por LoanService para verificar reservas pendientes
+     */
+    searchByISBN(isbn: string): { found: boolean; product?: Product } {
+        const result = this.binarySearchByISBN(isbn);
+        console.log(`[ProductService] Binary search ISBN ${isbn}: ${result.found ? 'FOUND' : 'NOT FOUND'}`);
+
+        return {
+            found: result.found,
+            product: result.product
+        };
     }
 
     /**
@@ -132,6 +366,21 @@ export class ProductService {
             if (error instanceof NotFoundException) {
                 throw error;
             }
+            throw new InternalServerErrorException(error.message);
+        }
+    }
+
+    /**
+     * Genera Reporte Global ordenado por valor usando Merge Sort
+     */
+    async generateValueReport(ascending: boolean = true): Promise<Product[]> {
+        try {
+            const products = await this.listProducts();
+            const sortedProducts = this.mergeSortByValue(products, ascending);
+
+            console.log(`[ProductService] Value report: ${sortedProducts.length} products (${ascending ? 'ASC' : 'DESC'})`);
+            return sortedProducts;
+        } catch (error) {
             throw new InternalServerErrorException(error.message);
         }
     }
