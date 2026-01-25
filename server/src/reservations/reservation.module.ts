@@ -5,13 +5,21 @@ import { ReservationController } from './reservation.controller';
 import { ReservationService } from './reservation.service';
 import { Product, ProductSchema } from 'src/products/schemas/product.schema';
 import { User, UserSchema } from 'src/users/schemas/user.schema';
+import { setupReservationMiddleware } from './middlewares/reservation.middleware';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([
-      { name: Reservation.name, schema: ReservationSchema },
-      { name: Product.name, schema: ProductSchema },
-      { name: User.name, schema: UserSchema }
+    MongooseModule.forFeatureAsync([
+      {
+        name: Reservation.name,
+        useFactory: () => {
+          const schema = ReservationSchema;
+          setupReservationMiddleware();
+          return schema;
+        },
+      },
+      { name: Product.name, useFactory: () => ProductSchema },
+      { name: User.name, useFactory: () => UserSchema }
     ]),
   ],
   controllers: [ReservationController],
