@@ -10,6 +10,9 @@ import { ProductModule } from './products/product.module';
 import { CartController } from './carts/cart.controller';
 import { AddressModule } from './addresses/address.module';
 import { OrderModule } from './orders/order.module';
+import { ShelfModule } from './shelves/shelf.module';
+import { LoanModule } from './loans/loan.module';
+import { ReservationModule } from './reservations/reservation.module';
 
 @Module({
   imports: [
@@ -31,6 +34,9 @@ import { OrderModule } from './orders/order.module';
     ProductModule,
     AddressModule,
     OrderModule,
+    ShelfModule,
+    LoanModule,
+    ReservationModule,
   ],
   controllers: [AppController, CartController],
   providers: [AppService],
