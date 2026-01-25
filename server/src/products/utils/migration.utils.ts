@@ -50,44 +50,146 @@ export function estimatePageCount(category: string): number {
 }
 
 /**
- * Asigna autor por defecto según categoría
+ * Asigna autor por defecto según categoría (con variedad)
  */
 export function assignDefaultAuthor(category: string): string {
-    const defaultAuthors: Record<string, string> = {
-        'Academic': 'Dr. John Smith',
-        'Children': 'Mary Johnson',
-        'Health': 'Dr. Sarah Williams',
-        'Horror': 'Stephen Dark',
-        'Business': 'Michael Porter',
-        'History': 'David McCullough',
-        'Adventure': 'Jack London',
+    const authorsByCategory: Record<string, string[]> = {
+        'Academic': [
+            'Dr. John Smith',
+            'Dr. Sarah Mitchell',
+            'Prof. Robert Chen',
+            'Dr. Emily Watson',
+            'Prof. Michael Brown'
+        ],
+        'Children': [
+            'Mary Johnson',
+            'Emma Davis',
+            'Sophie Williams',
+            'Olivia Martinez',
+            'Isabella Garcia'
+        ],
+        'Health': [
+            'Dr. Sarah Williams',
+            'Dr. James Anderson',
+            'Dr. Lisa Taylor',
+            'Dr. David Moore',
+            'Dr. Jennifer Brown'
+        ],
+        'Horror': [
+            'Stephen Dark',
+            'Edgar Nightshade',
+            'Mary Shelley Jr.',
+            'H.P. Lovecraft II',
+            'Anne Shadow'
+        ],
+        'Business': [
+            'Michael Porter',
+            'Peter Drucker Jr.',
+            'Jim Collins',
+            'Tom Peters',
+            'Clayton Christensen'
+        ],
+        'History': [
+            'David McCullough',
+            'Doris Kearns Goodwin',
+            'Ron Chernow',
+            'Walter Isaacson',
+            'Barbara Tuchman'
+        ],
+        'Adventure': [
+            'Jack London',
+            'Jules Verne Jr.',
+            'Ernest Hemingway II',
+            'Mark Twain III',
+            'Robert Louis Stevenson'
+        ],
     };
 
-    return defaultAuthors[category] || 'Unknown Author';
+    const authors = authorsByCategory[category] || ['Unknown Author'];
+
+    // Seleccionar un autor aleatorio de la lista
+    const randomIndex = Math.floor(Math.random() * authors.length);
+    return authors[randomIndex];
 }
 
 /**
- * Asigna editorial por defecto según categoría
+ * Asigna editorial por defecto según categoría (con variedad)
  */
 export function assignDefaultPublisher(category: string): string {
-    const publishers: Record<string, string> = {
-        'Academic': 'Academic Press',
-        'Children': 'Scholastic',
-        'Health': 'Health Publishing House',
-        'Horror': 'Dark Tales Publishing',
-        'Business': 'Business Insights Press',
-        'History': 'Historical Books Ltd',
-        'Adventure': 'Adventure Reads',
+    const publishersByCategory: Record<string, string[]> = {
+        'Academic': [
+            'Academic Press',
+            'Oxford University Press',
+            'Cambridge University Press',
+            'MIT Press',
+            'Springer'
+        ],
+        'Children': [
+            'Scholastic',
+            'Penguin Random House Kids',
+            'HarperCollins Children',
+            'Simon & Schuster Kids',
+            'Disney Publishing'
+        ],
+        'Health': [
+            'Health Publishing House',
+            'Wellness Press',
+            'Medical Books Ltd',
+            'Healthy Living Publishing',
+            'Fitness & Health Press'
+        ],
+        'Horror': [
+            'Dark Tales Publishing',
+            'Nightmare Press',
+            'Gothic Books Ltd',
+            'Horror House Publishing',
+            'Shadow & Fear Press'
+        ],
+        'Business': [
+            'Business Insights Press',
+            'Harvard Business Review Press',
+            'McGraw-Hill Professional',
+            'Wiley Business',
+            'Portfolio Penguin'
+        ],
+        'History': [
+            'Historical Books Ltd',
+            'History Press',
+            'Chronicle Books',
+            'Vintage History',
+            'Oxford Historical Press'
+        ],
+        'Adventure': [
+            'Adventure Reads',
+            'Explorer Publishing',
+            'Wild Books Press',
+            'Journey Publishing House',
+            'Outdoor Adventures Press'
+        ],
     };
 
-    return publishers[category] || 'Zibooka Editorial';
+    const publishers = publishersByCategory[category] || ['Zibooka Editorial'];
+    const randomIndex = Math.floor(Math.random() * publishers.length);
+    return publishers[randomIndex];
 }
 
 /**
- * Genera año de publicación aleatorio (últimos 10 años)
+ * Genera año de publicación aleatorio basado en categoría
  */
-export function generatePublicationYear(): number {
+export function generatePublicationYear(category?: string): number {
     const currentYear = new Date().getFullYear();
-    const randomYears = Math.floor(Math.random() * 10); // 0-9 años atrás
+
+    // Categorías con libros más antiguos
+    const vintageCategories = ['History', 'Adventure'];
+
+    if (category && vintageCategories.includes(category)) {
+        // Para historia y aventura: entre 1950 y año actual
+        const minYear = 1950;
+        const yearRange = currentYear - minYear;
+        return minYear + Math.floor(Math.random() * yearRange);
+    }
+
+    // Para otras categorías: últimos 20 años
+    const randomYears = Math.floor(Math.random() * 20);
     return currentYear - randomYears;
 }

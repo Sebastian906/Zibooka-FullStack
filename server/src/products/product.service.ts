@@ -159,26 +159,33 @@ export class ProductService {
             let migratedCount = 0;
             let skippedCount = 0;
             const errors: string[] = [];
+            const usedISBNs = new Set<string>();
 
             console.log(`[Migration] Found ${productsWithoutISBN.length} products to migrate`);
 
             for (const product of productsWithoutISBN) {
                 try {
-                    // Generar datos faltantes
-                    const isbn = generateISBN();
-                    const author = product.author || assignDefaultAuthor(product.category);
-                    const pageCount = product.pageCount || estimatePageCount(product.category);
-                    const publisher = product.publisher || assignDefaultPublisher(product.category);
-                    const publicationYear = product.publicationYear || generatePublicationYear();
+                    // Generar ISBN único
+                    let isbn = generateISBN();
+                    let attempts = 0;
 
-                    // Verificar que el ISBN generado no exista
-                    const existingISBN = await this.productModel.findOne({ isbn });
-                    if (existingISBN) {
-                        console.log(`[Migration] ISBN collision for ${product.name}, regenerating...`);
-                        // En producción, regenerar ISBN hasta que sea único
-                        skippedCount++;
-                        continue;
+                    // Reintentar si hay colisión
+                    while (usedISBNs.has(isbn) || await this.productModel.findOne({ isbn })) {
+                        isbn = generateISBN();
+                        attempts++;
+
+                        if (attempts > 10) {
+                            throw new Error('Failed to generate unique ISBN after 10 attempts');
+                        }
                     }
+
+                    usedISBNs.add(isbn);
+
+                    // Generar datos aleatorios pero coherentes con la categoría
+                    const author = assignDefaultAuthor(product.category);
+                    const pageCount = estimatePageCount(product.category);
+                    const publisher = assignDefaultPublisher(product.category);
+                    const publicationYear = generatePublicationYear(product.category);
 
                     // Actualizar producto
                     await this.productModel.findByIdAndUpdate(
@@ -194,7 +201,8 @@ export class ProductService {
                     );
 
                     migratedCount++;
-                    console.log(`[Migration] ✓ Migrated: ${product.name} (ISBN: ${isbn})`);
+                    console.log(`[Migration] ✓ ${migratedCount}/${productsWithoutISBN.length} - ${product.name}`);
+                    console.log(`  ISBN: ${isbn} | Author: ${author} | Pages: ${pageCount} | Publisher: ${publisher} | Year: ${publicationYear}`);
 
                 } catch (error) {
                     const errorMsg = `Failed to migrate ${product.name}: ${error.message}`;
