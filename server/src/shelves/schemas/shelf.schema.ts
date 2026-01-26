@@ -12,18 +12,18 @@ export class Shelf {
     maxWeight: number;
 
     @Prop({ type: Number, default: 0 })
-    currentWeight: number; 
+    currentWeight: number;
 
     @Prop({ type: Number, default: 0 })
-    currentValue: number; 
+    currentValue: number;
 
     @Prop({ type: [{ type: Types.ObjectId, ref: 'Product' }], default: [] })
     books: Types.ObjectId[];
 
     @Prop({ type: String, required: true })
-    location: string; 
+    location: string;
 
-    @Prop({ type: String, enum: ['available', 'full', 'overloaded'], default: 'available' })
+    @Prop({ type: String, enum: ['safe', 'at-risk', 'overloaded'], default: 'safe' })
     status: string;
 
     @Prop({ type: String })
