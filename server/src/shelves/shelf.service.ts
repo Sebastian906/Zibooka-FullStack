@@ -134,13 +134,15 @@ export class ShelfService {
      * FUERZA BRUTA: Encuentra todas las combinaciones de 4 libros que superen 8 Kg
      * Complejidad: O(n^4) - Muy ineficiente pero exhaustivo
      */
-    async findDangerousCombinations(shelfId: string): Promise<{
+    async findDangerousCombinations(shelfId: string, analyzeAll: boolean = false): Promise<{
         combinations: Array<{
             books: any[];
             totalWeight: number;
             shelfCode: string;
+            category?: string;
         }>;
         count: number;
+        groupedByCategory?: Record<string, number>;
     }> {
         try {
             const shelf = await this.shelfModel
@@ -152,48 +154,79 @@ export class ShelfService {
                 throw new NotFoundException('Shelf not found');
             }
 
-            const books = shelf.books as unknown as Product[];
-            const dangerousCombinations: Array<{
+            const RISK_THRESHOLD = 8; // Kg
+            let booksToAnalyze: Product[];
+            let dangerousCombinations: Array<{
                 books: any[];
                 totalWeight: number;
                 shelfCode: string;
+                category?: string;
             }> = [];
 
-            const RISK_THRESHOLD = 8; // Kg
-            const n = books.length;
+            if (analyzeAll) {
+                // MODO NUEVO: Analizar TODOS los libros del sistema
+                const allBooks = await this.productModel
+                    .find({ pageCount: { $exists: true, $ne: null } })
+                    .exec();
 
-            console.log(`[ShelfService] Starting brute force search for dangerous combinations...`);
-            console.log(`[ShelfService] Total books on shelf ${shelf.code}: ${n}`);
+                console.log(`[ShelfService] Analyzing ALL books in system: ${allBooks.length} books`);
 
-            // Fuerza bruta: Probar TODAS las combinaciones de 4 libros
-            for (let i = 0; i < n; i++) {
-                for (let j = i + 1; j < n; j++) {
-                    for (let k = j + 1; k < n; k++) {
-                        for (let l = k + 1; l < n; l++) {
-                            const combo = [books[i], books[j], books[k], books[l]];
-
-                            // Calcular peso total
-                            const totalWeight = combo.reduce((sum, book) => {
-                                const weight = (book.pageCount || 0) * 0.005;
-                                return sum + weight;
-                            }, 0);
-
-                            // Si supera el umbral, guardar
-                            if (totalWeight > RISK_THRESHOLD) {
-                                dangerousCombinations.push({
-                                    books: combo.map(b => ({
-                                        _id: (b as any)._id,
-                                        name: b.name,
-                                        pageCount: b.pageCount,
-                                        weight: ((b.pageCount || 0) * 0.005).toFixed(2),
-                                    })),
-                                    totalWeight: parseFloat(totalWeight.toFixed(2)),
-                                    shelfCode: shelf.code,
-                                });
-                            }
-                        }
+                // Agrupar por categoría para reducir complejidad
+                const booksByCategory = allBooks.reduce((acc, book) => {
+                    if (!acc[book.category]) {
+                        acc[book.category] = [];
                     }
+                    acc[book.category].push(book);
+                    return acc;
+                }, {} as Record<string, Product[]>);
+
+                // Analizar cada categoría por separado
+                Object.entries(booksByCategory).forEach(([category, books]) => {
+                    if (books.length < 4) return; // Necesitamos al menos 4 libros
+
+                    const categoryCombinations = this.findCombinationsInArray(
+                        books,
+                        RISK_THRESHOLD,
+                        shelf.code,
+                        category
+                    );
+
+                    dangerousCombinations.push(...categoryCombinations);
+                });
+
+                // Agrupar resultados por categoría
+                const groupedByCategory = dangerousCombinations.reduce((acc, combo) => {
+                    if (combo.category) {
+                        acc[combo.category] = (acc[combo.category] || 0) + 1;
+                    }
+                    return acc;
+                }, {} as Record<string, number>);
+
+                return {
+                    combinations: dangerousCombinations,
+                    count: dangerousCombinations.length,
+                    groupedByCategory,
+                };
+
+            } else {
+                // MODO ORIGINAL: Solo libros del estante
+                booksToAnalyze = shelf.books as unknown as Product[];
+
+                if (booksToAnalyze.length < 4) {
+                    console.log(`[ShelfService] Shelf ${shelf.code} has only ${booksToAnalyze.length} books. Need at least 4.`);
+                    return {
+                        combinations: [],
+                        count: 0,
+                    };
                 }
+
+                console.log(`[ShelfService] Analyzing shelf ${shelf.code}: ${booksToAnalyze.length} books`);
+
+                dangerousCombinations = this.findCombinationsInArray(
+                    booksToAnalyze,
+                    RISK_THRESHOLD,
+                    shelf.code
+                );
             }
 
             console.log(`[ShelfService] Brute force completed: ${dangerousCombinations.length} dangerous combinations found`);
@@ -211,16 +244,80 @@ export class ShelfService {
     }
 
     /**
+     * Función auxiliar para encontrar combinaciones en un array de libros
+     */
+    private findCombinationsInArray(
+        books: Product[],
+        threshold: number,
+        shelfCode: string,
+        category?: string
+    ): Array<{
+        books: any[];
+        totalWeight: number;
+        shelfCode: string;
+        category?: string;
+    }> {
+        const combinations: Array<{
+            books: any[];
+            totalWeight: number;
+            shelfCode: string;
+            category?: string;
+        }> = [];
+        const n = books.length;
+
+        // Fuerza bruta: Probar TODAS las combinaciones de 4 libros
+        for (let i = 0; i < n; i++) {
+            for (let j = i + 1; j < n; j++) {
+                for (let k = j + 1; k < n; k++) {
+                    for (let l = k + 1; l < n; l++) {
+                        const combo = [books[i], books[j], books[k], books[l]];
+
+                        // Calcular peso total
+                        const totalWeight = combo.reduce((sum, book) => {
+                            const weight = (book.pageCount || 0) * 0.005;
+                            return sum + weight;
+                        }, 0);
+
+                        // Si supera el umbral, guardar
+                        if (totalWeight > threshold) {
+                            combinations.push({
+                                books: combo.map(b => ({
+                                    _id: (b as any)._id,
+                                    name: b.name,
+                                    category: b.category,
+                                    pageCount: b.pageCount,
+                                    weight: ((b.pageCount || 0) * 0.005).toFixed(2),
+                                })),
+                                totalWeight: parseFloat(totalWeight.toFixed(2)),
+                                shelfCode,
+                                category,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        return combinations;
+    }
+
+    /**
      * BACKTRACKING: Encuentra la combinación óptima (máximo valor sin exceder peso)
      * Problema de la Mochila (Knapsack Problem)
      */
-    async optimizeShelf(shelfId: string): Promise<{
+    async optimizeShelf(shelfId: string, analyzeAll: boolean = false): Promise<{
         bestCombination: {
             books: any[];
             totalWeight: number;
             totalValue: number;
         };
         maxWeight: number;
+        recommendation?: string;
+        currentVsOptimal?: {
+            current: { weight: number; value: number; books: number };
+            optimal: { weight: number; value: number; books: number };
+            improvement: string;
+        };
     }> {
         try {
             const shelf = await this.shelfModel
@@ -232,11 +329,32 @@ export class ShelfService {
                 throw new NotFoundException('Shelf not found');
             }
 
-            const books = shelf.books as unknown as Product[];
             const maxWeight = shelf.maxWeight;
+            let booksToAnalyze: Product[];
 
-            console.log(`[ShelfService] Starting backtracking optimization for shelf ${shelf.code}...`);
-            console.log(`[ShelfService] Max weight: ${maxWeight} Kg, Books available: ${books.length}`);
+            if (analyzeAll) {
+                // Analizar todos los libros disponibles (no asignados)
+                booksToAnalyze = await this.productModel
+                    .find({
+                        pageCount: { $exists: true, $ne: null },
+                        $or: [
+                            { shelfLocation: null },
+                            { shelfLocation: { $exists: false } }
+                        ]
+                    })
+                    .exec();
+
+                console.log(`[ShelfService] Optimizing from ALL available books: ${booksToAnalyze.length} books`);
+            } else {
+                // Solo libros del estante
+                booksToAnalyze = shelf.books as unknown as Product[];
+
+                if (booksToAnalyze.length === 0) {
+                    throw new BadRequestException('Shelf has no books to optimize');
+                }
+
+                console.log(`[ShelfService] Optimizing shelf ${shelf.code}: ${booksToAnalyze.length} books`);
+            }
 
             let bestValue = 0;
             let bestCombination: Product[] = [];
@@ -258,12 +376,12 @@ export class ShelfService {
                 }
 
                 // Caso base: llegamos al final de los libros
-                if (index >= books.length) {
+                if (index >= booksToAnalyze.length) {
                     return;
                 }
 
                 // Calcular peso del libro actual
-                const book = books[index];
+                const book = booksToAnalyze[index];
                 const bookWeight = (book.pageCount || 0) * 0.005;
                 const bookValue = book.offerPrice;
 
@@ -288,11 +406,45 @@ export class ShelfService {
 
             console.log(`[ShelfService] Backtracking completed: Best value = ${bestValue} COP, Weight = ${bestWeight.toFixed(2)} Kg`);
 
+            // Generar recomendación
+            let recommendation = '';
+            let currentVsOptimal;
+
+            if (!analyzeAll && shelf.books.length > 0) {
+                // Comparar estado actual vs óptimo
+                const currentWeight = shelf.currentWeight || 0;
+                const currentValue = shelf.currentValue || 0;
+                const improvement = ((bestValue - currentValue) / currentValue * 100).toFixed(1);
+
+                currentVsOptimal = {
+                    current: {
+                        weight: parseFloat(currentWeight.toFixed(2)),
+                        value: currentValue,
+                        books: shelf.books.length
+                    },
+                    optimal: {
+                        weight: parseFloat(bestWeight.toFixed(2)),
+                        value: bestValue,
+                        books: bestCombination.length
+                    },
+                    improvement: `${improvement}%`
+                };
+
+                if (bestValue > currentValue) {
+                    recommendation = `Consider reorganizing: You could increase value by ${improvement}% by adjusting book selection.`;
+                } else {
+                    recommendation = 'Current selection is already optimal!';
+                }
+            } else if (analyzeAll) {
+                recommendation = `Recommended ${bestCombination.length} books from available inventory to maximize shelf value.`;
+            }
+
             return {
                 bestCombination: {
                     books: bestCombination.map(b => ({
                         _id: (b as any)._id,
                         name: b.name,
+                        category: b.category,
                         pageCount: b.pageCount,
                         offerPrice: b.offerPrice,
                         weight: ((b.pageCount || 0) * 0.005).toFixed(2),
@@ -301,9 +453,11 @@ export class ShelfService {
                     totalValue: bestValue,
                 },
                 maxWeight,
+                recommendation,
+                currentVsOptimal,
             };
         } catch (error) {
-            if (error instanceof NotFoundException) {
+            if (error instanceof NotFoundException || error instanceof BadRequestException) {
                 throw error;
             }
             throw new InternalServerErrorException(error.message);

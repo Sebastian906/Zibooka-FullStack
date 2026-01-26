@@ -1,5 +1,5 @@
-import { Body, Controller, Delete, Get, HttpStatus, Param, Post, Res, UseGuards } from '@nestjs/common';
-import { ApiBody, ApiCookieAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Delete, Get, HttpStatus, Param, Post, Query, Res, UseGuards } from '@nestjs/common';
+import { ApiBody, ApiCookieAuth, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ShelfService } from './shelf.service';
 import { AdminAuthGuard } from 'src/common/guards/admin-auth/admin-auth.guard';
 import { CreateShelfDto } from './dtos/create-shelf.dto';
@@ -95,6 +95,12 @@ export class ShelfController {
         description: 'Uses brute force algorithm to find all 4-book combinations exceeding 8 Kg'
     })
     @ApiParam({ name: 'shelfId', description: 'Shelf ID', example: '507f1f77bcf86cd799439011' })
+    @ApiQuery({
+        name: 'analyzeAll',
+        required: false,
+        type: Boolean,
+        description: 'If true, analyzes ALL books in system grouped by category. If false, only analyzes books on this shelf.'
+    })
     @ApiResponse({
         status: 200,
         description: 'Dangerous combinations found',
@@ -103,22 +109,34 @@ export class ShelfController {
             properties: {
                 success: { type: 'boolean', example: true },
                 count: { type: 'number', example: 5 },
-                combinations: { type: 'array' }
+                combinations: { type: 'array' },
+                groupedByCategory: {
+                    type: 'object',
+                    description: 'Only present when analyzeAll=true'
+                }
             }
         }
     })
     @ApiResponse({ status: 404, description: 'Shelf not found' })
     async findDangerousCombinations(
         @Param('shelfId') shelfId: string,
+        @Query('analyzeAll') analyzeAll: string,
         @Res() res: Response
     ) {
         try {
-            const result = await this.shelfService.findDangerousCombinations(shelfId);
+            const shouldAnalyzeAll = analyzeAll === 'true';
+            const result = await this.shelfService.findDangerousCombinations(
+                shelfId,
+                shouldAnalyzeAll
+            );
 
             return res.status(HttpStatus.OK).json({
                 success: true,
                 count: result.count,
                 combinations: result.combinations,
+                ...(result.groupedByCategory && {
+                    groupedByCategory: result.groupedByCategory
+                }),
             });
         } catch (error) {
             return res.status(HttpStatus.BAD_REQUEST).json({
@@ -134,6 +152,12 @@ export class ShelfController {
         description: 'Uses backtracking to find the best book combination maximizing value without exceeding weight limit'
     })
     @ApiParam({ name: 'shelfId', description: 'Shelf ID', example: '507f1f77bcf86cd799439011' })
+    @ApiQuery({
+        name: 'analyzeAll',
+        required: false,
+        type: Boolean,
+        description: 'If true, analyzes ALL available books. If false, only analyzes books currently on shelf.'
+    })
     @ApiResponse({
         status: 200,
         description: 'Optimal combination found',
@@ -149,22 +173,31 @@ export class ShelfController {
                         totalValue: { type: 'number', example: 450 }
                     }
                 },
-                maxWeight: { type: 'number', example: 8 }
+                maxWeight: { type: 'number', example: 8 },
+                recommendation: { type: 'string' },
+                currentVsOptimal: {
+                    type: 'object',
+                    description: 'Only present when analyzeAll=false'
+                }
             }
         }
     })
     @ApiResponse({ status: 404, description: 'Shelf not found' })
     async optimizeShelf(
         @Param('shelfId') shelfId: string,
+        @Query('analyzeAll') analyzeAll: string,
         @Res() res: Response
     ) {
         try {
-            const result = await this.shelfService.optimizeShelf(shelfId);
+            const shouldAnalyzeAll = analyzeAll === 'true';
+            const result = await this.shelfService.optimizeShelf(
+                shelfId,
+                shouldAnalyzeAll
+            );
 
             return res.status(HttpStatus.OK).json({
                 success: true,
-                bestCombination: result.bestCombination,
-                maxWeight: result.maxWeight,
+                ...result,
             });
         } catch (error) {
             return res.status(HttpStatus.BAD_REQUEST).json({

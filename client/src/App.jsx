@@ -21,6 +21,7 @@ import ProductList from './pages/admin/ProductList'
 import Orders from './pages/admin/Orders'
 import Loading from './pages/Loading'
 import Profile from './pages/Profile'
+import Shelves from './pages/admin/Shelves'
 
 const App = () => {
 
@@ -48,6 +49,7 @@ const App = () => {
           <Route index element={isAdmin ? <AddProduct /> : null} />
           <Route path='list' element={<ProductList/>} />
           <Route path='orders' element={<Orders />} />
+          <Route path='shelves' element={<Shelves />} />
         </Route>
       </Routes>
       {!isAdminPath && <Footer />}

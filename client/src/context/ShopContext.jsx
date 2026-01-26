@@ -1,4 +1,4 @@
-import React, { createContext, useEffect, useState } from 'react'
+import { createContext, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import toast from 'react-hot-toast'
@@ -20,6 +20,7 @@ const ShopContextProvider = ({ children }) => {
     const [showUserLogin, setShowUserLogin] = useState("")
     const delivery_charges = 10
     const [isAdmin, setIsAdmin] = useState(false)
+    const [shelves, setShelves] = useState([])
 
     // Profile states
     const [profileData, setProfileData] = useState({
@@ -340,13 +341,106 @@ const ShopContextProvider = ({ children }) => {
         setPhoneNumber('');
     }
 
+    const fetchShelves = async () => {
+        try {
+            const { data } = await axios.get('/api/shelf/list')
+            if (data.success) {
+                setShelves(data.shelves)
+            }
+        } catch (error) {
+            console.error('Error fetching shelves:', error)
+        }
+    }
+
+    const createShelf = async (shelfData) => {
+        try {
+            const { data } = await axios.post('/api/shelf/create', shelfData)
+            if (data.success) {
+                await fetchShelves()
+                return { success: true, message: data.message, shelf: data.shelf }
+            }
+            return { success: false, message: data.message }
+        } catch (error) {
+            return { success: false, message: error.response?.data?.message || error.message }
+        }
+    }
+
+    const assignBookToShelf = async (shelfId, bookId) => {
+        try {
+            const { data } = await axios.post('/api/shelf/assign-book', { shelfId, bookId })
+            if (data.success) {
+                await fetchShelves()
+                await fetchBooks()
+                return { success: true, message: data.message, shelf: data.shelf }
+            }
+            return { success: false, message: data.message }
+        } catch (error) {
+            return { success: false, message: error.response?.data?.message || error.message }
+        }
+    }
+
+    const removeBookFromShelf = async (shelfId, bookId) => {
+        try {
+            const { data } = await axios.delete(`/api/shelf/remove-book/${shelfId}/${bookId}`)
+            if (data.success) {
+                await fetchShelves()
+                await fetchBooks()
+                return { success: true, message: data.message }
+            }
+            return { success: false, message: data.message }
+        } catch (error) {
+            return { success: false, message: error.message }
+        }
+    }
+
+    // Fuerza Bruta con modo analyzeAll
+    const findDangerousCombinations = async (shelfId, analyzeAll = false) => {
+        try {
+            const { data } = await axios.get(
+                `/api/shelf/dangerous-combinations/${shelfId}?analyzeAll=${analyzeAll}`
+            )
+            if (data.success) {
+                return {
+                    success: true,
+                    combinations: data.combinations,
+                    count: data.count,
+                    groupedByCategory: data.groupedByCategory
+                }
+            }
+            return { success: false, message: data.message }
+        } catch (error) {
+            return { success: false, message: error.message }
+        }
+    }
+
+    // Backtracking con modo analyzeAll
+    const optimizeShelf = async (shelfId, analyzeAll = false) => {
+        try {
+            const { data } = await axios.get(
+                `/api/shelf/optimize/${shelfId}?analyzeAll=${analyzeAll}`
+            )
+            if (data.success) {
+                return {
+                    success: true,
+                    bestCombination: data.bestCombination,
+                    maxWeight: data.maxWeight,
+                    recommendation: data.recommendation,
+                    currentVsOptimal: data.currentVsOptimal
+                }
+            }
+            return { success: false, message: data.message }
+        } catch (error) {
+            return { success: false, message: error.message }
+        }
+    }
+
     useEffect(() => {
         fetchBooks()
         fetchUser()
         fetchAdmin()
     }, [])
 
-    const value = { books, navigate, user, setUser, currency, searchQuery, setSearchQuery, cartItems, setCartItems, addToCart, getCartCount, getCartAmount, updateQuantity, method, setMethod, delivery_charges, showUserLogin, setShowUserLogin, isAdmin, setIsAdmin, axios, fetchBooks, fetchUser, logoutUser, profileData, setProfileData, profileImage, setProfileImage, imagePreview, setImagePreview, profileLoading, setProfileLoading, countryCodes, selectedCountryCode, setSelectedCountryCode, phoneNumber, setPhoneNumber, loadProfileData, handleProfileImageChange, handlePhoneChange, updateProfileField, submitProfileUpdate, cancelProfileUpdate, resetProfileForm }
+    const value = { books, navigate, user, setUser, currency, searchQuery, setSearchQuery, cartItems, setCartItems, addToCart, getCartCount, getCartAmount, updateQuantity, method, setMethod, delivery_charges, showUserLogin, setShowUserLogin, isAdmin, setIsAdmin, axios, fetchBooks, fetchUser, logoutUser, profileData, setProfileData, profileImage, setProfileImage, imagePreview, setImagePreview, profileLoading, setProfileLoading, countryCodes, selectedCountryCode, setSelectedCountryCode, phoneNumber, setPhoneNumber, loadProfileData, handleProfileImageChange, handlePhoneChange, updateProfileField, submitProfileUpdate, cancelProfileUpdate, resetProfileForm, shelves, fetchShelves, createShelf, assignBookToShelf, removeBookFromShelf, findDangerousCombinations, optimizeShelf }
 
     return (
         <ShopContext.Provider value={value}>
