@@ -8,11 +8,14 @@ export class Shelf {
     @Prop({ type: String, required: true, unique: true, uppercase: true })
     code: string;
 
-    @Prop({ type: Number, required: true, default: 3000 })
-    maxPages: number;
+    @Prop({ type: Number, required: true, default: 8 })
+    maxWeight: number;
 
     @Prop({ type: Number, default: 0 })
-    currentPages: number; 
+    currentWeight: number; 
+
+    @Prop({ type: Number, default: 0 })
+    currentValue: number; 
 
     @Prop({ type: [{ type: Types.ObjectId, ref: 'Product' }], default: [] })
     books: Types.ObjectId[];
