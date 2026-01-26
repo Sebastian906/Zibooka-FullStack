@@ -6,6 +6,8 @@ import { Loan, LoanSchema } from './schemas/loan.schema';
 import { Product, ProductSchema } from 'src/products/schemas/product.schema';
 import { User, UserSchema } from 'src/users/schemas/user.schema';
 import { setupLoanMiddleware } from './middlewares/loan.middleware';
+import { ProductModule } from 'src/products/product.module';
+import { ReservationModule } from 'src/reservations/reservation.module';
 
 @Module({
   imports: [
@@ -21,6 +23,8 @@ import { setupLoanMiddleware } from './middlewares/loan.middleware';
       { name: Product.name, useFactory: () => ProductSchema },
       { name: User.name, useFactory: () => UserSchema }
     ]),
+    ProductModule,
+    ReservationModule,
   ],
   controllers: [LoanController],
   providers: [LoanService],
