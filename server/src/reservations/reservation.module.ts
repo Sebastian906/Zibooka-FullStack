@@ -6,6 +6,7 @@ import { ReservationService } from './reservation.service';
 import { Product, ProductSchema } from 'src/products/schemas/product.schema';
 import { User, UserSchema } from 'src/users/schemas/user.schema';
 import { setupReservationMiddleware } from './middlewares/reservation.middleware';
+import { ProductModule } from 'src/products/product.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { setupReservationMiddleware } from './middlewares/reservation.middleware
       { name: Product.name, useFactory: () => ProductSchema },
       { name: User.name, useFactory: () => UserSchema }
     ]),
+    ProductModule,
   ],
   controllers: [ReservationController],
   providers: [ReservationService],
