@@ -505,4 +505,150 @@ export class ProductService {
             throw new InternalServerErrorException(error.message);
         }
     }
+
+    /**
+     * RECURSIÓN DE PILA: Calcula el valor total de todos los libros de una categoría específica
+     * Demuestra recursión tradicional usando la pila de llamadas
+     * Complejidad: O(n) donde n es el número de libros en la categoría
+     */
+    async calculateTotalValueByCategory(category: string): Promise<{
+        category: string;
+        totalValue: number;
+        bookCount: number;
+        executionLog: string[];
+    }> {
+        try {
+            const books = await this.productModel.find({ category }).exec();
+            const log: string[] = [];
+
+            console.log(`[ProductService] Starting stack recursion for category: ${category}`);
+            log.push(`Iniciando recursión de pila para categoría: ${category}`);
+            log.push(`Total de libros encontrados: ${books.length}`);
+
+            // Función recursiva usando pila de llamadas
+            const calculateRecursive = (bookList: Product[], index: number, depth: number): number => {
+                // Caso base
+                if (index >= bookList.length) {
+                    const message = `${'  '.repeat(depth)}[Caso base] Fin de la lista alcanzado en índice ${index}`;
+                    console.log(message);
+                    log.push(message);
+                    return 0;
+                }
+
+                const currentBook = bookList[index];
+                const message = `${'  '.repeat(depth)}[Nivel ${depth}] Procesando libro ${index + 1}/${bookList.length}: "${currentBook.name}" - Valor: $${currentBook.offerPrice}`;
+                console.log(message);
+                log.push(message);
+
+                // Llamada recursiva (push a la pila)
+                const remainingValue = calculateRecursive(bookList, index + 1, depth + 1);
+
+                // Sumar valor actual (pop de la pila)
+                const totalValue = currentBook.offerPrice + remainingValue;
+                const returnMessage = `${'  '.repeat(depth)}[Retorno nivel ${depth}] Valor acumulado: $${totalValue}`;
+                console.log(returnMessage);
+                log.push(returnMessage);
+
+                return totalValue;
+            };
+
+            const totalValue = calculateRecursive(books, 0, 0);
+
+            log.push(`\n=== RESULTADO FINAL ===`);
+            log.push(`Categoría: ${category}`);
+            log.push(`Total de libros: ${books.length}`);
+            log.push(`Valor total: $${totalValue} COP`);
+            log.push(`Promedio por libro: $${books.length > 0 ? (totalValue / books.length).toFixed(2) : 0} COP`);
+
+            console.log(`[ProductService] Stack recursion completed: ${totalValue} COP for ${books.length} books`);
+
+            return {
+                category,
+                totalValue,
+                bookCount: books.length,
+                executionLog: log,
+            };
+        } catch (error) {
+            throw new InternalServerErrorException(error.message);
+        }
+    }
+
+    /**
+     * RECURSIÓN DE COLA: Calcula el peso promedio de los libros de una categoría
+     * Demuestra tail recursion optimization donde el resultado se acumula en parámetros
+     * Complejidad: O(n) donde n es el número de libros en la categoría
+     */
+    async calculateAverageWeightByCategory(category: string): Promise<{
+        category: string;
+        averageWeight: number;
+        totalWeight: number;
+        bookCount: number;
+        executionLog: string[];
+    }> {
+        try {
+            const books = await this.productModel
+                .find({
+                    category,
+                    pageCount: { $exists: true, $ne: null }
+                })
+                .exec();
+
+            const log: string[] = [];
+
+            console.log(`[ProductService] Starting tail recursion for category: ${category}`);
+            log.push(`Iniciando recursión de cola para categoría: ${category}`);
+            log.push(`Total de libros encontrados: ${books.length}`);
+
+            // Función recursiva de cola (tail recursion)
+            // Los acumuladores permiten que el compilador optimice (no necesita mantener el stack frame)
+            const calculateTailRecursive = (
+                bookList: Product[],
+                index: number,
+                accumulatedWeight: number,
+                depth: number
+            ): number => {
+                // Caso base
+                if (index >= bookList.length) {
+                    const message = `${'→ '.repeat(depth)}[Caso base] Índice ${index} alcanzado. Peso total acumulado: ${accumulatedWeight.toFixed(3)} Kg`;
+                    console.log(message);
+                    log.push(message);
+                    return accumulatedWeight;
+                }
+
+                const currentBook = bookList[index];
+                const bookWeight = (currentBook.pageCount || 0) * 0.005; // 1 página ≈ 0.005 Kg
+                const newAccumulated = accumulatedWeight + bookWeight;
+
+                const message = `${'→ '.repeat(depth)}[Iteración ${index + 1}/${bookList.length}] "${currentBook.name}" (${currentBook.pageCount} páginas) = ${bookWeight.toFixed(3)} Kg | Acumulado: ${newAccumulated.toFixed(3)} Kg`;
+                console.log(message);
+                log.push(message);
+
+                // Llamada recursiva de cola (tail call)
+                // El resultado de esta llamada ES el resultado de la función actual
+                // No hay operaciones pendientes después de la llamada recursiva
+                return calculateTailRecursive(bookList, index + 1, newAccumulated, depth + 1);
+            };
+
+            const totalWeight = calculateTailRecursive(books, 0, 0, 0);
+            const averageWeight = books.length > 0 ? totalWeight / books.length : 0;
+
+            log.push(`\n=== RESULTADO FINAL ===`);
+            log.push(`Categoría: ${category}`);
+            log.push(`Total de libros: ${books.length}`);
+            log.push(`Peso total: ${totalWeight.toFixed(3)} Kg`);
+            log.push(`Peso promedio: ${averageWeight.toFixed(3)} Kg`);
+
+            console.log(`[ProductService] Tail recursion completed: ${averageWeight.toFixed(3)} Kg average for ${books.length} books`);
+
+            return {
+                category,
+                averageWeight: parseFloat(averageWeight.toFixed(3)),
+                totalWeight: parseFloat(totalWeight.toFixed(3)),
+                bookCount: books.length,
+                executionLog: log,
+            };
+        } catch (error) {
+            throw new InternalServerErrorException(error.message);
+        }
+    }
 }
