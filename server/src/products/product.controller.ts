@@ -1,5 +1,5 @@
-import { Body, Controller, Get, HttpStatus, Post, Query, Res, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
-import { ApiBody, ApiConsumes, ApiCookieAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, HttpStatus, Param, Post, Query, Res, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
+import { ApiBody, ApiConsumes, ApiCookieAuth, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ProductService } from './product.service';
 import { AdminAuthGuard } from 'src/common/guards/admin-auth/admin-auth.guard';
 import { FilesInterceptor } from '@nestjs/platform-express';
@@ -442,6 +442,105 @@ export class ProductController {
             return res.status(HttpStatus.OK).json({
                 success: true,
                 status,
+            });
+        } catch (error) {
+            return res
+                .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
+                .json({
+                    success: false,
+                    message: error.message,
+                });
+        }
+    }
+
+    /**
+     * Recursión de Pila - Calcular valor total por categoría
+     */
+    @Get('recursion/value-by-category/:category')
+    @ApiOperation({
+        summary: 'Calculate total value by category (Stack Recursion)',
+        description: 'Uses stack recursion to calculate the total value of all books in a specific category. Demonstrates traditional recursion using the call stack.'
+    })
+    @ApiParam({
+        name: 'category',
+        description: 'Book category',
+        example: 'Academic',
+        enum: ['Academic', 'Children', 'Health', 'Horror', 'Business', 'History', 'Adventure']
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'Calculation completed successfully',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                category: { type: 'string', example: 'Academic' },
+                totalValue: { type: 'number', example: 4500 },
+                bookCount: { type: 'number', example: 15 },
+                executionLog: { type: 'array', items: { type: 'string' } }
+            }
+        }
+    })
+    async calculateValueByCategory(
+        @Param('category') category: string,
+        @Res() res: Response
+    ) {
+        try {
+            const result = await this.productService.calculateTotalValueByCategory(category);
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                ...result,
+            });
+        } catch (error) {
+            return res
+                .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
+                .json({
+                    success: false,
+                    message: error.message,
+                });
+        }
+    }
+
+    /**
+     * Recursión de Cola - Calcular peso promedio por categoría
+     */
+    @Get('recursion/weight-by-category/:category')
+    @ApiOperation({
+        summary: 'Calculate average weight by category (Tail Recursion)',
+        description: 'Uses tail recursion to calculate the average weight of all books in a specific category. Demonstrates tail call optimization where the result accumulates in parameters.'
+    })
+    @ApiParam({
+        name: 'category',
+        description: 'Book category',
+        example: 'Academic',
+        enum: ['Academic', 'Children', 'Health', 'Horror', 'Business', 'History', 'Adventure']
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'Calculation completed successfully',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                category: { type: 'string', example: 'Academic' },
+                averageWeight: { type: 'number', example: 1.875 },
+                totalWeight: { type: 'number', example: 28.125 },
+                bookCount: { type: 'number', example: 15 },
+                executionLog: { type: 'array', items: { type: 'string' } }
+            }
+        }
+    })
+    async calculateWeightByCategory(
+        @Param('category') category: string,
+        @Res() res: Response
+    ) {
+        try {
+            const result = await this.productService.calculateAverageWeightByCategory(category);
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                ...result,
             });
         } catch (error) {
             return res
