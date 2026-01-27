@@ -6,7 +6,7 @@ import { FaTruckFast } from 'react-icons/fa6';
 import ProductDescription from '../components/ProductDescription';
 import ProductFeatures from '../components/ProductFeatures';
 import RelatedBooks from '../components/RelatedBooks';
-import { FaBook } from 'react-icons/fa';
+import { FaBook, FaClock } from 'react-icons/fa';
 
 const ProductDetails = () => {
 

@@ -47,7 +47,7 @@ export class ReservationService {
             const currentQueueSize = await this.reservationModel.countDocuments({
                 bookId: new Types.ObjectId(bookId),
                 status: 'pending'
-            });
+            });            
 
             // Crear reservación (agregar al final de la cola)
             const reservation = await this.reservationModel.create({

@@ -31,4 +31,4 @@ import { ReservationModule } from 'src/reservations/reservation.module';
   exports: [LoanService],
 })
 
-export class LoanModule {}
+export class LoanModule { }
