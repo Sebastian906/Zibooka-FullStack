@@ -127,7 +127,7 @@ const ShopContextProvider = ({ children }) => {
         setCartItems(cartData)
         if (user) {
             try {
-                const { data } = await axios.post('/api/cart/add', { itemId }) 
+                const { data } = await axios.post('/api/cart/add', { itemId })
                 data.success ? toast.success(data.message) : toast.error(data.message)
             } catch (error) {
                 toast.error(error.message)
@@ -494,7 +494,7 @@ const ShopContextProvider = ({ children }) => {
             if (data.success) {
                 toast.success(data.message || 'Loan created successfully')
                 // Recargar la lista de libros para actualizar stock
-                await getBooks()
+                await fetchBooks()
                 return data
             }
         } catch (error) {
@@ -511,7 +511,7 @@ const ShopContextProvider = ({ children }) => {
             if (data.success) {
                 toast.success(data.message || 'Book returned successfully')
                 // Recargar la lista de libros para actualizar stock
-                await getBooks()
+                await fetchBooks()
                 return data
             }
         } catch (error) {
@@ -626,7 +626,7 @@ const ShopContextProvider = ({ children }) => {
         fetchAdmin()
     }, [])
 
-    const value = { books, navigate, user, setUser, currency, searchQuery, setSearchQuery, cartItems, setCartItems, addToCart, getCartCount, getCartAmount, updateQuantity, method, setMethod, delivery_charges, showUserLogin, setShowUserLogin, isAdmin, setIsAdmin, axios, fetchBooks, fetchUser, logoutUser, profileData, setProfileData, profileImage, setProfileImage, imagePreview, setImagePreview, profileLoading, setProfileLoading, countryCodes, selectedCountryCode, setSelectedCountryCode, phoneNumber, setPhoneNumber, getUserProfile, loadProfileData, handleProfileImageChange, handlePhoneChange, updateProfileField, submitProfileUpdate, cancelProfileUpdate, resetProfileForm, shelves, fetchShelves, createShelf, assignBookToShelf, removeBookFromShelf, findDangerousCombinations, optimizeShelf, getUserLoans, getUserLoanStats, createLoan, returnBook, getAllLoans }
+    const value = { books, navigate, user, setUser, currency, searchQuery, setSearchQuery, cartItems, setCartItems, addToCart, getCartCount, getCartAmount, updateQuantity, method, setMethod, delivery_charges, showUserLogin, setShowUserLogin, isAdmin, setIsAdmin, axios, fetchBooks, fetchUser, logoutUser, profileData, setProfileData, profileImage, setProfileImage, imagePreview, setImagePreview, profileLoading, setProfileLoading, countryCodes, selectedCountryCode, setSelectedCountryCode, phoneNumber, setPhoneNumber, getUserProfile, loadProfileData, handleProfileImageChange, handlePhoneChange, updateProfileField, submitProfileUpdate, cancelProfileUpdate, resetProfileForm, shelves, fetchShelves, createShelf, assignBookToShelf, removeBookFromShelf, findDangerousCombinations, optimizeShelf, getUserLoans, getUserLoanStats, createLoan, returnBook, getAllLoans, getUserReservationStats, getUserReservationList, getWaitingList, createReservation, cancelReservation }
 
     return (
         <ShopContext.Provider value={value}>

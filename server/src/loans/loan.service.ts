@@ -47,7 +47,7 @@ export class LoanService {
     async createLoan(bookId: string, userId: string): Promise<Loan> {
         try {
             // Verificar que el libro (producto) exista y esté disponible
-            const book = await this.productModel.findById(bookId); 
+            const book = await this.productModel.findById(bookId);
             if (!book) {
                 throw new NotFoundException('Book not found');
             }
@@ -75,7 +75,7 @@ export class LoanService {
                 userId: new Types.ObjectId(userId),
                 bookId: new Types.ObjectId(bookId),
                 loanDate: loanDate,
-                dueDate: dueDate, 
+                dueDate: dueDate,
                 status: 'active'
             });
 

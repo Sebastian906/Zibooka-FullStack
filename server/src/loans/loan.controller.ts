@@ -71,7 +71,8 @@ export class LoanController {
         @Res() res: Response
     ) {
         try {
-            const loan = await this.loanService.createLoan(userId, createLoanDto.bookId);
+            // Note: LoanService expects (bookId, userId)
+            const loan = await this.loanService.createLoan(createLoanDto.bookId, userId);
 
             return res.status(HttpStatus.CREATED).json({
                 success: true,
