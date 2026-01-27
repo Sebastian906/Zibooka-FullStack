@@ -6,6 +6,7 @@ import { UserId } from 'src/common/decorators/users/user-id.decorator';
 import type { Response } from 'express';
 import { LoanStatsResponseDto } from './dto/loan-stats-response.dto';
 import { CreateLoanDto } from './dto/create-loan.dto';
+import { AdminAuthGuard } from 'src/common/guards/admin-auth/admin-auth.guard';
 
 @ApiTags('Loans')
 @Controller('loan')
@@ -140,7 +141,7 @@ export class LoanController {
     @ApiResponse({ status: 400, description: 'Loan not active or not found' })
     async returnBook(@Param('loanId') loanId: string, @Res() res: Response) {
         try {
-            const result = await this.loanService.returnBook(loanId);
+            const result: any = await this.loanService.returnBook(loanId);
 
             return res.status(HttpStatus.OK).json({
                 success: true,
@@ -173,6 +174,43 @@ export class LoanController {
             return res.status(HttpStatus.OK).json({
                 success: true,
                 stats,
+            });
+        } catch (error) {
+            return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+                success: false,
+                message: error.message,
+            });
+        }
+    }
+
+    @Get('admin/all')
+    @UseGuards(AdminAuthGuard)
+    @ApiCookieAuth('adminToken')
+    @ApiOperation({
+        summary: 'Get all loans (Admin only)',
+        description: 'Returns all loans in the system with full user and book details'
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'All loans retrieved successfully',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                count: { type: 'number', example: 25 },
+                loans: { type: 'array' }
+            }
+        }
+    })
+    @ApiResponse({ status: 401, description: 'Unauthorized - Admin access required' })
+    async getAllLoans(@Res() res: Response) {
+        try {
+            const loans = await this.loanService.getAllLoans();
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                count: loans.length,
+                loans,
             });
         } catch (error) {
             return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({

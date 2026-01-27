@@ -184,6 +184,18 @@ const ShopContextProvider = ({ children }) => {
         return totalAmount
     }
 
+    // Get the current profile
+    const getUserProfile = async () => {
+        try {
+            const { data } = await axios.get('/api/user/profile')
+            if (data.success) {
+                setUser(data.user)
+            }
+        } catch (error) {
+            console.error('Error getting user profile:', error)
+        }
+    }
+
     // Load user profile data
     const loadProfileData = async () => {
         if (!user) {
@@ -434,13 +446,187 @@ const ShopContextProvider = ({ children }) => {
         }
     }
 
+    // Obtiene el historial de préstamos del usuario (Stack - LIFO)
+    const getUserLoans = async () => {
+        try {
+            const { data } = await axios.get('/api/loan/history')
+            if (data.success) {
+                return data.loans
+            }
+            return []
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Error loading loans')
+            return []
+        }
+    }
+
+    // Obtiene las estadísticas de préstamos del usuario
+    const getUserLoanStats = async () => {
+        try {
+            const { data } = await axios.get('/api/loan/stats')
+            if (data.success) {
+                return data.stats
+            }
+            return {
+                total: 0,
+                active: 0,
+                completed: 0,
+                overdue: 0,
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Error loading loan stats')
+            return {
+                total: 0,
+                active: 0,
+                completed: 0,
+                overdue: 0,
+            }
+        }
+    }
+
+    // Crea un nuevo préstamo para un libro
+    const createLoan = async (bookId) => {
+        try {
+            const { data } = await axios.post('/api/loan/create', {
+                bookId,
+            })
+
+            if (data.success) {
+                toast.success(data.message || 'Loan created successfully')
+                // Recargar la lista de libros para actualizar stock
+                await getBooks()
+                return data
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Error creating loan')
+            throw error
+        }
+    }
+
+    // Devuelve un libro prestado (Binary Search integrado en backend)
+    const returnBook = async (loanId) => {
+        try {
+            const { data } = await axios.post(`/api/loan/return/${loanId}`)
+
+            if (data.success) {
+                toast.success(data.message || 'Book returned successfully')
+                // Recargar la lista de libros para actualizar stock
+                await getBooks()
+                return data
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Error returning book')
+            throw error
+        }
+    }
+
+    // Obtiene todos los préstamos del sistema (Solo Admin)
+    const getAllLoans = async () => {
+        try {
+            const { data } = await axios.get('/api/loan/admin/all')
+            if (data.success) {
+                return data.loans
+            }
+            return []
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Error loading all loans')
+            return []
+        }
+    }
+
+    // Obtiene las estadísticas de reservas del usuario
+    const getUserReservationStats = async () => {
+        try {
+            const { data } = await axios.get('/api/reservation/my-reservations')
+            if (data.success) {
+                return data.stats
+            }
+            return {
+                total: 0,
+                pending: 0,
+                fulfilled: 0,
+                cancelled: 0,
+                expired: 0,
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Error loading reservation stats')
+            return {
+                total: 0,
+                pending: 0,
+                fulfilled: 0,
+                cancelled: 0,
+                expired: 0,
+            }
+        }
+    }
+
+    // Obtiene la lista completa de reservas del usuario con detalles del libro
+    const getUserReservationList = async () => {
+        try {
+            const { data } = await axios.get('/api/reservation/user-list')
+            if (data.success) {
+                return data.reservations
+            }
+            return []
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Error loading reservations')
+            return []
+        }
+    }
+
+    // Obtiene la lista de espera (waiting list) para un libro específico
+    const getWaitingList = async (bookId) => {
+        try {
+            const { data } = await axios.get(`/api/reservation/waiting-list/${bookId}`)
+            if (data.success) {
+                return data.waitingList
+            }
+            return []
+        } catch (error) {
+            console.error('Error loading waiting list:', error)
+            return []
+        }
+    }
+
+    // Crea una nueva reserva para un libro
+    const createReservation = async (bookId) => {
+        try {
+            const { data } = await axios.post('/api/reservation/add', {
+                bookId,
+            })
+
+            if (data.success) {
+                toast.success(data.message || 'Reservation created successfully')
+                return data
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Error creating reservation')
+            throw error
+        }
+    }
+
+    // Cancela una reserva
+    const cancelReservation = async (reservationId) => {
+        try {
+            const { data } = await axios.delete(`/api/reservation/cancel/${reservationId}`)
+
+            if (data.success) {
+                toast.success(data.message || 'Reservation cancelled successfully')
+                return data
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Error cancelling reservation')
+            throw error
+        }
+    }
+
     useEffect(() => {
         fetchBooks()
         fetchUser()
         fetchAdmin()
     }, [])
 
-    const value = { books, navigate, user, setUser, currency, searchQuery, setSearchQuery, cartItems, setCartItems, addToCart, getCartCount, getCartAmount, updateQuantity, method, setMethod, delivery_charges, showUserLogin, setShowUserLogin, isAdmin, setIsAdmin, axios, fetchBooks, fetchUser, logoutUser, profileData, setProfileData, profileImage, setProfileImage, imagePreview, setImagePreview, profileLoading, setProfileLoading, countryCodes, selectedCountryCode, setSelectedCountryCode, phoneNumber, setPhoneNumber, loadProfileData, handleProfileImageChange, handlePhoneChange, updateProfileField, submitProfileUpdate, cancelProfileUpdate, resetProfileForm, shelves, fetchShelves, createShelf, assignBookToShelf, removeBookFromShelf, findDangerousCombinations, optimizeShelf }
+    const value = { books, navigate, user, setUser, currency, searchQuery, setSearchQuery, cartItems, setCartItems, addToCart, getCartCount, getCartAmount, updateQuantity, method, setMethod, delivery_charges, showUserLogin, setShowUserLogin, isAdmin, setIsAdmin, axios, fetchBooks, fetchUser, logoutUser, profileData, setProfileData, profileImage, setProfileImage, imagePreview, setImagePreview, profileLoading, setProfileLoading, countryCodes, selectedCountryCode, setSelectedCountryCode, phoneNumber, setPhoneNumber, getUserProfile, loadProfileData, handleProfileImageChange, handlePhoneChange, updateProfileField, submitProfileUpdate, cancelProfileUpdate, resetProfileForm, shelves, fetchShelves, createShelf, assignBookToShelf, removeBookFromShelf, findDangerousCombinations, optimizeShelf, getUserLoans, getUserLoanStats, createLoan, returnBook, getAllLoans }
 
     return (
         <ShopContext.Provider value={value}>
