@@ -1,14 +1,16 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Loan, LoanDocument } from './schemas/loan.schema';
 import { Model, Types } from 'mongoose';
 import { ProductService } from 'src/products/product.service';
 import { ReservationService } from 'src/reservations/reservation.service';
+import { Product } from 'src/products/schemas/product.schema';
 
 @Injectable()
 export class LoanService {
     constructor(
         @InjectModel(Loan.name) private loanModel: Model<LoanDocument>,
+        @InjectModel(Product.name) private productModel: Model<Product>,
         private productService: ProductService,
         private reservationService: ReservationService,
     ) { }
@@ -42,30 +44,53 @@ export class LoanService {
      * @param bookId - ID del libro
      * @returns Préstamo creado
      */
-    async createLoan(userId: string, bookId: string): Promise<Loan> {
+    async createLoan(bookId: string, userId: string): Promise<Loan> {
         try {
-            const product = await this.productService.getSingleProduct(bookId);
-
-            if (!product.inStock) {
-                throw new Error('Book is not available for loan');
+            // Verificar que el libro (producto) exista y esté disponible
+            const book = await this.productModel.findById(bookId); 
+            if (!book) {
+                throw new NotFoundException('Book not found');
             }
 
-            const loan = await this.loanModel.create({
+            if (!book.inStock) {
+                throw new BadRequestException('Book is currently out of stock');
+            }
+
+            // Verificar que el usuario no tenga préstamos activos del mismo libro
+            const existingActiveLoan = await this.loanModel.findOne({
                 userId: new Types.ObjectId(userId),
                 bookId: new Types.ObjectId(bookId),
-                loanDate: new Date(),
-                status: 'active',
+                status: 'active'
             });
 
-            console.log(`[LoanService] Loan created (pushed to stack): ${loan._id}`);
+            if (existingActiveLoan) {
+                throw new BadRequestException('You already have an active loan for this book');
+            }
 
-            await this.productService.changeStock({
-                productId: bookId,
-                inStock: false
+            const loanDate = new Date();
+            const dueDate = new Date(loanDate.getTime() + 14 * 24 * 60 * 60 * 1000); // +14 días
+
+            // Crear el préstamo
+            const newLoan = new this.loanModel({
+                userId: new Types.ObjectId(userId),
+                bookId: new Types.ObjectId(bookId),
+                loanDate: loanDate,
+                dueDate: dueDate, 
+                status: 'active'
             });
 
-            return loan;
+            await newLoan.save();
+
+            // Actualizar el stock del libro (producto)
+            book.inStock = false;
+            await book.save();
+
+            console.log(`[LoanService] Loan created successfully for book ${bookId} by user ${userId}`);
+            return newLoan;
         } catch (error) {
+            if (error instanceof NotFoundException || error instanceof BadRequestException) {
+                throw error;
+            }
             throw new InternalServerErrorException(error.message);
         }
     }
@@ -194,23 +219,39 @@ export class LoanService {
     /**
      * Calcula estadísticas del historial de préstamos
      */
-    async getUserLoanStats(userId: string): Promise<{
-        total: number;
-        active: number;
-        returned: number;
-        overdue: number;
-    }> {
+    async getUserLoanStats(userId: string) {
         try {
-            const loans = await this.loanModel.find({
-                userId: new Types.ObjectId(userId)
-            }).exec();
+            const loans = await this.loanModel.find({ userId: new Types.ObjectId(userId) });
 
-            return {
+            const stats = {
                 total: loans.length,
                 active: loans.filter(l => l.status === 'active').length,
-                returned: loans.filter(l => l.status === 'returned').length,
+                completed: loans.filter(l => l.status === 'completed').length,
                 overdue: loans.filter(l => l.status === 'overdue').length,
             };
+
+            console.log(`[LoanService] Loan stats for user ${userId}:`, stats);
+            return stats;
+        } catch (error) {
+            throw new InternalServerErrorException(error.message);
+        }
+    }
+
+    /**
+     * Obtiene TODOS los préstamos del sistema (Admin only)
+     * @returns Array de préstamos con información de usuario y libro
+     */
+    async getAllLoans(): Promise<Loan[]> {
+        try {
+            const loans = await this.loanModel
+                .find()
+                .populate('bookId')
+                .populate('userId')
+                .sort({ loanDate: -1 })  // Stack (LIFO) - más reciente primero
+                .exec();
+
+            console.log(`[LoanService] Retrieved ${loans.length} total loans`);
+            return loans;
         } catch (error) {
             throw new InternalServerErrorException(error.message);
         }

@@ -1,4 +1,4 @@
-import React, { useContext } from 'react'
+import { useContext } from 'react'
 import { Toaster } from 'react-hot-toast'
 import { Routes, Route, useLocation } from 'react-router-dom'
 import Home from './pages/Home'
@@ -22,6 +22,9 @@ import Orders from './pages/admin/Orders'
 import Loading from './pages/Loading'
 import Profile from './pages/Profile'
 import Shelves from './pages/admin/Shelves'
+import MyReservations from './pages/MyReservations'
+import MyLoans from './pages/MyLoans'
+import AdminLoans from './pages/admin/AdminLoans'
 
 const App = () => {
 
@@ -43,6 +46,8 @@ const App = () => {
         <Route path='/cart' element={<Cart />} />
         <Route path='/address-form' element={<AddressForm />} />
         <Route path='/my-orders' element={<MyOrders />} />
+        <Route path='/my-loans' element={<MyLoans />} />
+        <Route path='/my-reservations' element={<MyReservations />} />
         <Route path='/loader' element={<Loading />} />
         <Route path='/profile' element={<Profile />} />
         <Route path='/admin' element={isAdmin ? <Sidebar /> : <AdminLogin />}>
@@ -50,6 +55,7 @@ const App = () => {
           <Route path='list' element={<ProductList/>} />
           <Route path='orders' element={<Orders />} />
           <Route path='shelves' element={<Shelves />} />
+          <Route path='loans' element={<AdminLoans />} />
         </Route>
       </Routes>
       {!isAdminPath && <Footer />}

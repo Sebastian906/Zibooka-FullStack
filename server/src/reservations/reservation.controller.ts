@@ -155,4 +155,38 @@ export class ReservationController {
             });
         }
     }
+
+    @Get('user-list')
+    @ApiOperation({
+        summary: 'Get user reservation list with full details',
+        description: 'Returns all user reservations (not just stats) with book information'
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'Reservation list retrieved successfully',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                count: { type: 'number', example: 5 },
+                reservations: { type: 'array' }
+            }
+        }
+    })
+    async getUserReservationList(@UserId() userId: string, @Res() res: Response) {
+        try {
+            const reservations = await this.reservationService.getUserReservationList(userId);
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                count: reservations.length,
+                reservations,
+            });
+        } catch (error) {
+            return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+                success: false,
+                message: error.message,
+            });
+        }
+    }
 }

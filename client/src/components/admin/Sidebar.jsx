@@ -1,7 +1,7 @@
 import React, { useContext } from 'react'
 import { ShopContext } from '../../context/ShopContext'
 import { FaSquarePlus } from 'react-icons/fa6';
-import { FaListAlt, FaWarehouse } from 'react-icons/fa';
+import { FaBook, FaListAlt, FaWarehouse } from 'react-icons/fa';
 import { MdFactCheck } from 'react-icons/md';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import { BiLogOut } from 'react-icons/bi';
@@ -15,7 +15,8 @@ const Sidebar = () => {
         {path: "/admin", label: "Add Item", icon: <FaSquarePlus />},
         {path: "/admin/list", label: "List", icon: <FaListAlt />},
         { path: "/admin/orders", label: "Orders", icon: <MdFactCheck /> },
-        { path: "/admin/shelves", label: "Shelves", icon: <FaWarehouse/> }
+        { path: "/admin/shelves", label: "Shelves", icon: <FaWarehouse /> },
+        { path: "/admin/loans", label: "Loans", icon: <FaBook /> }
     ]
 
     const logout = async () => {

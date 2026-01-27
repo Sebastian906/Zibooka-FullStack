@@ -46,8 +46,8 @@ const Header = () => {
                 <Navbar
                     setMenuOpened={setMenuOpened}
                     containerStyles={`${menuOpened
-                            ? "flex items-start flex-col gap-y-8 fixed top-16 right-6 p-5 bg-white rounded-xl shadow-lg w-52 ring-1 ring-slate-900/5 z-50"
-                            : "hidden lg:flex gap-x-5 xl:gap-x-7 medium-15 ring-1 ring-slate-900/15 rounded-full p-1 bg-primary"
+                        ? "flex items-start flex-col gap-y-8 fixed top-16 right-6 p-5 bg-white rounded-xl shadow-lg w-52 ring-1 ring-slate-900/5 z-50"
+                        : "hidden lg:flex gap-x-5 xl:gap-x-7 medium-15 ring-1 ring-slate-900/15 rounded-full p-1 bg-primary"
                         }`}
                 />
             </div>
@@ -55,15 +55,15 @@ const Header = () => {
                 { /* BARRA DE BÚSQUEDA */}
                 <div className='relative hidden xl:flex items-center'>
                     <div className={`br-white ring-1 ring-slate-900/10 rounded-full overflow-hidden transition-all duration-300 ease-in-out ${showSearch ? 'w-66.5 opacity-100 px-4 py-2.5' : 'w-0 opacity-0 p-0'}`}>
-                        <input 
-                            onChange={(e)=>setSearchQuery(e.target.value)}
-                            type="text" 
-                            placeholder="Search book..." 
+                        <input
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            type="text"
+                            placeholder="Search book..."
                             className='bg-transparent w-full text-sm outline-none pr-10 placeholder:text-gray-400'
                         />
                     </div>
-                    <div 
-                        onClick={() => setShowSearch(prev=>!prev)}
+                    <div
+                        onClick={() => setShowSearch(prev => !prev)}
                         className='absolute right-0.5 bg-primary p-2.5 rounded-full cursor-pointer z-10'
                     >
                         <FaSearch className="text-xl" />
@@ -118,9 +118,11 @@ const Header = () => {
                     </div>
                     { /* MENÜ DESPLEGABLE */}
                     {user && (
-                        <ul className='bg-white p-2 w-32 ring-1 ring-slate-900/15 rounded absolute right-0 top-10 hidden group-hover:flex flex-col medium-14 shadow-md z-50'>
+                        <ul className='bg-white p-2 w-40 ring-1 ring-slate-900/15 rounded absolute right-0 top-10 hidden group-hover:flex flex-col medium-14 shadow-md z-50'>
                             <li onClick={() => navigate('/profile')} className='p-2 rounded-md hover:bg-primary cursor-pointer'>Profile</li>
                             <li onClick={() => navigate('/my-orders')} className='p-2 rounded-md hover:bg-primary cursor-pointer'>Orders</li>
+                            <li onClick={() => navigate('/my-loans')} className='p-2 rounded-md hover:bg-primary cursor-pointer'>My Loans</li>
+                            <li onClick={() => navigate('/my-reservations')} className='p-2 rounded-md hover:bg-primary cursor-pointer'>Reservations</li>
                             <li
                                 onClick={logoutUser}
                                 className='p-2 rounded-md hover:bg-primary cursor-pointer'

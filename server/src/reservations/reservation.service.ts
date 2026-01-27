@@ -274,4 +274,24 @@ export class ReservationService {
             throw new InternalServerErrorException(error.message);
         }
     }
+
+    /**
+     * Obtiene la lista completa de reservas de un usuario con detalles del libro
+     * @param userId - ID del usuario
+     * @returns Array de reservaciones con información completa
+     */
+    async getUserReservationList(userId: string): Promise<Reservation[]> {
+        try {
+            const reservations = await this.reservationModel
+                .find({ userId: new Types.ObjectId(userId) })
+                .populate('bookId')
+                .sort({ requestDate: -1 })
+                .exec();
+
+            console.log(`[ReservationService] Retrieved ${reservations.length} reservations for user ${userId}`);
+            return reservations;
+        } catch (error) {
+            throw new InternalServerErrorException(error.message);
+        }
+    }
 }
