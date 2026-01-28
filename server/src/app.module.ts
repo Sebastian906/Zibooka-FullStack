@@ -13,6 +13,7 @@ import { OrderModule } from './orders/order.module';
 import { ShelfModule } from './shelves/shelf.module';
 import { LoanModule } from './loans/loan.module';
 import { ReservationModule } from './reservations/reservation.module';
+import { ReportModule } from './reports/report.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { ReservationModule } from './reservations/reservation.module';
     ShelfModule,
     LoanModule,
     ReservationModule,
+    ReportModule,
   ],
   controllers: [AppController, CartController],
   providers: [AppService],

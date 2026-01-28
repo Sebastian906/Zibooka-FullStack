@@ -25,6 +25,7 @@ import Shelves from './pages/admin/Shelves'
 import MyReservations from './pages/MyReservations'
 import MyLoans from './pages/MyLoans'
 import AdminLoans from './pages/admin/AdminLoans'
+import Reports from './pages/admin/Reports'
 
 const App = () => {
 
@@ -56,6 +57,7 @@ const App = () => {
           <Route path='orders' element={<Orders />} />
           <Route path='shelves' element={<Shelves />} />
           <Route path='loans' element={<AdminLoans />} />
+          <Route path='reports' element={<Reports />} />
         </Route>
       </Routes>
       {!isAdminPath && <Footer />}

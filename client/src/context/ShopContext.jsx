@@ -21,6 +21,7 @@ const ShopContextProvider = ({ children }) => {
     const delivery_charges = 10
     const [isAdmin, setIsAdmin] = useState(false)
     const [shelves, setShelves] = useState([])
+    const [reportLoading, setReportLoading] = useState(false);
 
     // Profile states
     const [profileData, setProfileData] = useState({
@@ -620,13 +621,212 @@ const ShopContextProvider = ({ children }) => {
         }
     }
 
+    /**
+    * Descargar reporte de inventario en PDF
+    */
+    const downloadInventoryPDF = async (category = '') => {
+        try {
+            setReportLoading(true);
+            const url = category
+                ? `${import.meta.env.VITE_BACKEND_URL}/api/reports/inventory/pdf?category=${category}`
+                : `${import.meta.env.VITE_BACKEND_URL}/api/reports/inventory/pdf`;
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Error generating PDF report');
+            }
+
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = category
+                ? `inventory-${category}-${Date.now()}.pdf`
+                : `inventory-complete-${Date.now()}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(downloadUrl);
+
+            toast.success('PDF report downloaded successfully');
+        } catch (error) {
+            console.error('Error downloading PDF:', error);
+            toast.error(error.message || 'Error downloading PDF report');
+        } finally {
+            setReportLoading(false);
+        }
+    };
+
+    /**
+     * Descargar reporte de inventario en XLSX
+     */
+    const downloadInventoryXLSX = async (category = '') => {
+        try {
+            setReportLoading(true);
+            const url = category
+                ? `${import.meta.env.VITE_BACKEND_URL}/api/reports/inventory/xlsx?category=${category}`
+                : `${import.meta.env.VITE_BACKEND_URL}/api/reports/inventory/xlsx`;
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Error generating Excel report');
+            }
+
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = category
+                ? `inventory-${category}-${Date.now()}.xlsx`
+                : `inventory-complete-${Date.now()}.xlsx`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(downloadUrl);
+
+            toast.success('Excel report downloaded successfully');
+        } catch (error) {
+            console.error('Error downloading XLSX:', error);
+            toast.error(error.message || 'Error downloading Excel report');
+        } finally {
+            setReportLoading(false);
+        }
+    };
+
+    /**
+     * Descargar reporte de préstamos en PDF
+     */
+    const downloadLoansPDF = async (dateFrom = '', dateTo = '') => {
+        try {
+            setReportLoading(true);
+            let url = `${import.meta.env.VITE_BACKEND_URL}/api/reports/loans/pdf`;
+            const params = new URLSearchParams();
+
+            if (dateFrom) params.append('dateFrom', dateFrom);
+            if (dateTo) params.append('dateTo', dateTo);
+
+            if (params.toString()) {
+                url += `?${params.toString()}`;
+            }
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Error generating loans PDF report');
+            }
+
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = `loans-${Date.now()}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(downloadUrl);
+
+            toast.success('Loans PDF report downloaded successfully');
+        } catch (error) {
+            console.error('Error downloading loans PDF:', error);
+            toast.error(error.message || 'Error downloading loans PDF report');
+        } finally {
+            setReportLoading(false);
+        }
+    };
+
+    /**
+     * Descargar reporte de préstamos en XLSX
+     */
+    const downloadLoansXLSX = async (dateFrom = '', dateTo = '') => {
+        try {
+            setReportLoading(true);
+            let url = `${import.meta.env.VITE_BACKEND_URL}/api/reports/loans/xlsx`;
+            const params = new URLSearchParams();
+
+            if (dateFrom) params.append('dateFrom', dateFrom);
+            if (dateTo) params.append('dateTo', dateTo);
+
+            if (params.toString()) {
+                url += `?${params.toString()}`;
+            }
+
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Error generating loans Excel report');
+            }
+
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = `loans-${Date.now()}.xlsx`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(downloadUrl);
+
+            toast.success('Loans Excel report downloaded successfully');
+        } catch (error) {
+            console.error('Error downloading loans XLSX:', error);
+            toast.error(error.message || 'Error downloading loans Excel report');
+        } finally {
+            setReportLoading(false);
+        }
+    };
+
+    // Obtener vista previa de datos de recursión para todas las categorías
+    const getRecursionPreview = async () => {
+        try {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/reports/recursion/preview`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Error fetching recursion data');
+            }
+
+            const result = await response.json();
+            return result.data || [];
+        } catch (error) {
+            console.error('Error fetching recursion preview:', error);
+            toast.error('Error loading recursion data');
+            return [];
+        }
+    };
+
     useEffect(() => {
         fetchBooks()
         fetchUser()
         fetchAdmin()
     }, [])
 
-    const value = { books, navigate, user, setUser, currency, searchQuery, setSearchQuery, cartItems, setCartItems, addToCart, getCartCount, getCartAmount, updateQuantity, method, setMethod, delivery_charges, showUserLogin, setShowUserLogin, isAdmin, setIsAdmin, axios, fetchBooks, fetchUser, logoutUser, profileData, setProfileData, profileImage, setProfileImage, imagePreview, setImagePreview, profileLoading, setProfileLoading, countryCodes, selectedCountryCode, setSelectedCountryCode, phoneNumber, setPhoneNumber, getUserProfile, loadProfileData, handleProfileImageChange, handlePhoneChange, updateProfileField, submitProfileUpdate, cancelProfileUpdate, resetProfileForm, shelves, fetchShelves, createShelf, assignBookToShelf, removeBookFromShelf, findDangerousCombinations, optimizeShelf, getUserLoans, getUserLoanStats, createLoan, returnBook, getAllLoans, getUserReservationStats, getUserReservationList, getWaitingList, createReservation, cancelReservation }
+    const value = { books, navigate, user, setUser, currency, searchQuery, setSearchQuery, cartItems, setCartItems, addToCart, getCartCount, getCartAmount, updateQuantity, method, setMethod, delivery_charges, showUserLogin, setShowUserLogin, isAdmin, setIsAdmin, axios, fetchBooks, fetchUser, logoutUser, profileData, setProfileData, profileImage, setProfileImage, imagePreview, setImagePreview, profileLoading, setProfileLoading, countryCodes, selectedCountryCode, setSelectedCountryCode, phoneNumber, setPhoneNumber, getUserProfile, loadProfileData, handleProfileImageChange, handlePhoneChange, updateProfileField, submitProfileUpdate, cancelProfileUpdate, resetProfileForm, shelves, fetchShelves, createShelf, assignBookToShelf, removeBookFromShelf, findDangerousCombinations, optimizeShelf, getUserLoans, getUserLoanStats, createLoan, returnBook, getAllLoans, getUserReservationStats, getUserReservationList, getWaitingList, createReservation, cancelReservation, reportLoading, downloadInventoryPDF, downloadInventoryXLSX, downloadLoansPDF, downloadLoansXLSX, getRecursionPreview }
 
     return (
         <ShopContext.Provider value={value}>
