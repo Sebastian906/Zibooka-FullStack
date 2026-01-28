@@ -6,6 +6,7 @@ import { MdFactCheck } from 'react-icons/md';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import { BiLogOut } from 'react-icons/bi';
 import toast from 'react-hot-toast';
+import { IoBarChart } from 'react-icons/io5';
 
 const Sidebar = () => {
 
@@ -16,7 +17,8 @@ const Sidebar = () => {
         {path: "/admin/list", label: "List", icon: <FaListAlt />},
         { path: "/admin/orders", label: "Orders", icon: <MdFactCheck /> },
         { path: "/admin/shelves", label: "Shelves", icon: <FaWarehouse /> },
-        { path: "/admin/loans", label: "Loans", icon: <FaBook /> }
+        { path: "/admin/loans", label: "Loans", icon: <FaBook /> },
+        { path: "/admin/reports", label: "Reports", icon: <IoBarChart /> }
     ]
 
     const logout = async () => {
