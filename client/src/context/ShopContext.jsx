@@ -621,177 +621,133 @@ const ShopContextProvider = ({ children }) => {
         }
     }
 
-    /**
-    * Descargar reporte de inventario en PDF
-    */
+    // Descargar reporte de inventario en PDF
     const downloadInventoryPDF = async (category = '') => {
         try {
             setReportLoading(true);
-            const url = category
-                ? `${import.meta.env.VITE_BACKEND_URL}/api/reports/inventory/pdf?category=${category}`
-                : `${import.meta.env.VITE_BACKEND_URL}/api/reports/inventory/pdf`;
+            const params = category ? { category } : {};
 
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
+            const response = await axios.get('/api/reports/inventory/pdf', {
+                params,
+                responseType: 'blob',
             });
 
-            if (!response.ok) {
-                throw new Error('Error generating PDF report');
-            }
-
-            const blob = await response.blob();
+            const blob = new Blob([response.data], { type: 'application/pdf' });
             const downloadUrl = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = downloadUrl;
             link.download = category
-                ? `inventory-${category}-${Date.now()}.pdf`
-                : `inventory-complete-${Date.now()}.pdf`;
+                ? `inventario-${category}-${Date.now()}.pdf`
+                : `inventario-completo-${Date.now()}.pdf`;
             document.body.appendChild(link);
             link.click();
             link.remove();
             window.URL.revokeObjectURL(downloadUrl);
 
-            toast.success('PDF report downloaded successfully');
+            toast.success('Reporte PDF descargado exitosamente');
         } catch (error) {
             console.error('Error downloading PDF:', error);
-            toast.error(error.message || 'Error downloading PDF report');
+            toast.error(error.response?.data?.message || 'Error al descargar reporte PDF');
         } finally {
             setReportLoading(false);
         }
     };
 
-    /**
-     * Descargar reporte de inventario en XLSX
-     */
+    // Descargar reporte de inventario en XLSX
     const downloadInventoryXLSX = async (category = '') => {
         try {
             setReportLoading(true);
-            const url = category
-                ? `${import.meta.env.VITE_BACKEND_URL}/api/reports/inventory/xlsx?category=${category}`
-                : `${import.meta.env.VITE_BACKEND_URL}/api/reports/inventory/xlsx`;
+            const params = category ? { category } : {};
 
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
+            const response = await axios.get('/api/reports/inventory/xlsx', {
+                params,
+                responseType: 'blob',
             });
 
-            if (!response.ok) {
-                throw new Error('Error generating Excel report');
-            }
-
-            const blob = await response.blob();
+            const blob = new Blob([response.data], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            });
             const downloadUrl = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = downloadUrl;
             link.download = category
-                ? `inventory-${category}-${Date.now()}.xlsx`
-                : `inventory-complete-${Date.now()}.xlsx`;
+                ? `inventario-${category}-${Date.now()}.xlsx`
+                : `inventario-completo-${Date.now()}.xlsx`;
             document.body.appendChild(link);
             link.click();
             link.remove();
             window.URL.revokeObjectURL(downloadUrl);
 
-            toast.success('Excel report downloaded successfully');
+            toast.success('Reporte Excel descargado exitosamente');
         } catch (error) {
             console.error('Error downloading XLSX:', error);
-            toast.error(error.message || 'Error downloading Excel report');
+            toast.error(error.response?.data?.message || 'Error al descargar reporte Excel');
         } finally {
             setReportLoading(false);
         }
     };
 
-    /**
-     * Descargar reporte de préstamos en PDF
-     */
+    // Descargar reporte de préstamos en PDF
     const downloadLoansPDF = async (dateFrom = '', dateTo = '') => {
         try {
             setReportLoading(true);
-            let url = `${import.meta.env.VITE_BACKEND_URL}/api/reports/loans/pdf`;
-            const params = new URLSearchParams();
+            const params = {};
+            if (dateFrom) params.dateFrom = dateFrom;
+            if (dateTo) params.dateTo = dateTo;
 
-            if (dateFrom) params.append('dateFrom', dateFrom);
-            if (dateTo) params.append('dateTo', dateTo);
-
-            if (params.toString()) {
-                url += `?${params.toString()}`;
-            }
-
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
+            const response = await axios.get('/api/reports/loans/pdf', {
+                params,
+                responseType: 'blob',
             });
 
-            if (!response.ok) {
-                throw new Error('Error generating loans PDF report');
-            }
-
-            const blob = await response.blob();
+            const blob = new Blob([response.data], { type: 'application/pdf' });
             const downloadUrl = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = downloadUrl;
-            link.download = `loans-${Date.now()}.pdf`;
+            link.download = `prestamos-${Date.now()}.pdf`;
             document.body.appendChild(link);
             link.click();
             link.remove();
             window.URL.revokeObjectURL(downloadUrl);
 
-            toast.success('Loans PDF report downloaded successfully');
+            toast.success('Reporte de préstamos PDF descargado exitosamente');
         } catch (error) {
             console.error('Error downloading loans PDF:', error);
-            toast.error(error.message || 'Error downloading loans PDF report');
+            toast.error(error.response?.data?.message || 'Error al descargar reporte de préstamos');
         } finally {
             setReportLoading(false);
         }
     };
 
-    /**
-     * Descargar reporte de préstamos en XLSX
-     */
+    // Descargar reporte de préstamos en XLSX
     const downloadLoansXLSX = async (dateFrom = '', dateTo = '') => {
         try {
             setReportLoading(true);
-            let url = `${import.meta.env.VITE_BACKEND_URL}/api/reports/loans/xlsx`;
-            const params = new URLSearchParams();
+            const params = {};
+            if (dateFrom) params.dateFrom = dateFrom;
+            if (dateTo) params.dateTo = dateTo;
 
-            if (dateFrom) params.append('dateFrom', dateFrom);
-            if (dateTo) params.append('dateTo', dateTo);
-
-            if (params.toString()) {
-                url += `?${params.toString()}`;
-            }
-
-            const response = await fetch(url, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
+            const response = await axios.get('/api/reports/loans/xlsx', {
+                params,
+                responseType: 'blob',
             });
 
-            if (!response.ok) {
-                throw new Error('Error generating loans Excel report');
-            }
-
-            const blob = await response.blob();
+            const blob = new Blob([response.data], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            });
             const downloadUrl = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = downloadUrl;
-            link.download = `loans-${Date.now()}.xlsx`;
+            link.download = `prestamos-${Date.now()}.xlsx`;
             document.body.appendChild(link);
             link.click();
             link.remove();
             window.URL.revokeObjectURL(downloadUrl);
 
-            toast.success('Loans Excel report downloaded successfully');
+            toast.success('Reporte de préstamos Excel descargado exitosamente');
         } catch (error) {
             console.error('Error downloading loans XLSX:', error);
-            toast.error(error.message || 'Error downloading loans Excel report');
+            toast.error(error.response?.data?.message || 'Error al descargar reporte de préstamos');
         } finally {
             setReportLoading(false);
         }
@@ -800,25 +756,20 @@ const ShopContextProvider = ({ children }) => {
     // Obtener vista previa de datos de recursión para todas las categorías
     const getRecursionPreview = async () => {
         try {
-            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/reports/recursion/preview`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                },
-            });
+            const { data } = await axios.get('/api/reports/recursion/preview');
 
-            if (!response.ok) {
-                throw new Error('Error fetching recursion data');
+            if (data.success) {
+                return data.data || [];
             }
 
-            const result = await response.json();
-            return result.data || [];
+            toast.error(data.message || 'Error al cargar datos de recursión');
+            return [];
         } catch (error) {
             console.error('Error fetching recursion preview:', error);
-            toast.error('Error loading recursion data');
+            toast.error(error.response?.data?.message || 'Error al cargar datos de recursión');
             return [];
         }
-    };
+    }
 
     useEffect(() => {
         fetchBooks()
