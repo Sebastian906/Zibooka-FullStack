@@ -53,27 +53,49 @@ export class ReportService {
             }
 
             return new Promise((resolve, reject) => {
-                const doc = new PDFDocument({ size: 'A4', margin: 50 });
+                const doc = new PDFDocument({
+                    size: 'A4',
+                    margin: 50,
+                    bufferPages: true  // Importante: permite agregar contenido a páginas previas
+                });
                 const chunks: Buffer[] = [];
 
                 doc.on('data', (chunk) => chunks.push(chunk));
                 doc.on('end', () => resolve(Buffer.concat(chunks)));
                 doc.on('error', reject);
 
-                // Header
-                doc.fontSize(20).text('Reporte de Inventario', { align: 'center' });
-                doc.fontSize(10).text(`Fecha de generación: ${new Date().toLocaleDateString('es-CO')}`, { align: 'center' });
+                // Función helper para agregar footer
+                const addFooter = () => {
+                    const pageNumber = doc.bufferedPageRange().count;
+                    doc.fontSize(8).font('Helvetica').text(
+                        `Page ${pageNumber}`,
+                        50,
+                        doc.page.height - 50,
+                        {
+                            align: 'center',
+                            width: doc.page.width - 100
+                        }
+                    );
+                };
+
+                // ============================================
+                // HEADER
+                // ============================================
+                doc.fontSize(20).text('Inventory Report', { align: 'center' });
+                doc.fontSize(10).text(`Generated: ${new Date().toLocaleDateString('en-US')}`, { align: 'center' });
                 if (category) {
-                    doc.text(`Categoría: ${category}`, { align: 'center' });
+                    doc.text(`Category: ${category}`, { align: 'center' });
                 }
                 doc.moveDown(2);
 
-                // Tabla de productos
-                doc.fontSize(14).text('Productos', { underline: true });
+                // ============================================
+                // PRODUCTS TABLE
+                // ============================================
+                doc.fontSize(14).text('Products', { underline: true });
                 doc.moveDown();
 
                 const tableTop = doc.y;
-                const tableHeaders = ['ISBN', 'Título', 'Autor', 'Categoría', 'Precio', 'En Stock'];
+                const tableHeaders = ['ISBN', 'Title', 'Author', 'Category', 'Price', 'In Stock'];
                 const colWidths = [80, 150, 120, 80, 60, 50];
                 let xPos = 50;
 
@@ -84,15 +106,17 @@ export class ReportService {
                     xPos += colWidths[i];
                 });
 
-                // Línea separadora
+                // Separator line
                 doc.moveTo(50, tableTop + 15).lineTo(540, tableTop + 15).stroke();
 
-                // Datos
+                // Data rows
                 let yPos = tableTop + 20;
                 doc.font('Helvetica').fontSize(8);
 
-                products.forEach((product) => {
+                products.forEach((product, index) => {
+                    // Check if we need a new page
                     if (yPos > 700) {
+                        addFooter(); // Agregar footer a la página actual antes de cambiar
                         doc.addPage();
                         yPos = 50;
                     }
@@ -104,7 +128,7 @@ export class ReportService {
                         product.author?.substring(0, 25) || 'N/A',
                         product.category || 'N/A',
                         `$${product.offerPrice}`,
-                        product.inStock ? 'Sí' : 'No',
+                        product.inStock ? 'Yes' : 'No',
                     ];
 
                     rowData.forEach((data, i) => {
@@ -115,41 +139,41 @@ export class ReportService {
                     yPos += 15;
                 });
 
-                // Sección de recursión si existe
+                // Agregar footer a la última página de productos
+                addFooter();
+
+                // ============================================
+                // RECURSION ANALYSIS (if category filtered)
+                // ============================================
                 if (recursionData) {
                     doc.addPage();
-                    doc.fontSize(14).font('Helvetica-Bold').text('Análisis Recursivo', { underline: true });
+                    doc.fontSize(14).font('Helvetica-Bold').text('Recursive Analysis', { underline: true });
                     doc.moveDown();
 
-                    doc.fontSize(12).text('Recursión de Pila - Valor Total');
+                    // Stack Recursion
+                    doc.fontSize(12).text('Stack Recursion - Total Value');
                     doc.fontSize(10).font('Helvetica');
-                    doc.text(`Total de libros: ${recursionData.valueData.bookCount}`);
-                    doc.text(`Valor total: $${recursionData.valueData.totalValue.toLocaleString('es-CO')} COP`);
-                    doc.text(`Promedio: $${(recursionData.valueData.totalValue / recursionData.valueData.bookCount).toFixed(2)} COP`);
+                    doc.text(`Total books: ${recursionData.valueData.bookCount}`);
+                    doc.text(`Total value: $${recursionData.valueData.totalValue.toLocaleString('en-US')} USD`);
+                    doc.text(`Average: $${(recursionData.valueData.totalValue / recursionData.valueData.bookCount).toFixed(2)} USD`);
                     doc.moveDown();
 
-                    doc.fontSize(12).font('Helvetica-Bold').text('Recursión de Cola - Peso Promedio');
+                    // Tail Recursion
+                    doc.fontSize(12).font('Helvetica-Bold').text('Tail Recursion - Average Weight');
                     doc.fontSize(10).font('Helvetica');
-                    doc.text(`Total de libros: ${recursionData.weightData.bookCount}`);
-                    doc.text(`Peso total: ${recursionData.weightData.totalWeight} Kg`);
-                    doc.text(`Peso promedio: ${recursionData.weightData.averageWeight} Kg`);
+                    doc.text(`Total books: ${recursionData.weightData.bookCount}`);
+                    doc.text(`Total weight: ${recursionData.weightData.totalWeight.toFixed(3)} Kg`);
+                    doc.text(`Average weight: ${recursionData.weightData.averageWeight.toFixed(3)} Kg`);
+
+                    // Footer para la página de recursión
+                    addFooter();
                 }
 
-                // Footer
-                const pages = doc.bufferedPageRange();
-                for (let i = 0; i < pages.count; i++) {
-                    doc.switchToPage(i);
-                    doc.fontSize(8).text(
-                        `Página ${i + 1} de ${pages.count}`,
-                        50,
-                        doc.page.height - 50,
-                        { align: 'center' }
-                    );
-                }
-
+                // Finalizar el documento
                 doc.end();
             });
         } catch (error) {
+            console.error('[ReportService] Error generating inventory PDF:', error);
             throw new InternalServerErrorException(`Error generating PDF: ${error.message}`);
         }
     }
@@ -160,41 +184,40 @@ export class ReportService {
     async generateInventoryXLSX(category?: string): Promise<Buffer> {
         try {
             const workbook = new ExcelJS.Workbook();
-            workbook.creator = 'Biblioteca Digital';
+            workbook.creator = 'Digital Library';
             workbook.created = new Date();
 
-            // Hoja 1: Inventario
-            const inventorySheet = workbook.addWorksheet('Inventario');
+            // Sheet 1: Inventory
+            const inventorySheet = workbook.addWorksheet('Inventory');
 
-            // Configurar columnas
+            // Configure columns
             inventorySheet.columns = [
                 { header: 'ISBN', key: 'isbn', width: 15 },
-                { header: 'Título', key: 'title', width: 40 },
-                { header: 'Autor', key: 'author', width: 30 },
-                { header: 'Categoría', key: 'category', width: 15 },
-                { header: 'Precio (COP)', key: 'price', width: 15 },
-                { header: 'En Stock', key: 'inStock', width: 10 },
-                { header: 'Páginas', key: 'pages', width: 10 },
+                { header: 'Title', key: 'title', width: 40 },
+                { header: 'Author', key: 'author', width: 30 },
+                { header: 'Category', key: 'category', width: 15 },
+                { header: 'Price (USD)', key: 'price', width: 15 },
+                { header: 'In Stock', key: 'inStock', width: 10 },
+                { header: 'Pages', key: 'pages', width: 10 },
             ];
 
-            // Estilo del header (azul para inputs según el skill)
+            // Header style
             const headerRow = inventorySheet.getRow(1);
             headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
             headerRow.fill = {
                 type: 'pattern',
                 pattern: 'solid',
-                fgColor: { argb: 'FF4472C4' }, // Azul
+                fgColor: { argb: 'FF4472C4' },
             };
             headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
 
-            // Obtener productos
+            // Get products
             const query = category ? { category } : {};
             const products = await this.productModel.find(query).exec();
 
-            // Agregar datos
+            // Add data
             let inStockCount = 0;
             products.forEach((product, index) => {
-                const isInStock = product.inStock ? 1 : 0;
                 if (product.inStock) inStockCount++;
 
                 const row = inventorySheet.addRow({
@@ -203,24 +226,24 @@ export class ReportService {
                     author: product.author || 'N/A',
                     category: product.category || 'N/A',
                     price: product.offerPrice,
-                    inStock: product.inStock ? 'Sí' : 'No',
+                    inStock: product.inStock ? 'Yes' : 'No',
                     pages: product.pageCount || 0,
                 });
 
-                // Formato de moneda para precios (negro para fórmulas)
+                // Currency format for prices
                 row.getCell('price').numFmt = '$#,##0';
             });
 
-            // Fila de totales
+            // Totals row
             const lastRow = inventorySheet.rowCount + 1;
             const totalRow = inventorySheet.addRow({
                 isbn: '',
                 title: '',
                 author: '',
                 category: 'TOTAL',
-                price: `=AVERAGE(E2:E${lastRow - 1})`, // Promedio de precios
-                inStock: `${inStockCount} en stock`,
-                pages: `=SUM(G2:G${lastRow - 1})`, // Total de páginas
+                price: `=AVERAGE(E2:E${lastRow - 1})`,
+                inStock: `${inStockCount} in stock`,
+                pages: `=SUM(G2:G${lastRow - 1})`,
             });
 
             totalRow.font = { bold: true };
@@ -229,16 +252,16 @@ export class ReportService {
             totalRow.fill = {
                 type: 'pattern',
                 pattern: 'solid',
-                fgColor: { argb: 'FFFFF000' }, // Amarillo para atención
+                fgColor: { argb: 'FFFFF000' },
             };
 
-            // Hoja 2: Recursión (si hay categoría)
+            // Sheet 2: Recursion (if category specified)
             if (category) {
-                const recursionSheet = workbook.addWorksheet('Recursión');
+                const recursionSheet = workbook.addWorksheet('Recursion');
 
                 recursionSheet.columns = [
-                    { header: 'Métrica', key: 'metric', width: 30 },
-                    { header: 'Valor', key: 'value', width: 20 },
+                    { header: 'Metric', key: 'metric', width: 30 },
+                    { header: 'Value', key: 'value', width: 20 },
                 ];
 
                 // Header
@@ -255,28 +278,29 @@ export class ReportService {
                     this.productsService.calculateAverageWeightByCategory(category),
                 ]);
 
-                // Datos de recursión de pila
-                recursionSheet.addRow({ metric: 'Recursión de Pila - Categoría', value: category });
-                recursionSheet.addRow({ metric: 'Total de libros', value: valueData.bookCount });
-                recursionSheet.addRow({ metric: 'Valor total (COP)', value: valueData.totalValue });
+                // Stack recursion data
+                recursionSheet.addRow({ metric: 'Stack Recursion - Category', value: category });
+                recursionSheet.addRow({ metric: 'Total books', value: valueData.bookCount });
+                recursionSheet.addRow({ metric: 'Total value (USD)', value: valueData.totalValue });
                 recursionSheet.getCell('B4').numFmt = '$#,##0';
-                recursionSheet.addRow({ metric: 'Promedio por libro', value: `=B4/B3` }); // Fórmula
+                recursionSheet.addRow({ metric: 'Average per book', value: `=B4/B3` });
                 recursionSheet.getCell('B5').numFmt = '$#,##0';
 
-                recursionSheet.addRow({}); // Espacio
+                recursionSheet.addRow({});
 
-                // Datos de recursión de cola
-                recursionSheet.addRow({ metric: 'Recursión de Cola - Categoría', value: category });
-                recursionSheet.addRow({ metric: 'Total de libros', value: weightData.bookCount });
-                recursionSheet.addRow({ metric: 'Peso total (Kg)', value: weightData.totalWeight });
-                recursionSheet.addRow({ metric: 'Peso promedio (Kg)', value: `=B9/B8` }); // Fórmula
+                // Tail recursion data
+                recursionSheet.addRow({ metric: 'Tail Recursion - Category', value: category });
+                recursionSheet.addRow({ metric: 'Total books', value: weightData.bookCount });
+                recursionSheet.addRow({ metric: 'Total weight (Kg)', value: weightData.totalWeight });
+                recursionSheet.addRow({ metric: 'Average weight (Kg)', value: `=B9/B8` });
                 recursionSheet.getCell('B10').numFmt = '0.000';
             }
 
-            // Generar buffer
+            // Generate buffer
             const buffer = await workbook.xlsx.writeBuffer();
             return Buffer.from(buffer);
         } catch (error) {
+            console.error('[ReportService] Error generating inventory XLSX:', error);
             throw new InternalServerErrorException(`Error generating XLSX: ${error.message}`);
         }
     }
@@ -308,30 +332,30 @@ export class ReportService {
                 doc.on('error', reject);
 
                 // Header
-                doc.fontSize(20).text('Reporte de Préstamos', { align: 'center' });
-                doc.fontSize(10).text(`Fecha de generación: ${new Date().toLocaleDateString('es-CO')}`, { align: 'center' });
+                doc.fontSize(20).text('Loan Report', { align: 'center' });
+                doc.fontSize(10).text(`Generated: ${new Date().toLocaleDateString('en-US')}`, { align: 'center' });
                 if (dateFrom || dateTo) {
-                    doc.text(`Período: ${dateFrom?.toLocaleDateString('es-CO') || 'Inicio'} - ${dateTo?.toLocaleDateString('es-CO') || 'Hoy'}`, { align: 'center' });
+                    doc.text(`Period: ${dateFrom?.toLocaleDateString('en-US') || 'Start'} - ${dateTo?.toLocaleDateString('en-US') || 'Today'}`, { align: 'center' });
                 }
                 doc.moveDown(2);
 
-                // Estadísticas
+                // Statistics
                 const activeLoans = loans.filter(l => l.status === 'active').length;
                 const returnedLoans = loans.filter(l => l.status === 'returned').length;
 
-                doc.fontSize(12).font('Helvetica-Bold').text('Resumen');
+                doc.fontSize(12).font('Helvetica-Bold').text('Summary');
                 doc.fontSize(10).font('Helvetica');
-                doc.text(`Total de préstamos: ${loans.length}`);
-                doc.text(`Préstamos activos: ${activeLoans}`);
-                doc.text(`Préstamos devueltos: ${returnedLoans}`);
+                doc.text(`Total loans: ${loans.length}`);
+                doc.text(`Active loans: ${activeLoans}`);
+                doc.text(`Returned loans: ${returnedLoans}`);
                 doc.moveDown();
 
-                // Tabla de préstamos
-                doc.fontSize(14).font('Helvetica-Bold').text('Detalle de Préstamos', { underline: true });
+                // Loans table
+                doc.fontSize(14).font('Helvetica-Bold').text('Loan Details', { underline: true });
                 doc.moveDown();
 
                 const tableTop = doc.y;
-                const tableHeaders = ['Usuario', 'Libro', 'ISBN', 'Fecha Préstamo', 'Estado'];
+                const tableHeaders = ['User', 'Book', 'ISBN', 'Loan Date', 'Status'];
                 const colWidths = [120, 150, 80, 90, 80];
                 let xPos = 50;
 
@@ -344,7 +368,7 @@ export class ReportService {
 
                 doc.moveTo(50, tableTop + 15).lineTo(540, tableTop + 15).stroke();
 
-                // Datos
+                // Data
                 let yPos = tableTop + 20;
                 doc.font('Helvetica').fontSize(8);
 
@@ -356,7 +380,6 @@ export class ReportService {
 
                     xPos = 50;
 
-                    // Type guard para userId y bookId
                     const userName = loan.userId && typeof loan.userId === 'object' && 'name' in loan.userId
                         ? (loan.userId as any).name?.substring(0, 20)
                         : 'N/A';
@@ -373,8 +396,8 @@ export class ReportService {
                         userName,
                         bookName,
                         bookIsbn,
-                        new Date(loan.loanDate).toLocaleDateString('es-CO'),
-                        loan.status === 'active' ? 'Activo' : 'Devuelto',
+                        new Date(loan.loanDate).toLocaleDateString('en-US'),
+                        loan.status === 'active' ? 'Active' : 'Returned',
                     ];
 
                     rowData.forEach((data, i) => {
@@ -385,21 +408,26 @@ export class ReportService {
                     yPos += 15;
                 });
 
-                // Footer
-                const pages = doc.bufferedPageRange();
-                for (let i = 0; i < pages.count; i++) {
+                // Footer - CORREGIDO
+                const pageRange = doc.bufferedPageRange();
+                const totalPages = pageRange.count;
+
+                for (let i = 0; i < totalPages; i++) {
                     doc.switchToPage(i);
+
+                    const pageNumber = i + 1;
                     doc.fontSize(8).text(
-                        `Página ${i + 1} de ${pages.count}`,
+                        `Page ${pageNumber} of ${totalPages}`,
                         50,
                         doc.page.height - 50,
-                        { align: 'center' }
+                        { align: 'center', width: doc.page.width - 100 }
                     );
                 }
 
                 doc.end();
             });
         } catch (error) {
+            console.error('[ReportService] Error generating loans PDF:', error);
             throw new InternalServerErrorException(`Error generating loans PDF: ${error.message}`);
         }
     }
@@ -410,18 +438,18 @@ export class ReportService {
     async generateLoansXLSX(dateFrom?: Date, dateTo?: Date): Promise<Buffer> {
         try {
             const workbook = new ExcelJS.Workbook();
-            const loansSheet = workbook.addWorksheet('Préstamos');
+            const loansSheet = workbook.addWorksheet('Loans');
 
-            // Configurar columnas
+            // Configure columns
             loansSheet.columns = [
-                { header: 'Usuario', key: 'user', width: 25 },
+                { header: 'User', key: 'user', width: 25 },
                 { header: 'Email', key: 'email', width: 30 },
-                { header: 'Libro', key: 'book', width: 40 },
+                { header: 'Book', key: 'book', width: 40 },
                 { header: 'ISBN', key: 'isbn', width: 15 },
-                { header: 'Fecha Préstamo', key: 'loanDate', width: 15 },
-                { header: 'Fecha Devolución', key: 'returnDate', width: 15 },
-                { header: 'Estado', key: 'status', width: 12 },
-                { header: 'Días Préstamo', key: 'days', width: 15 },
+                { header: 'Loan Date', key: 'loanDate', width: 15 },
+                { header: 'Return Date', key: 'returnDate', width: 15 },
+                { header: 'Status', key: 'status', width: 12 },
+                { header: 'Days Loaned', key: 'days', width: 15 },
             ];
 
             // Header
@@ -433,7 +461,7 @@ export class ReportService {
                 fgColor: { argb: 'FF4472C4' },
             };
 
-            // Obtener préstamos
+            // Get loans
             const query: any = {};
             if (dateFrom || dateTo) {
                 query.loanDate = {};
@@ -447,12 +475,11 @@ export class ReportService {
                 .populate('bookId', 'name isbn')
                 .exec();
 
-            // Agregar datos
+            // Add data
             loans.forEach((loan, index) => {
                 const loanDate = new Date(loan.loanDate);
                 const returnDate = loan.returnDate ? new Date(loan.returnDate) : null;
 
-                // Type guards para userId y bookId
                 const userName = loan.userId && typeof loan.userId === 'object' && 'name' in loan.userId
                     ? (loan.userId as any).name
                     : 'N/A';
@@ -476,26 +503,26 @@ export class ReportService {
                     isbn: bookIsbn,
                     loanDate: loanDate,
                     returnDate: returnDate || '-',
-                    status: loan.status === 'active' ? 'Activo' : 'Devuelto',
+                    status: loan.status === 'active' ? 'Active' : 'Returned',
                     days: returnDate
-                        ? `=(F${index + 2}-E${index + 2})` // Fórmula para calcular días
-                        : `=(TODAY()-E${index + 2})`, // Si aún está activo, días desde préstamo
+                        ? `=(F${index + 2}-E${index + 2})`
+                        : `=(TODAY()-E${index + 2})`,
                 });
 
-                // Formato de fechas
-                row.getCell('loanDate').numFmt = 'dd/mm/yyyy';
+                // Date formats
+                row.getCell('loanDate').numFmt = 'mm/dd/yyyy';
                 if (returnDate) {
-                    row.getCell('returnDate').numFmt = 'dd/mm/yyyy';
+                    row.getCell('returnDate').numFmt = 'mm/dd/yyyy';
                 }
                 row.getCell('days').numFmt = '#,##0';
             });
 
-            // Hoja de estadísticas
-            const statsSheet = workbook.addWorksheet('Estadísticas');
+            // Statistics sheet
+            const statsSheet = workbook.addWorksheet('Statistics');
 
             statsSheet.columns = [
-                { header: 'Métrica', key: 'metric', width: 30 },
-                { header: 'Valor', key: 'value', width: 15 },
+                { header: 'Metric', key: 'metric', width: 30 },
+                { header: 'Value', key: 'value', width: 15 },
             ];
 
             const statsHeaderRow = statsSheet.getRow(1);
@@ -509,19 +536,20 @@ export class ReportService {
             const activeCount = loans.filter(l => l.status === 'active').length;
             const returnedCount = loans.filter(l => l.status === 'returned').length;
 
-            statsSheet.addRow({ metric: 'Total de préstamos', value: loans.length });
-            statsSheet.addRow({ metric: 'Préstamos activos', value: activeCount });
-            statsSheet.addRow({ metric: 'Préstamos devueltos', value: returnedCount });
-            statsSheet.addRow({ metric: 'Tasa de devolución (%)', value: `=B4/B2*100` }); // Fórmula
+            statsSheet.addRow({ metric: 'Total loans', value: loans.length });
+            statsSheet.addRow({ metric: 'Active loans', value: activeCount });
+            statsSheet.addRow({ metric: 'Returned loans', value: returnedCount });
+            statsSheet.addRow({ metric: 'Return rate (%)', value: `=B4/B2*100` });
             statsSheet.getCell('B5').numFmt = '0.00"%"';
-            statsSheet.addRow({ metric: 'Promedio días préstamo', value: `=AVERAGE(Préstamos!H:H)` }); // Link a otra hoja (verde)
+            statsSheet.addRow({ metric: 'Average days loaned', value: `=AVERAGE(Loans!H:H)` });
             statsSheet.getCell('B6').numFmt = '#,##0';
-            statsSheet.getCell('B6').font = { color: { argb: 'FF008000' } }; // Verde para links internos
+            statsSheet.getCell('B6').font = { color: { argb: 'FF008000' } };
 
-            // Generar buffer
+            // Generate buffer
             const buffer = await workbook.xlsx.writeBuffer();
             return Buffer.from(buffer);
         } catch (error) {
+            console.error('[ReportService] Error generating loans XLSX:', error);
             throw new InternalServerErrorException(`Error generating loans XLSX: ${error.message}`);
         }
     }
