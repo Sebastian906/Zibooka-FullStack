@@ -651,4 +651,59 @@ export class ProductService {
             throw new InternalServerErrorException(error.message);
         }
     }
+
+    /**
+ * Ordena productos por precio usando Merge Sort
+ * Método público accesible para todos los usuarios
+ * @param ascending - true para orden ascendente, false para descendente
+ */
+    async sortProductsByPrice(ascending: boolean = true): Promise<Product[]> {
+        const products = await this.productModel.find();
+        return this.mergeSortByPrice(products, ascending);
+    }
+
+    /**
+     * Implementación de Merge Sort para ordenar por precio (offerPrice)
+     * Algoritmo recursivo O(n log n)
+     */
+    private mergeSortByPrice(arr: Product[], ascending: boolean): Product[] {
+        if (arr.length <= 1) {
+            return arr;
+        }
+
+        const mid = Math.floor(arr.length / 2);
+        const left = arr.slice(0, mid);
+        const right = arr.slice(mid);
+
+        return this.mergeByPrice(
+            this.mergeSortByPrice(left, ascending),
+            this.mergeSortByPrice(right, ascending),
+            ascending,
+        );
+    }
+
+    /**
+     * Función auxiliar para combinar dos arrays ordenados
+     */
+    private mergeByPrice(left: Product[], right: Product[], ascending: boolean): Product[] {
+        const result: Product[] = [];
+        let leftIndex = 0;
+        let rightIndex = 0;
+
+        while (leftIndex < left.length && rightIndex < right.length) {
+            const comparison = ascending
+                ? left[leftIndex].offerPrice <= right[rightIndex].offerPrice
+                : left[leftIndex].offerPrice >= right[rightIndex].offerPrice;
+
+            if (comparison) {
+                result.push(left[leftIndex]);
+                leftIndex++;
+            } else {
+                result.push(right[rightIndex]);
+                rightIndex++;
+            }
+        }
+
+        return result.concat(left.slice(leftIndex)).concat(right.slice(rightIndex));
+    }
 }

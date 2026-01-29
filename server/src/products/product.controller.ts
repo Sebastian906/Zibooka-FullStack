@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpStatus, Param, Post, Query, Res, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, HttpStatus, Param, Post, Query, Res, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
 import { ApiBody, ApiConsumes, ApiCookieAuth, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ProductService } from './product.service';
 import { AdminAuthGuard } from 'src/common/guards/admin-auth/admin-auth.guard';
@@ -549,6 +549,28 @@ export class ProductController {
                     success: false,
                     message: error.message,
                 });
+        }
+    }
+
+    /**
+ * @route GET /api/product/sort-by-price
+ * @desc Ordena productos por precio usando Merge Sort (público para clientes)
+ * @access Public
+ * @query ascending (optional) - true para ascendente, false para descendente
+ */
+    @Get('sort-by-price')
+    async sortProductsByPrice(@Query('ascending') ascending?: string) {
+        try {
+            const isAscending = ascending !== 'false'; // Default: true (ascendente)
+            const sortedProducts = await this.productService.sortProductsByPrice(isAscending);
+
+            return {
+                success: true,
+                products: sortedProducts,
+                message: `Products sorted by price ${isAscending ? 'ascending' : 'descending'}`,
+            };
+        } catch (error) {
+            throw new BadRequestException(error.message);
         }
     }
 }
