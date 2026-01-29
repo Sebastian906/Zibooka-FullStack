@@ -1,4 +1,4 @@
-import { createContext, useEffect, useState } from 'react'
+import { createContext, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import toast from 'react-hot-toast'
@@ -50,6 +50,12 @@ const ShopContextProvider = ({ children }) => {
 
     const [selectedCountryCode, setSelectedCountryCode] = useState('+1')
     const [phoneNumber, setPhoneNumber] = useState('')
+
+    // Obtiene categorías únicas de los libros
+    const availableCategories = useMemo(() => {
+        const categories = [...new Set(books.map(book => book.category))];
+        return categories.sort();
+    }, [books]);
 
     // Fetch all books
     const fetchBooks = async () => {
@@ -115,6 +121,111 @@ const ShopContextProvider = ({ children }) => {
         } catch (error) {
             toast.error(error.message)
         }
+    }
+
+    // Búsqueda Lineal usando el endpoint del backend
+    const searchByTitleOrAuthor = async (searchTerm, searchBy = 'title') => {
+        try {
+            const { data } = await axios.post('/api/product/search/linear', {
+                searchTerm,
+                searchBy
+            });
+
+            if (data.success) {
+                return data.results;
+            }
+            return [];
+        } catch (error) {
+            console.error('Linear search error:', error);
+            return [];
+        }
+    }
+
+    // Búsqueda Binaria usando el endpoint del backend
+    const searchByISBN = async (isbn) => {
+        try {
+            const { data } = await axios.post('/api/product/search/binary', {
+                isbn
+            });
+
+            if (data.success) {
+                return {
+                    found: data.found,
+                    product: data.product
+                };
+            }
+            return { found: false, product: null };
+        } catch (error) {
+            console.error('Binary search error:', error);
+            return { found: false, product: null };
+        }
+    }
+
+    // Ordena productos por precio usando Merge Sort del backend
+    const sortProductsByPrice = async (ascending = true) => {
+        try {
+            const { data } = await axios.get('/api/product/sort-by-price', {
+                params: { ascending }
+            });
+
+            if (data.success) {
+                return data.products;
+            }
+            return [];
+        } catch (error) {
+            console.error('Merge sort error:', error);
+            return [];
+        }
+    }
+
+    // Aplica filtros y ordenamiento a los libros
+    const applyFiltersAndSort = (booksList, filters) => {
+        let result = [...booksList];
+
+        // 1. Búsqueda por texto en nombre del libro
+        if (filters.searchQuery && filters.searchQuery.length > 0) {
+            const query = filters.searchQuery.toLowerCase();
+            result = result.filter((book) =>
+                book.name.toLowerCase().includes(query)
+            );
+        }
+
+        // 2. Filtro por categoría
+        if (filters.category && filters.category !== 'all') {
+            result = result.filter((book) => book.category === filters.category);
+        }
+
+        // 3. Búsqueda por autor (filtro en frontend)
+        if (filters.authorSearch && filters.authorSearch.length > 0) {
+            const authorQuery = filters.authorSearch.toLowerCase();
+            result = result.filter((book) =>
+                book.author && book.author.toLowerCase().includes(authorQuery)
+            );
+        }
+
+        // 4. Ordenamiento (SIMPLIFICADO - sin value-asc/desc)
+        switch (filters.sortBy) {
+            case 'title-asc':
+                result.sort((a, b) => a.name.localeCompare(b.name));
+                break;
+            case 'title-desc':
+                result.sort((a, b) => b.name.localeCompare(a.name));
+                break;
+            case 'price-asc':
+            case 'price-desc':
+                // Ordenamiento por precio usando sort nativo
+                result.sort((a, b) =>
+                    filters.sortBy === 'price-asc'
+                        ? a.offerPrice - b.offerPrice
+                        : b.offerPrice - a.offerPrice
+                );
+                break;
+            default:
+                // Default: mantener orden original
+                break;
+        }
+
+        return result;
     }
 
     // Adding items to cart
@@ -777,7 +888,8 @@ const ShopContextProvider = ({ children }) => {
         fetchAdmin()
     }, [])
 
-    const value = { books, navigate, user, setUser, currency, searchQuery, setSearchQuery, cartItems, setCartItems, addToCart, getCartCount, getCartAmount, updateQuantity, method, setMethod, delivery_charges, showUserLogin, setShowUserLogin, isAdmin, setIsAdmin, axios, fetchBooks, fetchUser, logoutUser, profileData, setProfileData, profileImage, setProfileImage, imagePreview, setImagePreview, profileLoading, setProfileLoading, countryCodes, selectedCountryCode, setSelectedCountryCode, phoneNumber, setPhoneNumber, getUserProfile, loadProfileData, handleProfileImageChange, handlePhoneChange, updateProfileField, submitProfileUpdate, cancelProfileUpdate, resetProfileForm, shelves, fetchShelves, createShelf, assignBookToShelf, removeBookFromShelf, findDangerousCombinations, optimizeShelf, getUserLoans, getUserLoanStats, createLoan, returnBook, getAllLoans, getUserReservationStats, getUserReservationList, getWaitingList, createReservation, cancelReservation, reportLoading, downloadInventoryPDF, downloadInventoryXLSX, downloadLoansPDF, downloadLoansXLSX, getRecursionPreview }
+    const value = {
+        books, navigate, user, setUser, currency, searchQuery, setSearchQuery, cartItems, setCartItems, addToCart, getCartCount, getCartAmount, updateQuantity, method, setMethod, delivery_charges, showUserLogin, setShowUserLogin, isAdmin, setIsAdmin, axios, fetchBooks, fetchUser, logoutUser, availableCategories, searchByTitleOrAuthor, searchByISBN, sortProductsByPrice, applyFiltersAndSort, profileData, setProfileData, profileImage, setProfileImage, imagePreview, setImagePreview, profileLoading, setProfileLoading, countryCodes, selectedCountryCode, setSelectedCountryCode, phoneNumber, setPhoneNumber, getUserProfile, loadProfileData, handleProfileImageChange, handlePhoneChange, updateProfileField, submitProfileUpdate, cancelProfileUpdate, resetProfileForm, shelves, fetchShelves, createShelf, assignBookToShelf, removeBookFromShelf, findDangerousCombinations, optimizeShelf, getUserLoans, getUserLoanStats, createLoan, returnBook, getAllLoans, getUserReservationStats, getUserReservationList, getWaitingList, createReservation, cancelReservation, reportLoading, downloadInventoryPDF, downloadInventoryXLSX, downloadLoansPDF, downloadLoansXLSX, getRecursionPreview }
 
     return (
         <ShopContext.Provider value={value}>
