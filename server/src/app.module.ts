@@ -14,6 +14,7 @@ import { ShelfModule } from './shelves/shelf.module';
 import { LoanModule } from './loans/loan.module';
 import { ReservationModule } from './reservations/reservation.module';
 import { ReportModule } from './reports/report.module';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { ReportModule } from './reports/report.module';
     LoanModule,
     ReservationModule,
     ReportModule,
+    EmailModule,
   ],
   controllers: [AppController, CartController],
   providers: [AppService],

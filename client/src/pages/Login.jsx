@@ -39,6 +39,11 @@ const Login = () => {
         }
     }
 
+    const handleForgotPassword = () => {
+        setShowUserLogin(false);
+        navigate('/forgot-password');
+    }
+
     return (
         <div
             onClick={() => setShowUserLogin(false)}
@@ -110,6 +115,20 @@ const Login = () => {
                         required
                     />
                 </div>
+
+                {/* Forgot Password Link - Only show on login */}
+                {state === "login" && (
+                    <div className='w-full flex justify-end'>
+                        <button
+                            type='button'
+                            onClick={handleForgotPassword}
+                            className='text-secondary text-sm hover:underline cursor-pointer'
+                        >
+                            Forgot your password?
+                        </button>
+                    </div>
+                )}
+
                 {state === "register" ? (
                     <p>
                         Already have account?
