@@ -22,6 +22,18 @@ export class User {
 
     @Prop({ type: Object, default: {} })
     cartData: Record<string, any>;
+
+    @Prop({ type: Date, default: null })
+    lastLogin: Date | null;
+
+    @Prop({ type: Date, default: null })
+    lastLogout: Date | null;
+
+    @Prop({ type: Date, default: null })
+    lastActivity: Date | null;
+
+    @Prop({ type: String, default: null })
+    sessionToken: string | null;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

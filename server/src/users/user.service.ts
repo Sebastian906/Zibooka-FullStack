@@ -78,32 +78,48 @@ export class UserService {
         }
     }
 
-    async login(userLoginDto: UserLoginDto): Promise<{ token: string; user: UserResponseDto }> {
+    async login(userLoginDto: UserLoginDto): Promise<{ token: string; user: UserResponseDto; expiresIn: number }> {
         try {
             const { email, password, phone } = userLoginDto;
 
-            // Find user by email
             const user = await this.userModel.findOne({ email });
 
             if (!user) {
                 throw new UnauthorizedException('Invalid credentials');
             }
 
-            // Compare passwords
             const isPasswordValid = await bcrypt.compare(password, user.password);
 
             if (!isPasswordValid) {
                 throw new UnauthorizedException('Invalid credentials');
             }
 
-            // Generate JWT token
+            // Generar session token único
+            const sessionToken = jwt.sign(
+                { session: new Date().getTime() },
+                this.configService.getOrThrow<string>('JWT_SECRET'),
+            );
+
+            // Token de acceso con expiración de 7 días
+            const expiresIn = 7 * 24 * 60 * 60; // 7 días en segundos
             const token = jwt.sign(
-                { id: user._id },
+                {
+                    id: user._id,
+                    session: sessionToken,
+                },
                 this.configService.getOrThrow<string>('JWT_SECRET'),
                 { expiresIn: '7d' }
             );
 
-            // Return user data without password
+            // Actualizar última actividad y sesión
+            await this.userModel.findByIdAndUpdate(user._id, {
+                lastLogin: new Date(),
+                lastActivity: new Date(),
+                sessionToken,
+            });
+
+            console.log(`[UserService] User ${user.email} logged in at ${new Date().toISOString()}`);
+
             return {
                 token,
                 user: {
@@ -111,6 +127,7 @@ export class UserService {
                     name: user.name,
                     profileImage: user.profileImage ?? '',
                 },
+                expiresIn,
             };
         } catch (error) {
             if (error instanceof UnauthorizedException) {
@@ -143,16 +160,25 @@ export class UserService {
         }
     }
 
-    async logout(): Promise<{ message: string }> {
-        // Aquí podrías agregar lógica adicional en el futuro:
-        // - Invalidar tokens en una blacklist
-        // - Registrar el logout en logs
-        // - Actualizar última actividad del usuario
-        // - Limpiar sesiones activas
+    async logout(userId: string): Promise<{ message: string }> {
+        try {
+            const user = await this.userModel.findById(userId);
 
-        return {
-            message: 'Successfully logged out',
-        };
+            if (user) {
+                // Registrar última actividad
+                await this.userModel.findByIdAndUpdate(userId, {
+                    lastLogout: new Date(),
+                });
+
+                console.log(`[UserService] User ${user.email} logged out at ${new Date().toISOString()}`);
+            }
+
+            return {
+                message: 'Successfully logged out',
+            };
+        } catch (error) {
+            throw new InternalServerErrorException('Error during logout');
+        }
     }
 
     async getUserById(userId: string): Promise<UserResponseDto> {

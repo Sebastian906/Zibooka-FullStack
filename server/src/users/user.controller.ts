@@ -104,17 +104,22 @@ export class UserController {
     }
 
     @Post('logout')
+    @UseGuards(AuthGuard)
+    @ApiCookieAuth('token')
     @ApiOperation({ summary: 'Logout user' })
     @ApiResponse({
         status: 200,
         description: 'User successfully logged out'
     })
-    async logout(@Res() res: express.Response) {
+    async logout(
+        @UserId() userId: string,
+        @Res() res: express.Response
+    ) {
         try {
-            // Llamar al service para ejecutar lógica de negocio
-            const result = await this.userService.logout();
+            // Ejecutar logout del usuario
+            const result = await this.userService.logout(userId);
 
-            // El controller solo maneja la parte HTTP (cookies)
+            // Configurar opciones de cookie
             const cookieOptions = {
                 httpOnly: true,
                 secure: this.configService.get<string>('APP_ENV') === 'production',
@@ -123,6 +128,7 @@ export class UserController {
                     : ('strict' as const),
             };
 
+            // Limpiar cookie
             res.clearCookie('token', cookieOptions);
 
             return res.status(HttpStatus.OK).json({

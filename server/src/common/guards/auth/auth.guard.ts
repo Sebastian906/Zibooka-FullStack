@@ -31,16 +31,27 @@ export class AuthGuard implements CanActivate {
         throw new UnauthorizedException('JWT_SECRET is not configured');
       }
 
-      const decoded = jwt.verify(token, jwtSecret) as unknown as { id: string };
+      const decoded = jwt.verify(token, jwtSecret) as unknown as {
+        id: string;
+        session?: string;
+        exp: number;
+      };
 
       if (!decoded.id) {
         throw new UnauthorizedException('Not authorized. Login again');
       }
 
-      // Agregar userId al request para usarlo en los controladores
+      // Verificar expiración del token
+      const currentTime = Math.floor(Date.now() / 1000);
+      if (decoded.exp && decoded.exp < currentTime) {
+        throw new UnauthorizedException('Session expired. Login again');
+      }
       request.userId = decoded.id;
       return true;
     } catch (error) {
+      if (error instanceof jwt.TokenExpiredError) {
+        throw new UnauthorizedException('Session expired. Login again');
+      }
       throw new UnauthorizedException('Not authorized. Login again');
     }
   }

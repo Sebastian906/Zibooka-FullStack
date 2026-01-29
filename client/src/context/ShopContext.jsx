@@ -78,18 +78,46 @@ const ShopContextProvider = ({ children }) => {
             if (data.success) {
                 setUser(data.user)
                 setCartItems(data.user.cartData || {})
+
+                // Guardar tiempo de login si no existe
+                if (!localStorage.getItem('loginTime')) {
+                    localStorage.setItem('loginTime', Date.now().toString());
+                }
             } else {
                 setUser(null)
                 setCartItems({})
+                localStorage.removeItem('loginTime');
             }
         } catch (error) {
             setUser(null);
             setCartItems({});
+            localStorage.removeItem('loginTime');
             if (!(error.response && error.response.status === 401)) {
                 toast.error(error.message);
             }
         }
     }
+
+    // Auto-logout cuando expire la sesión
+    useEffect(() => {
+        const checkSessionExpiry = () => {
+            const loginTime = localStorage.getItem('loginTime');
+            if (loginTime) {
+                const sevenDays = 7 * 24 * 60 * 60 * 1000;
+                const elapsed = Date.now() - parseInt(loginTime);
+
+                if (elapsed > sevenDays) {
+                    logoutUser();
+                    toast.error('Session expired. Please login again');
+                }
+            }
+        };
+
+        // Verificar cada 5 minutos
+        const interval = setInterval(checkSessionExpiry, 5 * 60 * 1000);
+
+        return () => clearInterval(interval);
+    }, []);
 
     // Fetch Admin
     const fetchAdmin = async () => {
