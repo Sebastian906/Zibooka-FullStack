@@ -11,6 +11,8 @@ import { UserId } from 'src/common/decorators/users/user-id.decorator';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @ApiTags('Users')
 @Controller('user')
@@ -242,6 +244,88 @@ export class UserController {
                 success: true,
                 message: result.message,
                 user: result.user,
+            });
+        } catch (error) {
+            return res.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).json({
+                success: false,
+                message: error.message,
+            });
+        }
+    }
+
+    @Post('forgot-password')
+    @ApiOperation({
+        summary: 'Request password reset',
+        description: 'Sends a password reset link to the user\'s email. Link expires in 1 hour.'
+    })
+    @ApiBody({ type: ForgotPasswordDto })
+    @ApiResponse({
+        status: 200,
+        description: 'If email exists, reset link has been sent',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                message: {
+                    type: 'string',
+                    example: 'If this email exists, a password reset link has been sent'
+                }
+            }
+        }
+    })
+    @ApiResponse({ status: 500, description: 'Error processing request' })
+    async forgotPassword(
+        @Body() forgotPasswordDto: ForgotPasswordDto,
+        @Res() res: express.Response,
+    ) {
+        try {
+            const result = await this.userService.forgotPassword(forgotPasswordDto);
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                message: result.message,
+            });
+        } catch (error) {
+            return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+                success: false,
+                message: error.message,
+            });
+        }
+    }
+
+    @Post('reset-password')
+    @ApiOperation({
+        summary: 'Reset password',
+        description: 'Resets user password using the token from email'
+    })
+    @ApiBody({ type: ResetPasswordDto })
+    @ApiResponse({
+        status: 200,
+        description: 'Password reset successful',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                message: {
+                    type: 'string',
+                    example: 'Password has been reset successfully. You can now log in with your new password'
+                }
+            }
+        }
+    })
+    @ApiResponse({ status: 400, description: 'Passwords do not match' })
+    @ApiResponse({ status: 401, description: 'Invalid or expired reset link' })
+    @ApiResponse({ status: 404, description: 'User not found' })
+    async resetPassword(
+        @Body() resetPasswordDto: ResetPasswordDto,
+        @Res() res: express.Response,
+    ) {
+        try {
+            const result = await this.userService.resetPassword(resetPasswordDto);
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                message: result.message,
             });
         } catch (error) {
             return res.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).json({

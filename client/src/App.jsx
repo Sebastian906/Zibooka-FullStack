@@ -26,16 +26,20 @@ import MyReservations from './pages/MyReservations'
 import MyLoans from './pages/MyLoans'
 import AdminLoans from './pages/admin/AdminLoans'
 import Reports from './pages/admin/Reports'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 
 const App = () => {
 
-  const {showUserLogin, isAdmin} = useContext(ShopContext)
+  const { showUserLogin, isAdmin } = useContext(ShopContext)
   const isAdminPath = useLocation().pathname.includes('admin')
+  const isForgotPasswordPath = useLocation().pathname === '/forgot-password'
+  const isResetPasswordPath = useLocation().pathname === '/reset-password'
 
   return (
     <main>
       {showUserLogin && <Login />}
-      {!isAdminPath && <Header />}
+      {!isAdminPath && !isForgotPasswordPath && !isResetPasswordPath && <Header />}
       <Toaster position='bottom-right'/>
       <Routes>
         <Route path='/' element={<Home />} /> 
@@ -51,6 +55,8 @@ const App = () => {
         <Route path='/my-reservations' element={<MyReservations />} />
         <Route path='/loader' element={<Loading />} />
         <Route path='/profile' element={<Profile />} />
+        <Route path='/forgot-password' element={<ForgotPassword />} />
+        <Route path='/reset-password' element={<ResetPassword />} />
         <Route path='/admin' element={isAdmin ? <Sidebar /> : <AdminLogin />}>
           <Route index element={isAdmin ? <AddProduct /> : null} />
           <Route path='list' element={<ProductList/>} />
@@ -60,7 +66,7 @@ const App = () => {
           <Route path='reports' element={<Reports />} />
         </Route>
       </Routes>
-      {!isAdminPath && <Footer />}
+      {!isAdminPath && !isForgotPasswordPath && !isResetPasswordPath && <Footer />}
     </main>
   )
 }

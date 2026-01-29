@@ -12,12 +12,16 @@ import { AddToCartDto } from 'src/carts/dto/add-to-cart.dto';
 import { UpdateCartDto } from 'src/carts/dto/update-cart.dto';
 import { v2 as cloudinary } from 'cloudinary';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { EmailService } from 'src/email/email.service';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @Injectable()
 export class UserService {
     constructor(
         @InjectModel(User.name) private userModel: Model<UserDocument>,
         private configService: ConfigService,
+        private emailService: EmailService,
     ) { 
         // Configure cloudinary
         cloudinary.config({
@@ -283,6 +287,127 @@ export class UserService {
                 throw error;
             }
             throw new InternalServerErrorException(error.message);
+        }
+    }
+
+    /**
+     * Solicitud de recuperación de contraseña
+     * Genera un token JWT con expiración de 1 hora y envía email
+     */
+    async forgotPassword(forgotPasswordDto: ForgotPasswordDto): Promise<{ message: string }> {
+        try {
+            const { email } = forgotPasswordDto;
+
+            // Verificar que el usuario existe
+            const user = await this.userModel.findOne({ email });
+
+            if (!user) {
+                // Por seguridad, no revelamos si el email existe o no
+                return {
+                    message: 'If this email exists, a password reset link has been sent'
+                };
+            }
+
+            // Generar token de reseteo con expiración de 1 hora
+            const resetToken = jwt.sign(
+                {
+                    id: user._id,
+                    email: user.email,
+                    type: 'password-reset'
+                },
+                this.configService.getOrThrow<string>('JWT_SECRET'),
+                { expiresIn: '1h' }
+            );
+
+            // Enviar email
+            await this.emailService.sendPasswordResetEmail(
+                user.email,
+                resetToken,
+                user.name
+            );
+
+            console.log(`[UserService] Password reset email sent to: ${user.email}`);
+
+            return {
+                message: 'If this email exists, a password reset link has been sent'
+            };
+        } catch (error) {
+            console.error('[UserService] Error in forgotPassword:', error);
+            throw new InternalServerErrorException('Error processing password reset request');
+        }
+    }
+
+    /**
+     * Reseteo de contraseña
+     * Valida el token y actualiza la contraseña
+     */
+    async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<{ message: string }> {
+        try {
+            const { token, newPassword, confirmPassword } = resetPasswordDto;
+
+            // Verificar que las contraseñas coincidan
+            if (newPassword !== confirmPassword) {
+                throw new BadRequestException('Passwords do not match');
+            }
+
+            // Verificar y decodificar el token
+            let decoded: any;
+            try {
+                decoded = jwt.verify(
+                    token,
+                    this.configService.getOrThrow<string>('JWT_SECRET')
+                );
+            } catch (error) {
+                if (error.name === 'TokenExpiredError') {
+                    throw new UnauthorizedException('Reset link has expired. Please request a new one');
+                }
+                throw new UnauthorizedException('Invalid reset link');
+            }
+
+            // Verificar que sea un token de reset
+            if (decoded.type !== 'password-reset') {
+                throw new UnauthorizedException('Invalid reset link');
+            }
+
+            // Buscar usuario
+            const user = await this.userModel.findById(decoded.id);
+
+            if (!user) {
+                throw new NotFoundException('User not found');
+            }
+
+            // Verificar que el email del token coincida con el del usuario
+            if (user.email !== decoded.email) {
+                throw new UnauthorizedException('Invalid reset link');
+            }
+
+            // Hashear nueva contraseña
+            const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+            // Actualizar contraseña
+            user.password = hashedPassword;
+            await user.save();
+
+            // Enviar email de confirmación
+            await this.emailService.sendPasswordChangedConfirmation(
+                user.email,
+                user.name
+            );
+
+            console.log(`[UserService] Password reset successful for: ${user.email}`);
+
+            return {
+                message: 'Password has been reset successfully. You can now log in with your new password'
+            };
+        } catch (error) {
+            if (
+                error instanceof BadRequestException ||
+                error instanceof UnauthorizedException ||
+                error instanceof NotFoundException
+            ) {
+                throw error;
+            }
+            throw new InternalServerErrorException('Error resetting password');
         }
     }
 
