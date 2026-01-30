@@ -14,14 +14,11 @@ export class EmailService {
     private async setupTransporter(): Promise<void> {
         const host = this.configService.get<string>('EMAIL_HOST') || 'smtp.gmail.com';
         const port = this.configService.get<number>('EMAIL_PORT') || 587;
-
-        const forceSmtp =
-            this.configService.get<string>('EMAIL_FORCE_SMTP') === 'true' ||
-            this.configService.get<boolean>('EMAIL_FORCE_SMTP') === true;
-
-        // Safe debug: log presence of SMTP env vars (do NOT log the password value)
         const user = this.configService.get<string>('EMAIL_USER');
         const pass = this.configService.get<string>('EMAIL_PASS');
+
+        const forceSmtp = this.configService.get<string>('EMAIL_FORCE_SMTP') === 'true';
+
         console.log('[EmailService] SMTP env presence:', {
             user: !!user,
             pass: !!pass,
@@ -36,22 +33,24 @@ export class EmailService {
                 auth: { user, pass },
             });
 
-            try {
-                await this.transporter.verify();
-                console.log('[EmailService] SMTP transporter configured.');
-                return; // verified, use configured transporter
-            } catch (err) {
-                console.error('[EmailService] SMTP verify failed:', err);
-                if (forceSmtp) {
-                    console.error('[EmailService] EMAIL_FORCE_SMTP is enabled — aborting instead of falling back to Ethereal.');
-                    throw err;
+            // SOLO VERIFICAR EN DESARROLLO, NO EN PRODUCCIÓN
+            if (!forceSmtp) {
+                try {
+                    await this.transporter.verify();
+                    console.log('[EmailService] SMTP transporter verified and ready.');
+                    return;
+                } catch (err) {
+                    console.error('[EmailService] SMTP verify failed:', err);
+                    console.log('[EmailService] Continuing without verification. Emails will be attempted on-demand.');
+                    return; // NO lanzar error, solo advertir
                 }
-                console.log('[EmailService] Falling back to Ethereal test account for local testing.');
-                // continue to create test account as fallback
+            } else {
+                console.log('[EmailService] EMAIL_FORCE_SMTP enabled — skipping verification.');
+                return;
             }
         }
 
-        // Fallback: use Ethereal test account for local development
+        // Fallback: Ethereal (solo para testing local)
         try {
             const testAccount = await nodemailer.createTestAccount();
             this.transporter = nodemailer.createTransport({
@@ -61,10 +60,10 @@ export class EmailService {
                 auth: { user: testAccount.user, pass: testAccount.pass },
             });
 
-            console.log('[EmailService] No SMTP credentials found — using Ethereal test account for email testing.');
-            console.log(`[EmailService] Ethereal account user: ${testAccount.user}`);
+            console.log('[EmailService] Using Ethereal test account.');
+            console.log(`[EmailService] Ethereal user: ${testAccount.user}`);
         } catch (err) {
-            console.error('[EmailService] Failed to create Ethereal test account:', err);
+            console.error('[EmailService] Failed to create Ethereal account:', err);
             throw err;
         }
     }
@@ -75,7 +74,7 @@ export class EmailService {
         resetToken: string,
         userName: string,
     ): Promise<void> {
-        const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
+        const frontendUrl = this.configService.get<string>('VITE_FRONTEND_URL') || 'http://localhost:5173';
         const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
 
         const mailOptions = {
