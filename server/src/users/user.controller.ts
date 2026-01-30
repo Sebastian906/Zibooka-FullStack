@@ -22,6 +22,19 @@ export class UserController {
         private readonly configService: ConfigService,
     ) { }
 
+    private getCookieOptions() {
+        const isProduction = this.configService.get<string>('APP_ENV') === 'production';
+
+        return {
+            httpOnly: true,
+            secure: isProduction, // true en producción
+            sameSite: isProduction ? ('none' as const) : ('lax' as const), // 'none' requires secure=true
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
+            path: '/', // Cookie disponible en todas las rutas
+            domain: isProduction ? '.onrender.com' : undefined, // Compartir entre subdominios
+        };
+    }
+
     @Post('register')
     @ApiOperation({ summary: 'Register a new user' })
     @ApiBody({ type: RegisterUserDto })
@@ -39,17 +52,7 @@ export class UserController {
         try {
             const { token, user } = await this.userService.register(registerUserDto);
 
-            // Cookie options
-            const cookieOptions = {
-                httpOnly: true,
-                secure: this.configService.get<string>('APP_ENV') === 'production',
-                sameSite: this.configService.get<string>('APP_ENV') === 'production'
-                    ? ('none' as const)
-                    : ('strict' as const),
-                maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-            };
-
-            res.cookie('token', token, cookieOptions);
+            res.cookie('token', token, this.getCookieOptions());
 
             return res.status(HttpStatus.CREATED).json({
                 success: true,
@@ -79,17 +82,8 @@ export class UserController {
     ) {
         try {
             const { token, user } = await this.userService.login(userLoginDto);
-            // Cookie options
-            const cookieOptions = {
-                httpOnly: true,
-                secure: this.configService.get<string>('APP_ENV') === 'production',
-                sameSite: this.configService.get<string>('APP_ENV') === 'production'
-                    ? ('none' as const)
-                    : ('strict' as const),
-                maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-            };
 
-            res.cookie('token', token, cookieOptions);
+            res.cookie('token', token, this.getCookieOptions());
 
             return res.status(HttpStatus.OK).json({
                 success: true,
@@ -116,19 +110,9 @@ export class UserController {
         @Res() res: express.Response
     ) {
         try {
-            // Ejecutar logout del usuario
             const result = await this.userService.logout(userId);
 
-            // Configurar opciones de cookie
-            const cookieOptions = {
-                httpOnly: true,
-                secure: this.configService.get<string>('APP_ENV') === 'production',
-                sameSite: this.configService.get<string>('APP_ENV') === 'production'
-                    ? ('none' as const)
-                    : ('strict' as const),
-            };
-
-            // Limpiar cookie
+            const cookieOptions = this.getCookieOptions();
             res.clearCookie('token', cookieOptions);
 
             return res.status(HttpStatus.OK).json({

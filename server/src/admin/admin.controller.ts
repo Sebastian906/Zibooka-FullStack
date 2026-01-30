@@ -16,13 +16,15 @@ export class AdminController {
     ) { }
 
     private getCookieOptions() {
+        const isProduction = this.configService.get<string>('APP_ENV') === 'production';
+
         return {
             httpOnly: true,
-            secure: this.configService.get<string>('APP_ENV') === 'production',
-            sameSite: this.configService.get<string>('APP_ENV') === 'production'
-                ? ('none' as const)
-                : ('strict' as const),
-            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+            secure: isProduction,
+            sameSite: isProduction ? ('none' as const) : ('lax' as const),
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+            path: '/',
+            domain: isProduction ? '.onrender.com' : undefined,
         };
     }
 
@@ -66,15 +68,7 @@ export class AdminController {
         try {
             const result = await this.adminService.logout();
 
-            const cookieOptions = {
-                httpOnly: true,
-                secure: this.configService.get<string>('APP_ENV') === 'production',
-                sameSite: this.configService.get<string>('APP_ENV') === 'production'
-                    ? ('none' as const)
-                    : ('strict' as const),
-            };
-
-            res.clearCookie('adminToken', cookieOptions);
+            res.clearCookie('adminToken', this.getCookieOptions());
 
             return res.status(HttpStatus.OK).json({
                 success: true,

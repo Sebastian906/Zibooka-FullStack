@@ -20,8 +20,8 @@ async function bootstrap() {
 
   // Permitir múltiples origenes
   const allowedOrigins = [
-    process.env.VITE_FRONTEND_URL || 'http://localhost:5173',
-    'https://zibooka-frontend.onrender.com',
+    'http://localhost:5173',
+    process.env.VITE_FRONTEND_URL,
   ]; // URL del Frontend
 
   // Configurar CORS
@@ -37,6 +37,8 @@ async function bootstrap() {
       }
     },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   });
 
   // Middleware para cookies
