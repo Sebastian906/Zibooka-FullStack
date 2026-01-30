@@ -19,11 +19,23 @@ async function bootstrap() {
   );
 
   // Permitir múltiples origenes
-  const allowedOrigins = ['http://localhost:5173']; // URL del Frontend
+  const allowedOrigins = [
+    'http://localhost:5173',
+    'https://tu-app-frontend.onrender.com',
+  ]; // URL del Frontend
 
   // Configurar CORS
   app.enableCors({
-    origin: allowedOrigins, 
+    origin: (origin, callback) => {
+      // Permitir requests sin origin (mobile apps, curl, postman)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   });
 
