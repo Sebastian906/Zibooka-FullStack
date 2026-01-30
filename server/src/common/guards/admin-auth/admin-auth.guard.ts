@@ -18,7 +18,14 @@ export class AdminAuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<RequestWithAdmin>();
-    const adminToken = request.cookies?.adminToken;
+    let adminToken = request.cookies?.adminToken;
+
+    if (!adminToken) {
+      const authHeader = request.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        adminToken = authHeader.substring(7);
+      }
+    }
 
     if (!adminToken) {
       throw new UnauthorizedException('Not authorized. Login again');

@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 
-axios.defaults.withCredentials = true
-axios.defaults.baseURL = import.meta.env.VITE_BACKEND_URL
+// axios.defaults.withCredentials = true
+axios.defaults.baseURL = import.meta.env.VITE_BACKEND_URL || '/api'
 
 export const ShopContext = createContext()
 
@@ -71,29 +71,69 @@ const ShopContextProvider = ({ children }) => {
         }
     }
 
+    // Interceptor para agregar token a todas las requests
+    useEffect(() => {
+        const requestInterceptor = axios.interceptors.request.use(
+            (config) => {
+                const token = localStorage.getItem('token');
+                if (token) {
+                    config.headers.Authorization = `Bearer ${token}`;
+                }
+                return config;
+            },
+            (error) => Promise.reject(error)
+        );
+
+        const responseInterceptor = axios.interceptors.response.use(
+            (response) => response,
+            (error) => {
+                if (error.response?.status === 401) {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('loginTime');
+                    setUser(null);
+                    setCartItems({});
+                    // No navegar automáticamente para evitar loops
+                    toast.error('Session expired. Please login again');
+                }
+                return Promise.reject(error);
+            }
+        );
+
+        return () => {
+            axios.interceptors.request.eject(requestInterceptor);
+            axios.interceptors.response.eject(responseInterceptor);
+        };
+    }, []);
+
     // Fetch User
     const fetchUser = async () => {
         try {
-            const { data } = await axios.get('/api/user/is-auth')
-            if (data.success) {
-                setUser(data.user)
-                setCartItems(data.user.cartData || {})
+            const token = localStorage.getItem('token');
+            if (!token) {
+                setUser(null);
+                setCartItems({});
+                return;
+            }
 
-                // Guardar tiempo de login si no existe
+            const { data } = await axios.get('/api/user/is-auth');
+            if (data.success) {
+                setUser(data.user);
+                setCartItems(data.user.cartData || {});
+
                 if (!localStorage.getItem('loginTime')) {
                     localStorage.setItem('loginTime', Date.now().toString());
                 }
             } else {
-                setUser(null)
-                setCartItems({})
-                localStorage.removeItem('loginTime');
+                localStorage.removeItem('token');
+                setUser(null);
+                setCartItems({});
             }
         } catch (error) {
+            localStorage.removeItem('token');
             setUser(null);
             setCartItems({});
-            localStorage.removeItem('loginTime');
             if (!(error.response && error.response.status === 401)) {
-                toast.error(error.message);
+                console.error('Error fetching user:', error);
             }
         }
     }
@@ -140,6 +180,8 @@ const ShopContextProvider = ({ children }) => {
             const { data } = await axios.post('/api/user/logout')
             if (data.success) {
                 toast.success(data.message)
+                localStorage.removeItem('token')
+                localStorage.removeItem('loginTime')
                 setUser(null)
                 setCartItems({})
                 navigate('/')

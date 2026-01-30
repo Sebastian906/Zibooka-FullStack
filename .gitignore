@@ -1,16 +1,16 @@
-# Dependencies
+# Dependencias
 node_modules/
 */node_modules/
 
-# Environment variables
+# Variables de entorno
 .env
 .env.local
 .env.production
+.env.production.local
 */.env
 */.env.local
-*/.env.production
 
-# Build outputs
+# Builds
 dist/
 dist-ssr/
 */dist/
@@ -21,18 +21,11 @@ build/
 # Logs
 *.log
 npm-debug.log*
-logs/
 
-# OS files
+# OS
 .DS_Store
 Thumbs.db
 
 # IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-
-# Cloudinary temp files
-server/uploads/
-client/uploads/

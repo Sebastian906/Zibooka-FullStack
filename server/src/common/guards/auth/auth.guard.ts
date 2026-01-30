@@ -19,7 +19,20 @@ export class AuthGuard implements CanActivate {
   
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<RequestWithUser>();
-    const token = request.cookies?.token;
+
+    // Intentar obtener token de cookie O header
+    let token = request.cookies?.token;
+
+    // Si no hay cookie, buscar en header Authorization
+    if (!token) {
+      const authHeader = request.headers.authorization;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7);
+      }
+    }
+
+    console.log('Auth Guard - Token presente:', !!token);
+    console.log('Token source:', request.cookies?.token ? 'cookie' : 'header');
 
     if (!token) {
       throw new UnauthorizedException('Not authorized. Login again');

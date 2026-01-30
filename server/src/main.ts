@@ -21,28 +21,47 @@ async function bootstrap() {
   // Permitir múltiples origenes
   const allowedOrigins = [
     'http://localhost:5173',
+    'https://zibooka.onrender.com',
+    'https://zibooka-frontend.onrender.com',
     process.env.VITE_FRONTEND_URL,
-  ]; // URL del Frontend
+  ].filter(Boolean);
+
+  console.log('Allowed Origins:', allowedOrigins);
 
   // Configurar CORS
   app.enableCors({
     origin: (origin, callback) => {
-      // Permitir requests sin origin (mobile apps, curl, postman)
-      if (!origin) return callback(null, true);
+      // Permitir requests sin origin (como proxies de Render)
+      if (!origin) {
+        console.log('No origin header - allowing (likely from Render proxy)');
+        return callback(null, true);
+      }
 
       if (allowedOrigins.includes(origin)) {
+        console.log('Origin allowed:', origin);
         callback(null, true);
       } else {
-        callback(new Error('Not allowed by CORS'));
+        console.log('Origin not in whitelist but allowing:', origin);
+        // Permitir de todas formas para compatibilidad con proxy
+        callback(null, true);
       }
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
+    exposedHeaders: ['Set-Cookie'],
   });
 
   // Middleware para cookies
   app.use(cookieParser());
+
+  // Middleware de debugging
+  app.use((req, res, next) => {
+    console.log('Request:', req.method, req.path);
+    console.log('Headers:', req.headers.authorization ? 'Auth header presente' : 'No auth header');
+    console.log('Cookies:', Object.keys(req.cookies).length > 0 ? 'Cookies presentes' : 'No cookies');
+    next();
+  });
 
   // Set global prefix
   app.setGlobalPrefix('api');
@@ -66,7 +85,9 @@ async function bootstrap() {
 
   await app.listen(port);
   console.log(`Server is running on http://localhost:${port}`);
+  console.log(`Environment: ${process.env.APP_ENV}`);
   console.log(`Swagger docs available at http://localhost:${port}/api/docs`);
   console.log(`Stripe webhook endpoint: http://localhost:${port}/api/stripe`);
+
 }
 bootstrap();

@@ -31,7 +31,6 @@ export class UserController {
             sameSite: isProduction ? ('none' as const) : ('lax' as const), // 'none' requires secure=true
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
             path: '/', // Cookie disponible en todas las rutas
-            domain: isProduction ? '.onrender.com' : undefined, // Compartir entre subdominios
         };
     }
 
@@ -57,6 +56,7 @@ export class UserController {
             return res.status(HttpStatus.CREATED).json({
                 success: true,
                 user,
+                token,
             });
         } catch (error) {
             return res.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).json({
@@ -88,6 +88,7 @@ export class UserController {
             return res.status(HttpStatus.OK).json({
                 success: true,
                 user,
+                token,
             });
         } catch (error) {
             return res.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).json({

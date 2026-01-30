@@ -22,7 +22,19 @@ const Login = () => {
                 payload = { name, email, password, phone };
             }
             const { data } = await axios.post(`/api/user/${state}`, payload);
+
+            console.log('Response completa:', data); // ← AGREGAR
+            console.log('Token recibido:', data.token); // ← AGREGAR
+
             if (data.success) {
+                if (data.token) {
+                    localStorage.setItem('token', data.token);
+                    console.log('Token guardado en localStorage'); // ← AGREGAR
+                    console.log('Token desde localStorage:', localStorage.getItem('token')); // ← AGREGAR
+                } else {
+                    console.error('No se recibió token en la respuesta'); // ← AGREGAR
+                }
+
                 toast.success(`${state === "login" ? "Login Successfully" : "Account Created"}`);
                 navigate('/');
                 await fetchUser();
@@ -31,6 +43,7 @@ const Login = () => {
                 toast.error(data.message);
             }
         } catch (error) {
+            console.error('Error en login:', error.response || error); // ← AGREGAR
             if (error.response && error.response.status === 401) {
                 toast.error(error.response.data.message || 'Invalid credentials');
             } else {
