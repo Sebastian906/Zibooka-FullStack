@@ -21,7 +21,7 @@ async function bootstrap() {
   // Permitir múltiples origenes
   const allowedOrigins = [
     process.env.VITE_FRONTEND_URL || 'http://localhost:5173',
-    'https://tu-app-frontend.onrender.com',
+    'https://zibooka-frontend.onrender.com',
   ]; // URL del Frontend
 
   // Configurar CORS
