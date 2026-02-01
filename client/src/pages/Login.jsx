@@ -26,6 +26,8 @@ const Login = () => {
             if (data.success) {
                 if (data.token) {
                     localStorage.setItem('token', data.token);
+                    // Guardar loginTime inmediatamente al hacer login
+                    localStorage.setItem('loginTime', Date.now().toString());
                 } else {
                     console.error('No se recibió token en la respuesta');
                 }

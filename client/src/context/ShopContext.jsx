@@ -87,13 +87,23 @@ const ShopContextProvider = ({ children }) => {
         const responseInterceptor = axios.interceptors.response.use(
             (response) => response,
             (error) => {
+                // Solo limpiar sesión si es un 401 con mensaje específico de sesión expirada
+                // Evitar limpiar en otros casos como errores de red
                 if (error.response?.status === 401) {
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('loginTime');
-                    setUser(null);
-                    setCartItems({});
-                    // No navegar automáticamente para evitar loops
-                    toast.error('Session expired. Please login again');
+                    const errorMessage = error.response?.data?.message || '';
+                    const isSessionExpired =
+                        errorMessage.toLowerCase().includes('session expired') ||
+                        errorMessage.toLowerCase().includes('token expired') ||
+                        errorMessage.toLowerCase().includes('jwt expired');
+
+                    if (isSessionExpired) {
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('loginTime');
+                        setUser(null);
+                        setCartItems({});
+                        toast.error('Session expired. Please login again');
+                    }
+                    // Si no es sesión expirada, solo rechazar el error sin limpiar
                 }
                 return Promise.reject(error);
             }
@@ -124,16 +134,32 @@ const ShopContextProvider = ({ children }) => {
                     localStorage.setItem('loginTime', Date.now().toString());
                 }
             } else {
+                // Solo limpiar si explícitamente no es exitoso
                 localStorage.removeItem('token');
+                localStorage.removeItem('loginTime');
                 setUser(null);
                 setCartItems({});
             }
         } catch (error) {
-            localStorage.removeItem('token');
-            setUser(null);
-            setCartItems({});
-            if (!(error.response && error.response.status === 401)) {
-                console.error('Error fetching user:', error);
+            // Solo limpiar token si es un error 401 de sesión expirada
+            // No limpiar en errores de red u otros problemas temporales
+            if (error.response?.status === 401) {
+                const errorMessage = error.response?.data?.message || '';
+                const isSessionExpired =
+                    errorMessage.toLowerCase().includes('session expired') ||
+                    errorMessage.toLowerCase().includes('token expired') ||
+                    errorMessage.toLowerCase().includes('jwt expired');
+
+                if (isSessionExpired) {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('loginTime');
+                    setUser(null);
+                    setCartItems({});
+                }
+            } else {
+                // Para otros errores (red, timeout), no eliminar el token
+                // El usuario podría estar offline temporalmente
+                console.error('Error fetching user (keeping session):', error.message);
             }
         }
     }
@@ -959,7 +985,8 @@ const ShopContextProvider = ({ children }) => {
     }, [])
 
     const value = {
-        books, navigate, user, setUser, currency, searchQuery, setSearchQuery, cartItems, setCartItems, addToCart, getCartCount, getCartAmount, updateQuantity, method, setMethod, delivery_charges, showUserLogin, setShowUserLogin, isAdmin, setIsAdmin, axios, fetchBooks, fetchUser, logoutUser, availableCategories, searchByTitleOrAuthor, searchByISBN, sortProductsByPrice, applyFiltersAndSort, profileData, setProfileData, profileImage, setProfileImage, imagePreview, setImagePreview, profileLoading, setProfileLoading, countryCodes, selectedCountryCode, setSelectedCountryCode, phoneNumber, setPhoneNumber, getUserProfile, loadProfileData, handleProfileImageChange, handlePhoneChange, updateProfileField, submitProfileUpdate, cancelProfileUpdate, resetProfileForm, shelves, fetchShelves, createShelf, assignBookToShelf, removeBookFromShelf, findDangerousCombinations, optimizeShelf, getUserLoans, getUserLoanStats, createLoan, returnBook, getAllLoans, getUserReservationStats, getUserReservationList, getWaitingList, createReservation, cancelReservation, reportLoading, downloadInventoryPDF, downloadInventoryXLSX, downloadLoansPDF, downloadLoansXLSX, getRecursionPreview }
+        books, navigate, user, setUser, currency, searchQuery, setSearchQuery, cartItems, setCartItems, addToCart, getCartCount, getCartAmount, updateQuantity, method, setMethod, delivery_charges, showUserLogin, setShowUserLogin, isAdmin, setIsAdmin, axios, fetchBooks, fetchUser, logoutUser, availableCategories, searchByTitleOrAuthor, searchByISBN, sortProductsByPrice, applyFiltersAndSort, profileData, setProfileData, profileImage, setProfileImage, imagePreview, setImagePreview, profileLoading, setProfileLoading, countryCodes, selectedCountryCode, setSelectedCountryCode, phoneNumber, setPhoneNumber, getUserProfile, loadProfileData, handleProfileImageChange, handlePhoneChange, updateProfileField, submitProfileUpdate, cancelProfileUpdate, resetProfileForm, shelves, fetchShelves, createShelf, assignBookToShelf, removeBookFromShelf, findDangerousCombinations, optimizeShelf, getUserLoans, getUserLoanStats, createLoan, returnBook, getAllLoans, getUserReservationStats, getUserReservationList, getWaitingList, createReservation, cancelReservation, reportLoading, downloadInventoryPDF, downloadInventoryXLSX, downloadLoansPDF, downloadLoansXLSX, getRecursionPreview
+    }
 
     return (
         <ShopContext.Provider value={value}>

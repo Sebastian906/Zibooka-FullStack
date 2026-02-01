@@ -1,6 +1,6 @@
-import { 
-  CanActivate, 
-  ExecutionContext, 
+import {
+  CanActivate,
+  ExecutionContext,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -15,8 +15,8 @@ export interface RequestWithUser extends Request {
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private configService: ConfigService) {}
-  
+  constructor(private configService: ConfigService) { }
+
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<RequestWithUser>();
 
@@ -54,16 +54,23 @@ export class AuthGuard implements CanActivate {
         throw new UnauthorizedException('Not authorized. Login again');
       }
 
-      // Verificar expiración del token
+      // Verificar expiración del token (jwt.verify ya lo hace, pero doble check)
       const currentTime = Math.floor(Date.now() / 1000);
       if (decoded.exp && decoded.exp < currentTime) {
         throw new UnauthorizedException('Session expired. Login again');
       }
+
       request.userId = decoded.id;
       return true;
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
         throw new UnauthorizedException('Session expired. Login again');
+      }
+      if (error instanceof jwt.JsonWebTokenError) {
+        throw new UnauthorizedException('Invalid token. Login again');
+      }
+      if (error instanceof UnauthorizedException) {
+        throw error;
       }
       throw new UnauthorizedException('Not authorized. Login again');
     }
