@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ShopContext } from '../context/ShopContext'
 import Title from './Title'
 import { Swiper, SwiperSlide } from 'swiper/react'
@@ -8,6 +9,7 @@ import Item from './Item'
 
 const PopularBooks = () => {
 
+    const { t } = useTranslation();
     const [popularBooks, setPopularBooks] = useState([]);
     const { books } = useContext(ShopContext);
 
@@ -19,11 +21,11 @@ const PopularBooks = () => {
     return (
         <section className='max-padd-container py-16'>
             <Title
-                title1={"Popular"}
-                title2={"Books"}
+                title1={t('popular.title1')}
+                title2={t('popular.title2')}
                 title1Styles={"pb-6"}
                 paraStyles={"mb-8"}
-                para={"Explore our top-selling books loved for their powerful stories, creative writing, and lasting impact."}
+                para={t('popular.description')}
             />
             { /* CONTAINER */}
             {

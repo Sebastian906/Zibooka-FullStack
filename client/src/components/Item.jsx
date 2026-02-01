@@ -1,9 +1,11 @@
 import React, { useContext } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ShopContext } from '../context/ShopContext'
 import { TbShoppingBagPlus } from 'react-icons/tb'
 
 const Item = ({ book, fromHero }) => {
 
+    const { t } = useTranslation()
     const { navigate, currency, addToCart } = useContext(ShopContext)
 
     return book ? (
@@ -37,7 +39,7 @@ const Item = ({ book, fromHero }) => {
         </div>
     ) : (
         <div className='p-5 text-red-600 text-sm rounded-md'>
-            No book found.
+            {t('product.noBookFound')}
         </div>
     )
 }

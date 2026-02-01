@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ShopContext } from '../context/ShopContext'
 import Title from './Title'
 import { Swiper, SwiperSlide } from 'swiper/react'
@@ -8,6 +9,7 @@ import Item from './Item'
 
 const NewArrivals = () => {
 
+    const { t } = useTranslation();
     const [newArrivals, setNewArrivals] = useState([])
     const { books } = useContext(ShopContext)
 
@@ -18,11 +20,11 @@ const NewArrivals = () => {
     return (
         <section className='max-padd-container py-16'>
             <Title
-                title1={"New"}
-                title2={"Arrivals"}
+                title1={t('newArrivals.title1')}
+                title2={t('newArrivals.title2')}
                 title1Styles={"pb-4"}
                 paraStyles={"mb-8"}
-                para={"Check out our newest books arriving weekly with fresh ideas, exciting plots, and vibrant voices"}
+                para={t('newArrivals.description')}
             />
             { /* CONTAINER */}
             {

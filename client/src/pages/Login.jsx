@@ -1,9 +1,11 @@
 import { useContext, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ShopContext } from '../context/ShopContext'
 import toast from 'react-hot-toast'
 
 const Login = () => {
 
+    const { t } = useTranslation()
     const { showUserLogin, navigate, setShowUserLogin, axios, fetchUser } = useContext(ShopContext);
     const [state, setState] = useState('login');
     const [name, setName] = useState("");
@@ -32,7 +34,7 @@ const Login = () => {
                     console.error('No se recibió token en la respuesta');
                 }
 
-                toast.success(`${state === "login" ? "Login Successfully" : "Account Created"}`);
+                toast.success(`${state === "login" ? t('auth.loginSuccess') : t('auth.registerSuccess')}`);
                 navigate('/');
                 await fetchUser();
                 setShowUserLogin(false);
@@ -65,36 +67,36 @@ const Login = () => {
                 className='flex flex-col gap-4 m-auto items-start p-8 py-12 w-80 sm:w-88 rounded-lg shadow-xl border border-gray-200 bg-white'
             >
                 <h3 className='bold-28 mx-auto mb-3'>
-                    <span className='capitalize text-secondary'>User </span>
-                    <span className='capitalize'>{state === "login" ? "Login" : "Register"}</span>
+                    <span className='capitalize text-secondary'>{t('header.login').split(' ')[0]} </span>
+                    <span className='capitalize'>{state === "login" ? t('auth.login') : t('auth.register')}</span>
                 </h3>
                 {state === "register" && (
                     <div className='w-full'>
-                        <p className='medium-14'>Name</p>
+                        <p className='medium-14'>{t('auth.name')}</p>
                         <input
                             type="text"
                             onChange={(e) => setName(e.target.value)}
                             value={name}
-                            placeholder='Type here...'
+                            placeholder={t('common.typeHere')}
                             className='border border-gray-200 rounded w-full p-2 mt-1 outline-black/80'
                             required
                         />
                     </div>
                 )}
                 <div className='w-full'>
-                    <p className='medium-14'>Email</p>
+                    <p className='medium-14'>{t('auth.email')}</p>
                     <input
                         type="text"
                         onChange={(e) => setEmail(e.target.value)}
                         value={email}
-                        placeholder='Type here...'
+                        placeholder={t('common.typeHere')}
                         className='border border-gray-200 rounded w-full p-2 mt-1 outline-black/80'
                         required
                     />
                 </div>
                 <div className='w-full'>
                     <div className='flex justify-between items-center mb-1'>
-                        <p className='medium-14'>Password</p>
+                        <p className='medium-14'>{t('auth.password')}</p>
                         <label className='flex items-center gap-1 medium-14 cursor-pointer text-gray-600'>
                             <input
                                 type="checkbox"
@@ -102,25 +104,25 @@ const Login = () => {
                                 onChange={(e) => setShowPassword(e.target.checked)}
                                 className='cursor-pointer'
                             />
-                            <span className='font-light'>Show</span>
+                            <span className='font-light'>{t('auth.showPassword')}</span>
                         </label>
                     </div>
                     <input
                         type={showPassword ? "text" : "password"}
                         onChange={(e) => setPassword(e.target.value)}
                         value={password}
-                        placeholder='Type here...'
+                        placeholder={t('common.typeHere')}
                         className='border border-gray-200 rounded w-full p-2 mt-1 outline-black/80'
                         required
                     />
                 </div>
                 <div className='w-full'>
-                    <p className='medium-14'>Phone</p>
+                    <p className='medium-14'>{t('auth.phone')}</p>
                     <input
                         type="text"
                         onChange={(e) => setPhone(e.target.value)}
                         value={phone}
-                        placeholder='Type here...'
+                        placeholder={t('common.typeHere')}
                         className='border border-gray-200 rounded w-full p-2 mt-1 outline-black/80'
                         required
                     />
@@ -134,31 +136,31 @@ const Login = () => {
                             onClick={handleForgotPassword}
                             className='text-secondary text-sm hover:underline cursor-pointer'
                         >
-                            Forgot your password?
+                            {t('auth.forgotPassword')}
                         </button>
                     </div>
                 )}
 
                 {state === "register" ? (
                     <p>
-                        Already have account?
+                        {t('auth.hasAccount')}
                         <span
                             onClick={() => setState("login")}
                             className='text-secondary cursor-pointer'
                         >
                             {" "}
-                            click here
+                            {t('auth.clickHere')}
                         </span>
                     </p>
                 ) : (
                     <p>
-                        Create an account?
+                        {t('auth.noAccount')}
                         <span
                             onClick={() => setState("register")}
                             className='text-secondary cursor-pointer'
                         >
                             {" "}
-                            click here
+                            {t('auth.clickHere')}
                         </span>
                     </p>
                 )}
@@ -166,7 +168,7 @@ const Login = () => {
                     type='submit'
                     className='bg-secondary w-full rounded py-2.5! text-white cursor-pointer'
                 >
-                    {state === "login" ? "Login" : "Create Account"}
+                    {state === "login" ? t('auth.login') : t('auth.register')}
                 </button>
             </form>
         </div>

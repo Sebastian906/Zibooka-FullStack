@@ -7,9 +7,12 @@ import { FaSearch } from 'react-icons/fa'
 import defaultUserImg from '../assets/user.png'
 import { RiUserLine } from 'react-icons/ri'
 import { ShopContext } from '../context/ShopContext'
+import { useTranslation } from 'react-i18next'
+import LanguageToggle from './LanguageToggle'
 
 const Header = () => {
 
+    const { t } = useTranslation();
     const [menuOpened, setMenuOpened] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
     const { navigate, user, setUser, searchQuery, setSearchQuery, getCartCount, showUserLogin, setShowUserLogin, logoutUser, fetchUser } = useContext(ShopContext);
@@ -58,7 +61,7 @@ const Header = () => {
                         <input
                             onChange={(e) => setSearchQuery(e.target.value)}
                             type="text"
-                            placeholder="Search book..."
+                            placeholder={t('header.searchPlaceholder')}
                             className='bg-transparent w-full text-sm outline-none pr-10 placeholder:text-gray-400'
                         />
                     </div>
@@ -69,6 +72,8 @@ const Header = () => {
                         <FaSearch className="text-xl" />
                     </div>
                 </div>
+                { /* SELECTOR DE IDIOMA */}
+                <LanguageToggle />
                 { /* MENÚ HAMBURGUESA */}
                 <>
                     {menuOpened ? (
@@ -89,7 +94,7 @@ const Header = () => {
                     className='flex relative'
                 >
                     <div className='bold-16'>
-                        Cart <span className='bg-secondary text-white text-[12px] font-semibold absolute -top-3.5 -right-2 flexCenter w-4 h-4 rounded-full shadow-md'>
+                        {t('header.cart')} <span className='bg-secondary text-white text-[12px] font-semibold absolute -top-3.5 -right-2 flexCenter w-4 h-4 rounded-full shadow-md'>
                             {getCartCount()}
                         </span>
                     </div>
@@ -112,21 +117,21 @@ const Header = () => {
                                 onClick={() => setShowUserLogin(true)}
                                 className='btn-light flexCenter gap-x-2'
                             >
-                                Login <RiUserLine className='text-xl' />
+                                {t('header.login')} <RiUserLine className='text-xl' />
                             </button>
                         )}
                     </div>
                     { /* MENÜ DESPLEGABLE */}
                     {user && (
                         <ul className='bg-white p-2 w-40 ring-1 ring-slate-900/15 rounded absolute right-0 top-10 hidden group-hover:flex flex-col medium-14 shadow-md z-50'>
-                            <li onClick={() => navigate('/profile')} className='p-2 rounded-md hover:bg-primary cursor-pointer'>Profile</li>
-                            <li onClick={() => navigate('/my-orders')} className='p-2 rounded-md hover:bg-primary cursor-pointer'>Orders</li>
-                            <li onClick={() => navigate('/my-loans')} className='p-2 rounded-md hover:bg-primary cursor-pointer'>My Loans</li>
-                            <li onClick={() => navigate('/my-reservations')} className='p-2 rounded-md hover:bg-primary cursor-pointer'>Reservations</li>
+                            <li onClick={() => navigate('/profile')} className='p-2 rounded-md hover:bg-primary cursor-pointer'>{t('header.profile')}</li>
+                            <li onClick={() => navigate('/my-orders')} className='p-2 rounded-md hover:bg-primary cursor-pointer'>{t('header.orders')}</li>
+                            <li onClick={() => navigate('/my-loans')} className='p-2 rounded-md hover:bg-primary cursor-pointer'>{t('header.myLoans')}</li>
+                            <li onClick={() => navigate('/my-reservations')} className='p-2 rounded-md hover:bg-primary cursor-pointer'>{t('header.reservations')}</li>
                             <li
                                 onClick={logoutUser}
                                 className='p-2 rounded-md hover:bg-primary cursor-pointer'
-                            >Logout</li>
+                            >{t('header.logout')}</li>
                         </ul>
                     )}
                 </div>

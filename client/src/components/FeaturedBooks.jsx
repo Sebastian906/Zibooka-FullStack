@@ -1,4 +1,5 @@
 import React, { useContext } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ShopContext } from '../context/ShopContext'
 import Title from './Title'
 import { TbShoppingBagPlus } from 'react-icons/tb'
@@ -6,6 +7,7 @@ import featuredBooksImg from '../assets/featured-books.png'
 
 const FeaturedBooks = () => {
 
+    const { t } = useTranslation();
     const { books, currency, addToCart } = useContext(ShopContext)
     const book = books[21]
 
@@ -16,11 +18,11 @@ const FeaturedBooks = () => {
                 { /* LADO IZQUIERDO */}
                 <div className='flex-1'>
                     <Title
-                        title1={"Featured"}
-                        title2={"Books"}
+                        title1={t('featured.title1')}
+                        title2={t('featured.title2')}
                         title1Styles={"pb-4"}
                         paraStyles={"mb-4"}
-                        para={"Browse featured books carefully selected for quality, imagination, storytelling, and unique characters"}
+                        para={t('featured.description')}
                     />
                     { /* CARTA DEL LIBRO */ }
                     <div className='flex gap-3 sm:gap-8 sm:bg-white sm:p-4 rounded-2xl'>
@@ -39,13 +41,13 @@ const FeaturedBooks = () => {
                             <div className='flex items-center gap-3 sm:mt-2'>
                                 <h4 className='text-lg font-bold text-secondary'>{currency}{book?.offerPrice}.00</h4>
                                 <p className='text-sm line-through'>{currency}{book?.price}.00</p>
-                                <span className='hidden sm:flex bg-green-100 text-green-700 text-xs font-semibold px-2 py-1 rounded-full'>Save 5</span>
+                                <span className='hidden sm:flex bg-green-100 text-green-700 text-xs font-semibold px-2 py-1 rounded-full'>{t('featured.save')} 5</span>
                             </div>
                             <div className='grid grid-cols-2 gap-2 sm:gap-4 mt-2 sm:mt-4 text-sm text-gray-600'>
-                                <p><span className='font-medium text-gray-700'>Published:</span> 2023</p>
-                                <p><span className='font-medium text-gray-700'>Pages:</span> 300</p>
-                                <p><span className='font-medium text-gray-700'>Language:</span> English</p>
-                                <p><span className='font-medium text-gray-700'>Stock:</span> In Stock</p>
+                                <p><span className='font-medium text-gray-700'>{t('featured.published')}:</span> 2023</p>
+                                <p><span className='font-medium text-gray-700'>{t('featured.pages')}:</span> 300</p>
+                                <p><span className='font-medium text-gray-700'>{t('featured.language')}:</span> English</p>
+                                <p><span className='font-medium text-gray-700'>{t('featured.stock')}:</span> {t('featured.inStock')}</p>
                             </div>
                             <p className='mt-1 sm:mt-4 text-sm line-clamp-3'>{book?.description}</p>
                             <button
@@ -53,7 +55,7 @@ const FeaturedBooks = () => {
                                 className='btn-secondary max-sm:text-xs mt-1 sm:mt-5 w-fit px-5 py-2 flex items-center gap-2 text-sm font-medium'
                             >
                                 <TbShoppingBagPlus className='text-lg'/>
-                                Add to Cart
+                                {t('product.addToCart')}
                             </button>
                         </div>
                     </div>

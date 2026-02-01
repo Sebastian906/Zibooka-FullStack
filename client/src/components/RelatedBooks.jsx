@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ShopContext } from '../context/ShopContext';
 import Title from './Title'
 import { Swiper, SwiperSlide } from 'swiper/react'
@@ -8,6 +9,7 @@ import Item from './Item'
 
 const RelatedBooks = ({ book, id }) => {
 
+    const { t } = useTranslation()
     const [relatedBooks, setRelatedBooks] = useState([]);
     const { books } = useContext(ShopContext);
 
@@ -24,11 +26,11 @@ const RelatedBooks = ({ book, id }) => {
     return (
         <section className='py-16'>
             <Title
-                title1={"Related"}
-                title2={"Books"}
+                title1={t('product.related.title1')}
+                title2={t('product.related.title2')}
                 title1Styles={"pb-4"}
                 paraStyles={"mb-10"}
-                para={"Discover books that spark curiosity, deliver quality and bring inspiration to your everyday reading"}
+                para={t('product.related.description')}
             />
             { /* CONTAINER */}
             {

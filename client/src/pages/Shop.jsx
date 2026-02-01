@@ -1,4 +1,5 @@
 import { useContext, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import Title from '../components/Title'
 import { ShopContext } from '../context/ShopContext'
 import Item from '../components/Item';
@@ -6,6 +7,7 @@ import { FaChevronDown, FaSearch } from 'react-icons/fa';
 
 const Shop = () => {
 
+    const { t } = useTranslation();
     const { books, searchQuery, applyFiltersAndSort, availableCategories } = useContext(ShopContext);
     const [filteredBooks, setFilteredBooks] = useState([])
     const [currPage, setCurrPage] = useState(1)
@@ -54,11 +56,11 @@ const Shop = () => {
     return (
         <div className='max-padd-container py-16 pt-28'>
             <Title
-                title1={"All"}
-                title2={"Books"}
+                title1={t('shop.title1')}
+                title2={t('shop.title2')}
                 title1Styles={"pb-2"}
                 paraStyles={"pb-6"}
-                para={"Explore our collection of books across various genres, carefully curated to ignite your imagination and expand your horizons."}
+                para={t('shop.description')}
             />
 
             {/* FILTERS AND SORTING SECTION */}
@@ -77,7 +79,7 @@ const Shop = () => {
                                     : 'bg-primary hover:bg-primary/80'
                                 } transition-all duration-300`}
                         >
-                            <span>Category: {selectedCategory === 'all' ? 'All' : selectedCategory}</span>
+                            <span>{t('shop.category')}: {selectedCategory === 'all' ? t('categories.all') : selectedCategory}</span>
                             <FaChevronDown className={`text-xs transition-transform ${showCategoryDropdown ? 'rotate-180' : ''}`} />
                         </button>
 
@@ -90,7 +92,7 @@ const Shop = () => {
                                     }}
                                     className='w-full text-left px-4 py-2 text-xs hover:bg-primary transition-all'
                                 >
-                                    All Categories
+                                    {t('shop.allCategories')}
                                 </button>
                                 {availableCategories.map((category) => (
                                     <button
@@ -115,7 +117,7 @@ const Shop = () => {
                             <FaSearch className='text-xs text-gray-500' />
                             <input
                                 type='text'
-                                placeholder='Search by author...'
+                                placeholder={t('shop.searchByAuthor')}
                                 value={authorSearch}
                                 onChange={(e) => setAuthorSearch(e.target.value)}
                                 className='bg-transparent outline-none placeholder:text-gray-500 w-32'
@@ -136,12 +138,12 @@ const Shop = () => {
                                 } transition-all duration-300`}
                         >
                             <span>
-                                Sort: {
-                                    sortBy === 'default' ? 'Default' :
-                                        sortBy === 'price-asc' ? 'Price: Low to High' :
-                                            sortBy === 'price-desc' ? 'Price: High to Low' :
-                                                sortBy === 'title-asc' ? 'Title: A to Z' :
-                                                    'Title: Z to A'
+                                {t('shop.sort')}: {
+                                    sortBy === 'default' ? t('shop.sortDefault') :
+                                        sortBy === 'price-asc' ? t('shop.sortPriceLowHigh') :
+                                            sortBy === 'price-desc' ? t('shop.sortPriceHighLow') :
+                                                sortBy === 'title-asc' ? t('shop.sortTitleAZ') :
+                                                    t('shop.sortTitleZA')
                                 }
                             </span>
                             <FaChevronDown className={`text-xs transition-transform ${showSortDropdown ? 'rotate-180' : ''}`} />
@@ -156,7 +158,7 @@ const Shop = () => {
                                     }}
                                     className='w-full text-left px-4 py-2 text-xs hover:bg-primary transition-all'
                                 >
-                                    Default
+                                    {t('shop.sortDefault')}
                                 </button>
                                 <button
                                     onClick={() => {
@@ -165,7 +167,7 @@ const Shop = () => {
                                     }}
                                     className='w-full text-left px-4 py-2 text-xs hover:bg-primary transition-all'
                                 >
-                                    Price: Low to High
+                                    {t('shop.sortPriceLowHigh')}
                                 </button>
                                 <button
                                     onClick={() => {
@@ -174,7 +176,7 @@ const Shop = () => {
                                     }}
                                     className='w-full text-left px-4 py-2 text-xs hover:bg-primary transition-all'
                                 >
-                                    Price: High to Low
+                                    {t('shop.sortPriceHighLow')}
                                 </button>
                                 <button
                                     onClick={() => {
@@ -183,7 +185,7 @@ const Shop = () => {
                                     }}
                                     className='w-full text-left px-4 py-2 text-xs hover:bg-primary transition-all'
                                 >
-                                    Title: A to Z
+                                    {t('shop.sortTitleAZ')}
                                 </button>
                                 <button
                                     onClick={() => {
@@ -192,7 +194,7 @@ const Shop = () => {
                                     }}
                                     className='w-full text-left px-4 py-2 text-xs hover:bg-primary transition-all'
                                 >
-                                    Title: Z to A
+                                    {t('shop.sortTitleZA')}
                                 </button>
                             </div>
                         )}
@@ -204,14 +206,14 @@ const Shop = () => {
                             onClick={handleResetFilters}
                             className='flexCenter gap-2 px-4 py-2 rounded-full text-xs bg-tertiary hover:bg-tertiary/80 transition-all duration-300'
                         >
-                            Reset Filters
+                            {t('shop.clearFilters')}
                         </button>
                     )}
                 </div>
 
                 {/* Results Count */}
                 <div className='text-xs text-gray-500'>
-                    Showing {filteredBooks.length} {filteredBooks.length === 1 ? 'book' : 'books'}
+                    {t('shop.showing')} {filteredBooks.length} {t('shop.books')}
                     {searchQuery && ` for "${searchQuery}"`}
                 </div>
             </div>
@@ -226,13 +228,14 @@ const Shop = () => {
                         ))
                 ) : (
                     <div className='col-span-full text-center py-12'>
-                        <h4 className='h4 mb-2'>Oops! Nothing matched your search</h4>
+                        <h4 className='h4 mb-2'>{t('shop.noBooks')}</h4>
+                        <p className='text-gray-500 mb-4'>{t('shop.tryAdjusting')}</p>
                         {hasActiveFilters && (
                             <button
                                 onClick={handleResetFilters}
                                 className='btn-secondary mt-4'
                             >
-                                Clear All Filters
+                                {t('shop.clearFilters')}
                             </button>
                         )}
                     </div>
@@ -247,7 +250,7 @@ const Shop = () => {
                         onClick={() => setCurrPage(prev => prev - 1)}
                         className={`${currPage === 1 && 'opacity-50 cursor-not-allowed'} btn-dark py-1! px-3!`}
                     >
-                        Previous
+                        {t('shop.previous')}
                     </button>
                     {Array.from({ length: totalPages }, (_, index) => (
                         <button
@@ -263,7 +266,7 @@ const Shop = () => {
                         onClick={() => setCurrPage(prev => prev + 1)}
                         className={`${currPage === totalPages && 'opacity-50 cursor-not-allowed'} btn-white bg-tertiary py-1! px-3!`}
                     >
-                        Next
+                        {t('shop.next')}
                     </button>
                 </div>
             )}

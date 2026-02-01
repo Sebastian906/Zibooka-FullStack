@@ -1,10 +1,12 @@
 import { useContext, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ShopContext } from '../context/ShopContext'
 import Title from '../components/Title'
 import uploadIcon from '../assets/upload_icon.png'
 
 const Profile = () => {
 
+    const { t } = useTranslation()
     const { user, profileData, imagePreview, profileLoading, countryCodes, selectedCountryCode, setSelectedCountryCode, phoneNumber, loadProfileData, handleProfileImageChange, handlePhoneChange, updateProfileField, submitProfileUpdate, cancelProfileUpdate } = useContext(ShopContext);
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
@@ -16,11 +18,11 @@ const Profile = () => {
     return (
         <div className='max-padd-container py-16 pt-28'>
             <Title
-                title1={"Edit"}
-                title2={"Profile"}
+                title1={t('profile.edit')}
+                title2={t('profile.title')}
                 titleStyles={"pb-6"}
                 paraStyles={"mb-8"}
-                para={"Update your personal information and profile settings"}
+                para={t('profile.updateInfo')}
             />
 
             <form onSubmit={submitProfileUpdate} className='max-w-188 mx-auto'>
@@ -48,18 +50,18 @@ const Profile = () => {
                         onChange={handleProfileImageChange}
                         className='hidden'
                     />
-                    <p className='text-sm text-gray-50 mt-2'>Click to upload profile picture</p>
+                    <p className='text-sm text-gray-50 mt-2'>{t('profile.clickToUpload')}</p>
                 </div>
 
                 <div className='bg-primary p-6 rounded-xl space-y-4'>
                     {/* NAME */}
                     <div>
-                        <label className='medium-14 block mb-1'>Full Name</label>
+                        <label className='medium-14 block mb-1'>{t('profile.fullName')}</label>
                         <input
                             type="text"
                             value={profileData.name}
                             onChange={(e) => updateProfileField('name', e.target.value)}
-                            placeholder='Enter your full name'
+                            placeholder={t('profile.enterFullName')}
                             className='w-full px-4 py-2.5 rounded-lg ring-1 ring-slate-900/10 bg-white outline-none focus:ring-secondary transition-all'
                             required
                         />
@@ -67,12 +69,12 @@ const Profile = () => {
 
                     {/* EMAIL */}
                     <div>
-                        <label className='medium-14 block mb-1'>Email Address</label>
+                        <label className='medium-14 block mb-1'>{t('profile.emailAddress')}</label>
                         <input
                             type="email"
                             value={profileData.email}
                             onChange={(e) => updateProfileField('email', e.target.value)}
-                            placeholder='Enter your email'
+                            placeholder={t('profile.enterEmail')}
                             className='w-full px-4 py-2.5 rounded-lg ring-1 ring-slate-900/10 bg-white outline-none focus:ring-secondary transition-all'
                             required
                         />
@@ -80,7 +82,7 @@ const Profile = () => {
 
                     {/* PHONE NUMBER */}
                     <div>
-                        <label className='medium-14 block mb-1'>Phone Number</label>
+                        <label className='medium-14 block mb-1'>{t('profile.phoneNumber')}</label>
                         <div className='flex gap-2'>
                             <select
                                 value={selectedCountryCode}
@@ -108,12 +110,12 @@ const Profile = () => {
 
                     {/* PASSWORD SECTION */}
                     <div className='space-y-4'>
-                        <h5 className='h5'>Change Password (Optional)</h5>
+                        <h5 className='h5'>{t('profile.changePassword')}</h5>
 
                         {/* CURRENT PASSWORD */}
                         <div>
                             <div className='flex justify-between items-center mb-1'>
-                                <label className='medium-14'>Current Password</label>
+                                <label className='medium-14'>{t('profile.currentPassword')}</label>
                                 <label className='flex items-center gap-1 text-xs cursor-pointer'>
                                     <input
                                         type="checkbox"
@@ -121,14 +123,14 @@ const Profile = () => {
                                         onChange={(e) => setShowCurrentPassword(e.target.checked)}
                                         className='cursor-pointer'
                                     />
-                                    Show
+                                    {t('auth.showPassword')}
                                 </label>
                             </div>
                             <input
                                 type={showCurrentPassword ? "text" : "password"}
                                 value={profileData.currentPassword}
                                 onChange={(e) => updateProfileField('currentPassword', e.target.value)}
-                                placeholder='Enter current password'
+                                placeholder={t('profile.enterCurrentPassword')}
                                 className='w-full px-4 py-2.5 rounded-lg ring-1 ring-slate-900/10 bg-white outline-none focus:ring-secondary transition-all'
                             />
                         </div>
@@ -136,7 +138,7 @@ const Profile = () => {
                         {/* NEW PASSWORD */}
                         <div>
                             <div className='flex justify-between items-center mb-1'>
-                                <label className='medium-14'>New Password</label>
+                                <label className='medium-14'>{t('profile.newPassword')}</label>
                                 <label className='flex items-center gap-1 text-xs cursor-pointer'>
                                     <input
                                         type="checkbox"
@@ -144,26 +146,26 @@ const Profile = () => {
                                         onChange={(e) => setShowNewPassword(e.target.checked)}
                                         className='cursor-pointer'
                                     />
-                                    Show
+                                    {t('auth.showPassword')}
                                 </label>
                             </div>
                             <input
                                 type={showNewPassword ? "text" : "password"}
                                 value={profileData.newPassword}
                                 onChange={(e) => updateProfileField('newPassword', e.target.value)}
-                                placeholder='Enter new password (min 8 characters)'
+                                placeholder={t('profile.enterNewPassword')}
                                 className='w-full px-4 py-2.5 rounded-lg ring-1 ring-slate-900/10 bg-white outline-none focus:ring-secondary transition-all'
                             />
                         </div>
 
                         {/* CONFIRM PASSWORD */}
                         <div>
-                            <label className='medium-14 block mb-1'>Confirm New Password</label>
+                            <label className='medium-14 block mb-1'>{t('profile.confirmNewPassword')}</label>
                             <input
                                 type="password"
                                 value={profileData.confirmPassword}
                                 onChange={(e) => updateProfileField('confirmPassword', e.target.value)}
-                                placeholder='Confirm new password'
+                                placeholder={t('profile.confirmNewPasswordPlaceholder')}
                                 className='w-full px-4 py-2.5 rounded-lg ring-1 ring-slate-900/10 bg-white outline-none focus:ring-secondary transition-all'
                             />
                         </div>
@@ -176,14 +178,14 @@ const Profile = () => {
                             disabled={profileLoading}
                             className='flex-1 btn-secondary rounded-lg disabled:opacity-50 disabled:cursor-not-allowed'
                         >
-                            {profileLoading ? 'Saving...' : 'Save Changes'}
+                            {profileLoading ? t('profile.saving') : t('profile.saveChanges')}
                         </button>
                         <button
                             type="button"
                             onClick={cancelProfileUpdate}
                             className='flex-1 btn-white rounded-lg'
                         >
-                            Cancel
+                            {t('common.cancel')}
                         </button>
                     </div>
                 </div>

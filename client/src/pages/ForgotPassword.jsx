@@ -1,9 +1,11 @@
 import { useState, useContext } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ShopContext } from '../context/ShopContext'
 import toast from 'react-hot-toast'
 import { FaArrowLeft } from 'react-icons/fa'
 
 const ForgotPassword = () => {
+    const { t } = useTranslation()
     const { navigate, axios } = useContext(ShopContext);
     const [email, setEmail] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -18,7 +20,7 @@ const ForgotPassword = () => {
 
             if (data.success) {
                 setEmailSent(true);
-                toast.success('Password reset link sent! Check your email.');
+                toast.success(t('forgotPassword.emailSent'));
             } else {
                 toast.error(data.message);
             }
@@ -43,26 +45,26 @@ const ForgotPassword = () => {
                             onClick={handleBackToLogin}
                             className='flex items-center gap-2 text-secondary hover:underline mb-2'
                         >
-                            <FaArrowLeft /> Back to Login
+                            <FaArrowLeft /> {t('forgotPassword.backToLogin')}
                         </button>
 
                         <h3 className='bold-28 mx-auto mb-3'>
-                            <span className='capitalize'>Forgot </span>
-                            <span className='capitalize text-secondary'>Password?</span>
+                            <span className='capitalize'>{t('forgotPassword.title').split(' ')[0]} </span>
+                            <span className='capitalize text-secondary'>{t('forgotPassword.title').split(' ').slice(1).join(' ')}?</span>
                         </h3>
 
                         <p className='text-center w-full mb-4 text-gray-500'>
-                            Enter your email address and we'll send you a link to reset your password.
+                            {t('forgotPassword.subtitle')}
                         </p>
 
                         <form onSubmit={onSubmitHandler} className='w-full flex flex-col gap-4'>
                             <div className='w-full'>
-                                <p className='medium-14'>Email</p>
+                                <p className='medium-14'>{t('forgotPassword.email')}</p>
                                 <input
                                     type="email"
                                     onChange={(e) => setEmail(e.target.value)}
                                     value={email}
-                                    placeholder='Enter your email...'
+                                    placeholder={t('common.typeHere')}
                                     className='border border-gray-200 rounded w-full p-2 mt-1 outline-black/80'
                                     required
                                     disabled={isLoading}
@@ -74,7 +76,7 @@ const ForgotPassword = () => {
                                 className='bg-secondary w-full rounded py-2.5! text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
                                 disabled={isLoading}
                             >
-                                {isLoading ? 'Sending...' : 'Send Reset Link'}
+                                {isLoading ? t('forgotPassword.sending') : t('forgotPassword.sendLink')}
                             </button>
                         </form>
                     </>
@@ -82,21 +84,20 @@ const ForgotPassword = () => {
                     <>
                         <div className='w-full text-center'>
                             <div className='text-6xl text-secondary mb-4'>✓</div>
-                            <h3 className='bold-24 mb-3'>Check Your Email</h3>
+                            <h3 className='bold-24 mb-3'>{t('forgotPassword.checkEmail')}</h3>
                             <p className='text-gray-500 mb-6'>
-                                We've sent a password reset link to <strong>{email}</strong>
+                                {t('forgotPassword.emailSentTo')} <strong>{email}</strong>
                             </p>
                             <div className='bg-primary p-4 rounded-lg mb-6'>
                                 <p className='text-sm text-gray-500'>
-                                    <strong>Important:</strong> The link will expire in 1 hour.
-                                    If you don't see the email, check your spam folder.
+                                    <strong>{t('forgotPassword.important')}:</strong> {t('forgotPassword.linkExpire')}
                                 </p>
                             </div>
                             <button
                                 onClick={handleBackToLogin}
                                 className='bg-secondary w-full rounded py-2.5! text-white cursor-pointer'
                             >
-                                Back to Login
+                                {t('forgotPassword.backToLogin')}
                             </button>
                         </div>
                     </>

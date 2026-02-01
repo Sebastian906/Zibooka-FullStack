@@ -1,10 +1,12 @@
 import { useState, useContext, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ShopContext } from '../context/ShopContext'
 import { useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { FaEye, FaEyeSlash } from 'react-icons/fa'
 
 const ResetPassword = () => {
+    const { t } = useTranslation()
     const { navigate, axios } = useContext(ShopContext);
     const [searchParams] = useSearchParams();
     const [newPassword, setNewPassword] = useState("");
@@ -18,7 +20,7 @@ const ResetPassword = () => {
     useEffect(() => {
         const tokenFromUrl = searchParams.get('token');
         if (!tokenFromUrl) {
-            toast.error('Invalid reset link');
+            toast.error(t('resetPassword.invalidLink'));
             setTokenValid(false);
             setTimeout(() => {
                 navigate('/');
@@ -32,12 +34,12 @@ const ResetPassword = () => {
         event.preventDefault();
 
         if (newPassword !== confirmPassword) {
-            toast.error('Passwords do not match');
+            toast.error(t('resetPassword.passwordsNotMatch'));
             return;
         }
 
         if (newPassword.length < 8) {
-            toast.error('Password must be at least 8 characters');
+            toast.error(t('resetPassword.minChars'));
             return;
         }
 
@@ -51,7 +53,7 @@ const ResetPassword = () => {
             });
 
             if (data.success) {
-                toast.success('Password reset successfully! You can now login.');
+                toast.success(t('resetPassword.success'));
                 setTimeout(() => {
                     navigate('/');
                 }, 2000);
@@ -61,7 +63,7 @@ const ResetPassword = () => {
         } catch (error) {
             console.error('Reset password error:', error);
             if (error.response?.status === 401) {
-                toast.error('Reset link has expired or is invalid. Please request a new one.');
+                toast.error(t('resetPassword.invalidLink'));
                 setTimeout(() => {
                     navigate('/forgot-password');
                 }, 2000);
@@ -78,9 +80,9 @@ const ResetPassword = () => {
             <div className='fixed top-0 bottom-0 left-0 right-0 z-40 flex items-center text-sm text-gray-600 bg-black/50'>
                 <div className='flex flex-col gap-4 m-auto items-center p-8 py-12 w-80 sm:w-88 rounded-lg shadow-xl border border-gray-200 bg-white'>
                     <div className='text-6xl text-red-500 mb-4'>✕</div>
-                    <h3 className='bold-24 text-center'>Invalid Reset Link</h3>
+                    <h3 className='bold-24 text-center'>{t('resetPassword.invalidLink')}</h3>
                     <p className='text-center text-gray-50'>
-                        Redirecting to home...
+                        {t('resetPassword.redirecting')}
                     </p>
                 </div>
             </div>
@@ -94,17 +96,17 @@ const ResetPassword = () => {
                 className='flex flex-col gap-4 m-auto items-start p-8 py-12 w-80 sm:w-88 rounded-lg shadow-xl border border-gray-200 bg-white'
             >
                 <h3 className='bold-28 mx-auto mb-3'>
-                    <span className='capitalize'>Reset </span>
-                    <span className='capitalize text-secondary'>Password</span>
+                    <span className='capitalize'>{t('resetPassword.title').split(' ')[0]} </span>
+                    <span className='capitalize text-secondary'>{t('resetPassword.title').split(' ').slice(1).join(' ')}</span>
                 </h3>
 
                 <p className='text-center w-full mb-4 text-gray-50'>
-                    Enter your new password below.
+                    {t('resetPassword.enterNewPassword')}
                 </p>
 
                 <div className='w-full'>
                     <div className='flex justify-between items-center mb-1'>
-                        <p className='medium-14'>New Password</p>
+                        <p className='medium-14'>{t('resetPassword.newPassword')}</p>
                         <button
                             type='button'
                             onClick={() => setShowNewPassword(!showNewPassword)}
@@ -117,20 +119,20 @@ const ResetPassword = () => {
                         type={showNewPassword ? "text" : "password"}
                         onChange={(e) => setNewPassword(e.target.value)}
                         value={newPassword}
-                        placeholder='Enter new password...'
+                        placeholder={t('resetPassword.enterNewPasswordPlaceholder')}
                         className='border border-gray-200 rounded w-full p-2 mt-1 outline-black/80'
                         required
                         minLength={8}
                         disabled={isLoading}
                     />
                     <p className='text-xs text-gray-500 mt-1'>
-                        Minimum 8 characters
+                        {t('resetPassword.minChars')}
                     </p>
                 </div>
 
                 <div className='w-full'>
                     <div className='flex justify-between items-center mb-1'>
-                        <p className='medium-14'>Confirm Password</p>
+                        <p className='medium-14'>{t('resetPassword.confirmPassword')}</p>
                         <button
                             type='button'
                             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -143,7 +145,7 @@ const ResetPassword = () => {
                         type={showConfirmPassword ? "text" : "password"}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         value={confirmPassword}
-                        placeholder='Confirm new password...'
+                        placeholder={t('resetPassword.confirmPasswordPlaceholder')}
                         className='border border-gray-200 rounded w-full p-2 mt-1 outline-black/80'
                         required
                         minLength={8}
@@ -156,11 +158,11 @@ const ResetPassword = () => {
                     <div className='w-full'>
                         {newPassword === confirmPassword ? (
                             <p className='text-xs text-green-600 flex items-center gap-1'>
-                                ✓ Passwords match
+                                ✓ {t('resetPassword.passwordsMatch')}
                             </p>
                         ) : (
                             <p className='text-xs text-red-600 flex items-center gap-1'>
-                                ✕ Passwords do not match
+                                ✕ {t('resetPassword.passwordsNotMatch')}
                             </p>
                         )}
                     </div>
@@ -171,7 +173,7 @@ const ResetPassword = () => {
                     className='bg-secondary w-full rounded py-2.5! mt-3 text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
                     disabled={isLoading || newPassword !== confirmPassword}
                 >
-                    {isLoading ? 'Resetting...' : 'Reset Password'}
+                    {isLoading ? t('resetPassword.resetting') : t('resetPassword.resetButton')}
                 </button>
 
                 <button
@@ -180,7 +182,7 @@ const ResetPassword = () => {
                     className='w-full text-center text-secondary hover:underline cursor-pointer'
                     disabled={isLoading}
                 >
-                    Back to Login
+                    {t('forgotPassword.backToLogin')}
                 </button>
             </form>
         </div>
