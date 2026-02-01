@@ -16,7 +16,7 @@ const Achievements = () => {
     ]
 
     return (
-        <section className='mx-auto max-w-360'>
+        <section id="achievements" className='mx-auto max-w-360'>
             { /* CONTAINER */}
             <div className='flex flex-col xl:flex-row gap-12'>
                 { /* LADO IZQUIERDO */}
@@ -26,7 +26,7 @@ const Achievements = () => {
                     { /* ESTADÍSTICAS */}
                     <div className='flex flex-wrap gap-4'>
                         {statistics.map((statistic, index) => (
-                            <div 
+                            <div
                                 key={index}
                                 className='p-4 rounded-lg'
                             >

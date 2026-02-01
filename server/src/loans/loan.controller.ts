@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpStatus, Param, Post, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpStatus, Param, Post, Res, SetMetadata, UseGuards } from '@nestjs/common';
 import { ApiBody, ApiCookieAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { LoanService } from './loan.service';
 import { AuthGuard } from 'src/common/guards/auth/auth.guard';
@@ -7,6 +7,9 @@ import type { Response } from 'express';
 import { LoanStatsResponseDto } from './dto/loan-stats-response.dto';
 import { CreateLoanDto } from './dto/create-loan.dto';
 import { AdminAuthGuard } from 'src/common/guards/admin-auth/admin-auth.guard';
+
+// Custom decorator to skip class-level guards
+export const SkipAuthGuard = () => SetMetadata('skipAuthGuard', true);
 
 @ApiTags('Loans')
 @Controller('loan')
@@ -185,6 +188,7 @@ export class LoanController {
     }
 
     @Get('admin/all')
+    @SkipAuthGuard()
     @UseGuards(AdminAuthGuard)
     @ApiCookieAuth('adminToken')
     @ApiOperation({

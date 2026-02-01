@@ -4,6 +4,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
 import * as jwt from 'jsonwebtoken';
@@ -15,9 +16,18 @@ export interface RequestWithUser extends Request {
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-  constructor(private configService: ConfigService) { }
+  constructor(
+    private configService: ConfigService,
+    private reflector: Reflector,
+  ) { }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
+    // Check if this route should skip auth guard
+    const skipAuthGuard = this.reflector.get<boolean>('skipAuthGuard', context.getHandler());
+    if (skipAuthGuard) {
+      return true;
+    }
+
     const request = context.switchToHttp().getRequest<RequestWithUser>();
 
     // Intentar obtener token de cookie O header

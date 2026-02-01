@@ -19,7 +19,7 @@ const PopularBooks = () => {
     }, [books]);
 
     return (
-        <section className='max-padd-container py-16'>
+        <section id="popular-books" className='max-padd-container py-16'>
             <Title
                 title1={t('popular.title1')}
                 title2={t('popular.title2')}

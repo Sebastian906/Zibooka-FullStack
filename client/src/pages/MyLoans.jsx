@@ -192,16 +192,16 @@ const MyLoans = () => {
 
                                         {loan.status === 'active' && daysRemaining !== null && (
                                             <div className={`${daysRemaining < 0
-                                                    ? 'bg-red-50 border-red-200'
-                                                    : daysRemaining <= 3
-                                                        ? 'bg-yellow-50 border-yellow-200'
-                                                        : 'bg-blue-50 border-blue-200'
+                                                ? 'bg-red-50 border-red-200'
+                                                : daysRemaining <= 3
+                                                    ? 'bg-yellow-50 border-yellow-200'
+                                                    : 'bg-blue-50 border-blue-200'
                                                 } border p-2 rounded-lg mb-3`}>
                                                 <p className={`text-sm ${daysRemaining < 0
-                                                        ? 'text-red-700'
-                                                        : daysRemaining <= 3
-                                                            ? 'text-yellow-700'
-                                                            : 'text-blue-700'
+                                                    ? 'text-red-700'
+                                                    : daysRemaining <= 3
+                                                        ? 'text-yellow-700'
+                                                        : 'text-blue-700'
                                                     }`}>
                                                     {daysRemaining < 0 ? (
                                                         <strong>⚠️ {t('loans.overdueBy')} {Math.abs(daysRemaining)} {t('loans.daysOverdue')}</strong>
@@ -231,7 +231,7 @@ const MyLoans = () => {
                                 {index === 0 && loans.length > 1 && (
                                     <div className='mt-3 pt-3 border-t border-gray-200'>
                                         <p className='text-xs text-gray-500'>
-                                            <strong>Stack (LIFO):</strong> {t('loans.stackNote')}
+                                            <strong>{t('loans.title')}:</strong> {t('loans.stackNote')}
                                         </p>
                                     </div>
                                 )}
