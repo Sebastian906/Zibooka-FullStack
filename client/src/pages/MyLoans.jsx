@@ -1,9 +1,11 @@
 import { useContext, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ShopContext } from '../context/ShopContext'
 import Title from '../components/Title'
 import { FaBook, FaCheckCircle, FaClock, FaExclamationTriangle } from 'react-icons/fa'
 
 const MyLoans = () => {
+    const { t } = useTranslation()
     const { user, navigate, getUserLoans, getUserLoanStats, returnBook } = useContext(ShopContext)
     const [loans, setLoans] = useState([])
     const [stats, setStats] = useState({
@@ -38,7 +40,7 @@ const MyLoans = () => {
     }
 
     const handleReturnBook = async (loanId) => {
-        if (!confirm('Are you sure you want to return this book?')) return
+        if (!confirm(t('loans.confirmReturn'))) return
 
         setReturningLoanId(loanId)
         try {
@@ -99,11 +101,11 @@ const MyLoans = () => {
     return (
         <div className='max-padd-container py-16 pt-28'>
             <Title
-                title1="My"
-                title2="Loans"
+                title1={t('loans.my')}
+                title2={t('loans.title')}
                 title1Styles="pb-4"
                 paraStyles="mb-8"
-                para="Your book loans managed with LIFO (Last In, First Out) stack"
+                para={t('loans.description')}
             />
 
             {/* STATISTICS */}
@@ -111,22 +113,22 @@ const MyLoans = () => {
                 <div className='bg-primary p-4 rounded-xl text-center'>
                     <FaBook className='text-3xl mx-auto mb-2 text-secondary' />
                     <h3 className='h3'>{stats.total}</h3>
-                    <p className='text-sm text-gray-600'>Total Loans</p>
+                    <p className='text-sm text-gray-600'>{t('loans.totalLoans')}</p>
                 </div>
                 <div className='bg-blue-50 p-4 rounded-xl text-center border border-blue-200'>
                     <FaClock className='text-3xl mx-auto mb-2 text-blue-600' />
                     <h3 className='h3 text-blue-700'>{stats.active}</h3>
-                    <p className='text-sm text-blue-600'>Active</p>
+                    <p className='text-sm text-blue-600'>{t('loans.active')}</p>
                 </div>
                 <div className='bg-green-50 p-4 rounded-xl text-center border border-green-200'>
                     <FaCheckCircle className='text-3xl mx-auto mb-2 text-green-600' />
                     <h3 className='h3 text-green-700'>{stats.completed}</h3>
-                    <p className='text-sm text-green-600'>Completed</p>
+                    <p className='text-sm text-green-600'>{t('loans.completed')}</p>
                 </div>
                 <div className='bg-red-50 p-4 rounded-xl text-center border border-red-200'>
                     <FaExclamationTriangle className='text-3xl mx-auto mb-2 text-red-600' />
                     <h3 className='h3 text-red-700'>{stats.overdue}</h3>
-                    <p className='text-sm text-red-600'>Overdue</p>
+                    <p className='text-sm text-red-600'>{t('loans.overdue')}</p>
                 </div>
             </div>
 
@@ -134,13 +136,13 @@ const MyLoans = () => {
             {loans.length === 0 ? (
                 <div className='bg-white p-12 rounded-xl text-center ring-1 ring-slate-900/5'>
                     <FaBook className='text-6xl text-gray-300 mx-auto mb-4' />
-                    <h3 className='h3 text-gray-600 mb-2'>No loans yet</h3>
-                    <p className='text-gray-500 mb-4'>Start borrowing books from our collection</p>
+                    <h3 className='h3 text-gray-600 mb-2'>{t('loans.noLoans')}</h3>
+                    <p className='text-gray-500 mb-4'>{t('loans.startBorrowing')}</p>
                     <button
                         onClick={() => navigate('/shop')}
                         className='btn-secondary'
                     >
-                        Browse Books
+                        {t('loans.browseBooks')}
                     </button>
                 </div>
             ) : (
@@ -175,15 +177,15 @@ const MyLoans = () => {
 
                                         <div className='grid grid-cols-1 md:grid-cols-3 gap-2 text-sm mb-3'>
                                             <div>
-                                                <p className='text-gray-500'>Loan Date:</p>
+                                                <p className='text-gray-500'>{t('loans.loanDate')}:</p>
                                                 <p className='font-medium'>{formatDate(loan.loanDate)}</p>
                                             </div>
                                             <div>
-                                                <p className='text-gray-500'>Due Date:</p>
+                                                <p className='text-gray-500'>{t('loans.dueDate')}:</p>
                                                 <p className='font-medium'>{formatDate(loan.dueDate)}</p>
                                             </div>
                                             <div>
-                                                <p className='text-gray-500'>Return Date:</p>
+                                                <p className='text-gray-500'>{t('loans.returnDate')}:</p>
                                                 <p className='font-medium'>{formatDate(loan.returnDate)}</p>
                                             </div>
                                         </div>
@@ -202,11 +204,11 @@ const MyLoans = () => {
                                                             : 'text-blue-700'
                                                     }`}>
                                                     {daysRemaining < 0 ? (
-                                                        <strong>⚠️ Overdue by {Math.abs(daysRemaining)} days</strong>
+                                                        <strong>⚠️ {t('loans.overdueBy')} {Math.abs(daysRemaining)} {t('loans.daysOverdue')}</strong>
                                                     ) : daysRemaining === 0 ? (
-                                                        <strong>⏰ Due today!</strong>
+                                                        <strong>⏰ {t('loans.dueToday')}</strong>
                                                     ) : (
-                                                        <strong>{daysRemaining} days remaining</strong>
+                                                        <strong>{daysRemaining} {t('loans.daysRemaining')}</strong>
                                                     )}
                                                 </p>
                                             </div>
@@ -219,7 +221,7 @@ const MyLoans = () => {
                                                 disabled={returningLoanId === loan._id}
                                                 className='btn-dark py-1! px-4! text-sm rounded-md disabled:opacity-50'
                                             >
-                                                {returningLoanId === loan._id ? 'Returning...' : 'Return Book'}
+                                                {returningLoanId === loan._id ? t('loans.returning') : t('loans.returnBook')}
                                             </button>
                                         )}
                                     </div>
@@ -229,7 +231,7 @@ const MyLoans = () => {
                                 {index === 0 && loans.length > 1 && (
                                     <div className='mt-3 pt-3 border-t border-gray-200'>
                                         <p className='text-xs text-gray-500'>
-                                            <strong>Stack (LIFO):</strong> Showing most recent loan first
+                                            <strong>Stack (LIFO):</strong> {t('loans.stackNote')}
                                         </p>
                                     </div>
                                 )}
@@ -241,27 +243,27 @@ const MyLoans = () => {
 
             {/* INFO BOX */}
             <div className='mt-8 bg-linear-to-r from-blue-50 to-purple-50 p-6 rounded-xl border border-blue-200'>
-                <h5 className='h5 mb-3'>How Loans Work (Stack - LIFO)</h5>
+                <h5 className='h5 mb-3'>{t('loans.howItWorks')}</h5>
                 <ul className='space-y-2 text-sm'>
                     <li className='flex items-start gap-2'>
                         <span className='text-blue-600'>•</span>
-                        <p>Loans are managed as a <strong>Stack (LIFO)</strong> - Last In, First Out</p>
+                        <p dangerouslySetInnerHTML={{ __html: t('loans.lifoInfo1') }} />
                     </li>
                     <li className='flex items-start gap-2'>
                         <span className='text-blue-600'>•</span>
-                        <p>Your most recent loan appears first in the list</p>
+                        <p>{t('loans.lifoInfo2')}</p>
                     </li>
                     <li className='flex items-start gap-2'>
                         <span className='text-blue-600'>•</span>
-                        <p>Each loan has a <strong>14-day</strong> due date from the loan date</p>
+                        <p dangerouslySetInnerHTML={{ __html: t('loans.lifoInfo3') }} />
                     </li>
                     <li className='flex items-start gap-2'>
                         <span className='text-blue-600'>•</span>
-                        <p>When you return a book, our system uses <strong>Binary Search</strong> to verify the loan and update stock</p>
+                        <p dangerouslySetInnerHTML={{ __html: t('loans.lifoInfo4') }} />
                     </li>
                     <li className='flex items-start gap-2'>
                         <span className='text-blue-600'>•</span>
-                        <p>Overdue books may incur late fees</p>
+                        <p>{t('loans.lifoInfo5')}</p>
                     </li>
                 </ul>
             </div>

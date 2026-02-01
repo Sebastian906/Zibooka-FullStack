@@ -2,6 +2,7 @@ import { createContext, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import { useTranslation } from 'react-i18next'
 
 // axios.defaults.withCredentials = true
 axios.defaults.baseURL = import.meta.env.VITE_BACKEND_URL || '/api'
@@ -11,6 +12,7 @@ export const ShopContext = createContext()
 const ShopContextProvider = ({ children }) => {
 
     const navigate = useNavigate()
+    const { i18n } = useTranslation()
     const [books, setBooks] = useState([])
     const [user, setUser] = useState('')
     const [searchQuery, setSearchQuery] = useState('')
@@ -21,7 +23,8 @@ const ShopContextProvider = ({ children }) => {
     const delivery_charges = 10
     const [isAdmin, setIsAdmin] = useState(false)
     const [shelves, setShelves] = useState([])
-    const [reportLoading, setReportLoading] = useState(false);
+    const [reportLoading, setReportLoading] = useState(false)
+    const [currentLanguage, setCurrentLanguage] = useState(i18n.language || 'en')
 
     // Profile states
     const [profileData, setProfileData] = useState({
@@ -57,19 +60,47 @@ const ShopContextProvider = ({ children }) => {
         return categories.sort();
     }, [books]);
 
-    // Fetch all books
-    const fetchBooks = async () => {
+    // Fetch all books (con soporte de idioma)
+    const fetchBooks = async (lang = null) => {
         try {
-            const { data } = await axios.get('/api/product/list')
+            const language = lang || i18n.language || 'en'
+            // Si es inglés, usar endpoint normal, si no, usar endpoint con traducción
+            const endpoint = language === 'en' 
+                ? '/api/product/list' 
+                : `/api/product/list/${language}`
+            
+            const { data } = await axios.get(endpoint)
             if (data.success) {
                 setBooks(data.products)
             } else {
                 toast.error(data.message)
             }
         } catch (error) {
-            toast.error(error.message)
+            // Fallback al endpoint normal si falla
+            try {
+                const { data } = await axios.get('/api/product/list')
+                if (data.success) {
+                    setBooks(data.products)
+                }
+            } catch (fallbackError) {
+                toast.error(error.message)
+            }
         }
     }
+
+    // Escuchar cambios de idioma y recargar libros
+    useEffect(() => {
+        const handleLanguageChange = (lng) => {
+            setCurrentLanguage(lng)
+            fetchBooks(lng)
+        }
+
+        i18n.on('languageChanged', handleLanguageChange)
+        
+        return () => {
+            i18n.off('languageChanged', handleLanguageChange)
+        }
+    }, [i18n])
 
     // Interceptor para agregar token a todas las requests
     useEffect(() => {
@@ -985,7 +1016,7 @@ const ShopContextProvider = ({ children }) => {
     }, [])
 
     const value = {
-        books, navigate, user, setUser, currency, searchQuery, setSearchQuery, cartItems, setCartItems, addToCart, getCartCount, getCartAmount, updateQuantity, method, setMethod, delivery_charges, showUserLogin, setShowUserLogin, isAdmin, setIsAdmin, axios, fetchBooks, fetchUser, logoutUser, availableCategories, searchByTitleOrAuthor, searchByISBN, sortProductsByPrice, applyFiltersAndSort, profileData, setProfileData, profileImage, setProfileImage, imagePreview, setImagePreview, profileLoading, setProfileLoading, countryCodes, selectedCountryCode, setSelectedCountryCode, phoneNumber, setPhoneNumber, getUserProfile, loadProfileData, handleProfileImageChange, handlePhoneChange, updateProfileField, submitProfileUpdate, cancelProfileUpdate, resetProfileForm, shelves, fetchShelves, createShelf, assignBookToShelf, removeBookFromShelf, findDangerousCombinations, optimizeShelf, getUserLoans, getUserLoanStats, createLoan, returnBook, getAllLoans, getUserReservationStats, getUserReservationList, getWaitingList, createReservation, cancelReservation, reportLoading, downloadInventoryPDF, downloadInventoryXLSX, downloadLoansPDF, downloadLoansXLSX, getRecursionPreview
+        books, navigate, user, setUser, currency, searchQuery, setSearchQuery, cartItems, setCartItems, addToCart, getCartCount, getCartAmount, updateQuantity, method, setMethod, delivery_charges, showUserLogin, setShowUserLogin, isAdmin, setIsAdmin, axios, fetchBooks, fetchUser, logoutUser, availableCategories, searchByTitleOrAuthor, searchByISBN, sortProductsByPrice, applyFiltersAndSort, profileData, setProfileData, profileImage, setProfileImage, imagePreview, setImagePreview, profileLoading, setProfileLoading, countryCodes, selectedCountryCode, setSelectedCountryCode, phoneNumber, setPhoneNumber, getUserProfile, loadProfileData, handleProfileImageChange, handlePhoneChange, updateProfileField, submitProfileUpdate, cancelProfileUpdate, resetProfileForm, shelves, fetchShelves, createShelf, assignBookToShelf, removeBookFromShelf, findDangerousCombinations, optimizeShelf, getUserLoans, getUserLoanStats, createLoan, returnBook, getAllLoans, getUserReservationStats, getUserReservationList, getWaitingList, createReservation, cancelReservation, reportLoading, downloadInventoryPDF, downloadInventoryXLSX, downloadLoansPDF, downloadLoansXLSX, getRecursionPreview, currentLanguage
     }
 
     return (

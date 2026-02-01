@@ -1,11 +1,12 @@
 import React, { useContext, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import Title from '../components/Title'
 import { ShopContext } from '../context/ShopContext'
 import Item from '../components/Item';
 import { useParams } from 'react-router-dom';
 
 const CategoryShop = () => {
-
+    const { t } = useTranslation();
     const { books, searchQuery } = useContext(ShopContext);
     const [filteredBooks, setFilteredBooks] = useState([])
     const [currPage, setCurrPage] = useState(1)
@@ -45,10 +46,10 @@ const CategoryShop = () => {
         <div className='max-padd-container py-16 pt-28'>
             <Title
                 title1={category}
-                title2={"Books"}
+                title2={t('categoryShop.books')}
                 title1Styles={"pb-2"}
                 paraStyles={"pb-6"}
-                para={"Explore our collection of books across various genres, carefully curated to ignite your imagination and expand your horizons."}
+                para={t('categoryShop.description')}
             />
             <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 sm:gap-8'>
                 {filteredBooks.length > 0 ? (
@@ -60,7 +61,7 @@ const CategoryShop = () => {
                         ))
                 ) : (
                     <h4 className='h4'>
-                        Oops! Nothing matched your search
+                        {t('categoryShop.noResults')}
                     </h4>
                 )}
             </div>
@@ -71,7 +72,7 @@ const CategoryShop = () => {
                     onClick={()=>setCurrPage(prev=>prev-1)}
                     className={`${currPage === 1 && 'opacity-50 cursor-not-allowed'} btn-dark py-1! px-3!`}
                 >
-                    Previous
+                    {t('shop.previous')}
                 </button>
                 {Array.from({length: totalPages}, (_, index)=>(
                     <button
@@ -87,7 +88,7 @@ const CategoryShop = () => {
                     onClick={()=>setCurrPage(prev=>prev+1)}
                     className={`${currPage === totalPages && 'opacity-50 cursor-not-allowed'} btn-white bg-tertiary py-1! px-3!`}
                 >
-                    Next
+                    {t('shop.next')}
                 </button>
             </div>
         </div>

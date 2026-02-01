@@ -1,4 +1,5 @@
 import { useContext, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ShopContext } from '../context/ShopContext'
 import { Link, useParams } from 'react-router-dom';
 import { TbHeart, TbShoppingBag, TbStarFilled, TbStarHalfFilled } from 'react-icons/tb';
@@ -10,6 +11,7 @@ import { FaBook, FaClock } from 'react-icons/fa';
 
 const ProductDetails = () => {
 
+    const { t } = useTranslation();
     const { books, currency, addToCart, user, setShowUserLogin, getWaitingList, createReservation, createLoan } = useContext(ShopContext)
     const { id } = useParams()
     const book = books.find((b) => b._id === id)
@@ -73,8 +75,8 @@ const ProductDetails = () => {
         book && (
             <div className='max-padd-container py-16 pt-28'>
                 <p>
-                    <Link to={'/'}>Home</Link> /
-                    <Link to={'/shop'}> Shop</Link> /
+                    <Link to={'/'}>{t('nav.home')}</Link> /
+                    <Link to={'/shop'}> {t('nav.shop')}</Link> /
                     <Link to={`/shop/${book.category}`}> {book.category}</Link> /
                     <span className='medium-14 text-secondary'> {book.name}</span>
                 </p>
@@ -124,11 +126,11 @@ const ProductDetails = () => {
                         <div className='flex items-center gap-2 my-3'>
                             {book.inStock ? (
                                 <span className='px-3 py-1 bg-green-100 text-green-700 text-xs rounded-full'>
-                                    In Stock
+                                    {t('product.inStock')}
                                 </span>
                             ) : (
                                 <span className='px-3 py-1 bg-red-100 text-red-700 text-xs rounded-full'>
-                                    Out of Stock
+                                    {t('product.outOfStock')}
                                 </span>
                             )}
                         </div>
@@ -140,27 +142,27 @@ const ProductDetails = () => {
                             <div className='mt-4 p-4 bg-white rounded-lg space-y-2'>
                                 {book.author && (
                                     <p className='text-sm'>
-                                        <span className='font-medium'>Author:</span> {book.author}
+                                        <span className='font-medium'>{t('product.author')}:</span> {book.author}
                                     </p>
                                 )}
                                 {book.pageCount && (
                                     <p className='text-sm'>
-                                        <span className='font-medium'>Pages:</span> {book.pageCount}
+                                        <span className='font-medium'>{t('product.pages')}:</span> {book.pageCount}
                                     </p>
                                 )}
                                 {book.publisher && (
                                     <p className='text-sm'>
-                                        <span className='font-medium'>Publisher:</span> {book.publisher}
+                                        <span className='font-medium'>{t('product.publisher')}:</span> {book.publisher}
                                     </p>
                                 )}
                                 {book.publicationYear && (
                                     <p className='text-sm'>
-                                        <span className='font-medium'>Year:</span> {book.publicationYear}
+                                        <span className='font-medium'>{t('product.year')}:</span> {book.publicationYear}
                                     </p>
                                 )}
                                 {book.isbn && (
                                     <p className='text-sm'>
-                                        <span className='font-medium'>ISBN:</span> {book.isbn}
+                                        <span className='font-medium'>{t('product.isbn')}:</span> {book.isbn}
                                     </p>
                                 )}
                             </div>
@@ -174,15 +176,15 @@ const ProductDetails = () => {
                                         onClick={() => addToCart(book._id)}
                                         className='btn-dark sm:w-auto flexCenter gap-x-2 capitalize rounded-md!'
                                     >
-                                        Add to Cart<TbShoppingBag />
+                                        {t('product.addToCart')}<TbShoppingBag />
                                     </button>
                                     <button
                                         onClick={handleCreateLoan}
                                         disabled={isCreatingLoan}
                                         className='btn-secondary sm:w-auto flexCenter gap-x-2 capitalize rounded-md! disabled:opacity-50'
                                     >
-                                        {isCreatingLoan ? 'Processing...' : (
-                                            <>Borrow Book<FaBook /></>
+                                        {isCreatingLoan ? t('product.processing') : (
+                                            <>{t('product.borrowBook')}<FaBook /></>
                                         )}
                                     </button>
                                 </>
@@ -192,8 +194,8 @@ const ProductDetails = () => {
                                     disabled={isReserving}
                                     className='btn-dark sm:w-auto flexCenter gap-x-2 capitalize rounded-md! disabled:opacity-50'
                                 >
-                                    {isReserving ? 'Reserving...' : (
-                                        <>Reserve Book<FaBook /></>
+                                    {isReserving ? t('product.reserving') : (
+                                        <>{t('product.reserveBook')}<FaBook /></>
                                     )}
                                 </button>
                             )}
@@ -210,18 +212,18 @@ const ProductDetails = () => {
                                     className='flex items-center gap-2 text-sm text-gray-600 hover:text-secondary transition-colors'
                                 >
                                     <FaClock />
-                                    <span>{waitingList.length} {waitingList.length === 1 ? 'person' : 'people'} in waiting list</span>
+                                    <span>{waitingList.length} {waitingList.length === 1 ? t('product.personWaiting') : t('product.peopleWaiting')}</span>
                                 </button>
 
                                 {showWaitingList && (
                                     <div className='mt-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200'>
-                                        <h5 className='font-medium text-sm mb-2'>Waiting List (FIFO)</h5>
+                                        <h5 className='font-medium text-sm mb-2'>{t('product.waitingList')}</h5>
                                         <div className='space-y-2 max-h-40 overflow-y-auto'>
                                             {waitingList.map((reservation) => (
                                                 <div key={reservation._id} className='flex items-center gap-2 text-xs'>
                                                     <span className='font-medium'>#{reservation.priority}</span>
                                                     <span className='text-gray-600'>
-                                                        Reserved on {new Date(reservation.requestDate).toLocaleDateString()}
+                                                        {t('product.reservedOn')} {new Date(reservation.requestDate).toLocaleDateString()}
                                                     </span>
                                                 </div>
                                             ))}
@@ -233,13 +235,13 @@ const ProductDetails = () => {
 
                         <div className='flex items-center gap-x-2 mt-3'>
                             <FaTruckFast />
-                            <span className='medium-14'>Free Delivery on orders over 500$</span>
+                            <span className='medium-14'>{t('product.freeDelivery')}</span>
                         </div>
                         <hr className='my-3 w-2/3' />
                         <div className='mt-2 flex flex-col gap-1 text-gray-300 text-[14px]'>
-                            <p>Authenticity You Can Trust</p>
-                            <p>Enjoy Cash on Delivery for Your Convenience</p>
-                            <p>Easy Returns and Exchanges Within 7 Days</p>
+                            <p>{t('product.authenticity')}</p>
+                            <p>{t('product.cashOnDelivery')}</p>
+                            <p>{t('product.easyReturns')}</p>
                         </div>
                     </div>
                 </div>

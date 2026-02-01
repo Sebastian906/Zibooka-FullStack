@@ -3,6 +3,18 @@ import { HydratedDocument, Types } from "mongoose"
 
 export type ProductDocument = HydratedDocument<Product>;
 
+// Sub-esquema para traducciones
+export class ProductTranslation {
+    @Prop({ type: String })
+    name?: string;
+
+    @Prop({ type: String })
+    description?: string;
+
+    @Prop({ type: String })
+    category?: string;
+}
+
 @Schema({ timestamps: true })
 export class Product {
     @Prop({
@@ -69,6 +81,13 @@ export class Product {
         default: null
     })
     shelfLocation?: Types.ObjectId;
+
+    // Campo para traducciones (estructura: { es: { name, description, category }, fr: { ... } })
+    @Prop({
+        type: Object,
+        default: {}
+    })
+    translations?: Record<string, ProductTranslation>;
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);

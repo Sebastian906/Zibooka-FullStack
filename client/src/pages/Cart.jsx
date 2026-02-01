@@ -1,4 +1,5 @@
 import React, { useContext } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ShopContext } from '../context/ShopContext'
 import Title from '../components/Title';
 import { FaMinus, FaPlus } from 'react-icons/fa6';
@@ -6,6 +7,7 @@ import CartTotal from '../components/CartTotal';
 
 const Cart = () => {
 
+    const { t } = useTranslation();
     const { navigate, books, currency, cartItems, updateQuantity } = useContext(ShopContext);
 
     return books && cartItems ? (
@@ -14,19 +16,19 @@ const Cart = () => {
                 { /* IZQUIERDA */}
                 <div className='flex flex-2 flex-col gap-3'>
                     <Title
-                        title1={"Cart"}
-                        title2={"Overview"}
+                        title1={t('cart.title1')}
+                        title2={t('cart.title2')}
                         titleStyles={"pb-5"}
                     />
                     <div className='grid grid-cols-[6fr_1fr_2fr] text-base font-medium bg-primary p-2 rounded-lg'>
                         <h5 className="h5 text-left">
-                            Product Details
+                            {t('cart.productDetails')}
                         </h5>
                         <h5 className="h5 text-center">
-                            Subtotal
+                            {t('cart.subtotal')}
                         </h5>
                         <h5 className="h5 text-center">
-                            Action
+                            {t('cart.action')}
                         </h5>
                     </div>
                     {books.map((book) => {
@@ -79,7 +81,7 @@ const Cart = () => {
                                         onClick={() => updateQuantity(book._id, 0)} 
                                         className='cursor-pointer mx-auto bold-14 text-secondary'
                                     >
-                                        delete
+                                        {t('cart.delete')}
                                     </button>
                                 </div>
                             )

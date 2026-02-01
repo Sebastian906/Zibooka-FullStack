@@ -1,9 +1,11 @@
 import { useContext, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ShopContext } from '../context/ShopContext'
 import Title from '../components/Title'
 import { FaBookmark, FaClock, FaCheckCircle, FaTimesCircle, FaHourglassHalf } from 'react-icons/fa'
 
 const MyReservations = () => {
+    const { t } = useTranslation()
     const { user, navigate, getUserReservationStats, getUserReservationList, cancelReservation } = useContext(ShopContext)
     const [reservations, setReservations] = useState([])
     const [stats, setStats] = useState({
@@ -39,7 +41,7 @@ const MyReservations = () => {
     }
 
     const handleCancelReservation = async (reservationId) => {
-        if (!confirm('Are you sure you want to cancel this reservation?')) return
+        if (!confirm(t('reservations.confirmCancel'))) return
 
         setCancellingId(reservationId)
         try {
@@ -93,11 +95,11 @@ const MyReservations = () => {
     return (
         <div className='max-padd-container py-16 pt-28'>
             <Title
-                title1="My"
-                title2="Reservations"
+                title1={t('reservations.my')}
+                title2={t('reservations.title')}
                 title1Styles="pb-4"
                 paraStyles="mb-8"
-                para="Your book reservations managed with FIFO (First In, First Out) queue"
+                para={t('reservations.description')}
             />
 
             {/* STATISTICS */}
@@ -105,27 +107,27 @@ const MyReservations = () => {
                 <div className='bg-primary p-4 rounded-xl text-center'>
                     <FaBookmark className='text-3xl mx-auto mb-2 text-secondary' />
                     <h3 className='h3'>{stats.total}</h3>
-                    <p className='text-sm text-gray-600'>Total</p>
+                    <p className='text-sm text-gray-600'>{t('reservations.total')}</p>
                 </div>
                 <div className='bg-yellow-50 p-4 rounded-xl text-center border border-yellow-200'>
                     <FaHourglassHalf className='text-3xl mx-auto mb-2 text-yellow-600' />
                     <h3 className='h3 text-yellow-700'>{stats.pending}</h3>
-                    <p className='text-sm text-yellow-600'>Pending</p>
+                    <p className='text-sm text-yellow-600'>{t('reservations.pending')}</p>
                 </div>
                 <div className='bg-green-50 p-4 rounded-xl text-center border border-green-200'>
                     <FaCheckCircle className='text-3xl mx-auto mb-2 text-green-600' />
                     <h3 className='h3 text-green-700'>{stats.fulfilled}</h3>
-                    <p className='text-sm text-green-600'>Fulfilled</p>
+                    <p className='text-sm text-green-600'>{t('reservations.fulfilled')}</p>
                 </div>
                 <div className='bg-red-50 p-4 rounded-xl text-center border border-red-200'>
                     <FaTimesCircle className='text-3xl mx-auto mb-2 text-red-600' />
                     <h3 className='h3 text-red-700'>{stats.cancelled}</h3>
-                    <p className='text-sm text-red-600'>Cancelled</p>
+                    <p className='text-sm text-red-600'>{t('reservations.cancelled')}</p>
                 </div>
                 <div className='bg-gray-50 p-4 rounded-xl text-center border border-gray-200'>
                     <FaClock className='text-3xl mx-auto mb-2 text-gray-600' />
                     <h3 className='h3 text-gray-700'>{stats.expired}</h3>
-                    <p className='text-sm text-gray-600'>Expired</p>
+                    <p className='text-sm text-gray-600'>{t('reservations.expired')}</p>
                 </div>
             </div>
 
@@ -133,13 +135,13 @@ const MyReservations = () => {
             {reservations.length === 0 ? (
                 <div className='bg-white p-12 rounded-xl text-center ring-1 ring-slate-900/5'>
                     <FaBookmark className='text-6xl text-gray-300 mx-auto mb-4' />
-                    <h3 className='h3 text-gray-600 mb-2'>No reservations yet</h3>
-                    <p className='text-gray-500 mb-4'>Reserve books when they are out of stock</p>
+                    <h3 className='h3 text-gray-600 mb-2'>{t('reservations.noReservations')}</h3>
+                    <p className='text-gray-500 mb-4'>{t('reservations.startReserving')}</p>
                     <button
                         onClick={() => navigate('/shop')}
                         className='btn-secondary'
                     >
-                        Browse Books
+                        {t('loans.browseBooks')}
                     </button>
                 </div>
             ) : (
@@ -173,21 +175,21 @@ const MyReservations = () => {
 
                                         <div className='grid grid-cols-1 md:grid-cols-3 gap-2 text-sm mb-3'>
                                             <div>
-                                                <p className='text-gray-500'>Request Date:</p>
+                                                <p className='text-gray-500'>{t('reservations.reservationDate')}:</p>
                                                 <p className='font-medium'>{formatDate(reservation.requestDate)}</p>
                                             </div>
                                             <div>
-                                                <p className='text-gray-500'>Priority:</p>
+                                                <p className='text-gray-500'>{t('reservations.priority')}:</p>
                                                 <p className='font-medium'>
                                                     {reservation.status === 'pending' ? (
-                                                        <span className='text-blue-600'>Position #{reservation.priority}</span>
+                                                        <span className='text-blue-600'>{t('reservations.position')} #{reservation.priority}</span>
                                                     ) : (
                                                         '-'
                                                     )}
                                                 </p>
                                             </div>
                                             <div>
-                                                <p className='text-gray-500'>Expires:</p>
+                                                <p className='text-gray-500'>{t('reservations.expiryDate')}:</p>
                                                 <p className='font-medium'>{formatDate(reservation.expiresAt)}</p>
                                             </div>
                                         </div>
@@ -195,7 +197,7 @@ const MyReservations = () => {
                                         {reservation.status === 'fulfilled' && reservation.fulfilledAt && (
                                             <div className='bg-green-50 border border-green-200 p-2 rounded-lg mb-3'>
                                                 <p className='text-sm text-green-700'>
-                                                    <strong>Fulfilled:</strong> {formatDate(reservation.fulfilledAt)}
+                                                    <strong>{t('reservations.fulfilled')}:</strong> {formatDate(reservation.fulfilledAt)}
                                                 </p>
                                             </div>
                                         )}
@@ -203,7 +205,7 @@ const MyReservations = () => {
                                         {reservation.notes && (
                                             <div className='bg-blue-50 border border-blue-200 p-2 rounded-lg mb-3'>
                                                 <p className='text-sm text-blue-700'>
-                                                    <strong>Notes:</strong> {reservation.notes}
+                                                    <strong>{t('reservations.notes')}:</strong> {reservation.notes}
                                                 </p>
                                             </div>
                                         )}
@@ -215,7 +217,7 @@ const MyReservations = () => {
                                                 disabled={cancellingId === reservation._id}
                                                 className='btn-white py-1! px-4! text-sm rounded-md disabled:opacity-50'
                                             >
-                                                {cancellingId === reservation._id ? 'Cancelling...' : 'Cancel Reservation'}
+                                                {cancellingId === reservation._id ? t('reservations.cancelling') : t('reservations.cancel')}
                                             </button>
                                         )}
                                     </div>
@@ -225,7 +227,7 @@ const MyReservations = () => {
                                 {index === 0 && reservations.length > 1 && (
                                     <div className='mt-3 pt-3 border-t border-gray-200'>
                                         <p className='text-xs text-gray-500'>
-                                            <strong>Queue (FIFO):</strong> Showing most recent reservation first
+                                            <strong>{t('reservations.queueFifo')}:</strong> {t('reservations.showingRecent')}
                                         </p>
                                     </div>
                                 )}
@@ -237,31 +239,31 @@ const MyReservations = () => {
 
             {/* INFO BOX */}
             <div className='mt-8 bg-linear-to-r from-purple-50 to-pink-50 p-6 rounded-xl border border-purple-200'>
-                <h5 className='h5 mb-3'>How Reservations Work (Queue - FIFO)</h5>
+                <h5 className='h5 mb-3'>{t('reservations.howItWorks')}</h5>
                 <ul className='space-y-2 text-sm'>
                     <li className='flex items-start gap-2'>
                         <span className='text-purple-600'>•</span>
-                        <p>Reservations are managed as a <strong>Queue (FIFO)</strong> - First In, First Out</p>
+                        <p dangerouslySetInnerHTML={{ __html: t('reservations.fifoInfo1') }}></p>
                     </li>
                     <li className='flex items-start gap-2'>
                         <span className='text-purple-600'>•</span>
-                        <p>You can only reserve books that are <strong>out of stock</strong></p>
+                        <p dangerouslySetInnerHTML={{ __html: t('reservations.fifoInfo2') }}></p>
                     </li>
                     <li className='flex items-start gap-2'>
                         <span className='text-purple-600'>•</span>
-                        <p>When someone returns the book, our system uses <strong>Binary Search</strong> to verify and assign it to the first person in queue</p>
+                        <p dangerouslySetInnerHTML={{ __html: t('reservations.fifoInfo3') }}></p>
                     </li>
                     <li className='flex items-start gap-2'>
                         <span className='text-purple-600'>•</span>
-                        <p>Your priority number shows your position in the queue (1 = first in line)</p>
+                        <p dangerouslySetInnerHTML={{ __html: t('reservations.fifoInfo4') }}></p>
                     </li>
                     <li className='flex items-start gap-2'>
                         <span className='text-purple-600'>•</span>
-                        <p>Reservations expire after <strong>30 days</strong> if not fulfilled</p>
+                        <p dangerouslySetInnerHTML={{ __html: t('reservations.fifoInfo5') }}></p>
                     </li>
                     <li className='flex items-start gap-2'>
                         <span className='text-purple-600'>•</span>
-                        <p>Browse books on the <strong>Shop</strong> page and click "Reserve" on out-of-stock items</p>
+                        <p dangerouslySetInnerHTML={{ __html: t('reservations.fifoInfo6') }}></p>
                     </li>
                 </ul>
             </div>

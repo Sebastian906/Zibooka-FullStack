@@ -706,4 +706,187 @@ export class ProductService {
 
         return result.concat(left.slice(leftIndex)).concat(right.slice(rightIndex));
     }
+
+    // ============================================
+    // MÉTODOS DE TRADUCCIÓN
+    // ============================================
+
+    /**
+     * Obtiene productos con traducciones aplicadas según el idioma solicitado
+     * @param lang - Código de idioma (es, en, etc.)
+     */
+    async listProductsWithTranslation(lang: string = 'en'): Promise<Product[]> {
+        try {
+            const products = await this.productModel.find({});
+            
+            // Si el idioma es inglés (default), retornar sin modificar
+            if (lang === 'en') {
+                return products;
+            }
+
+            // Aplicar traducciones si existen
+            return products.map(product => this.applyTranslation(product, lang));
+        } catch (error) {
+            throw new InternalServerErrorException(error.message);
+        }
+    }
+
+    /**
+     * Obtiene un producto con traducción aplicada
+     * @param productId - ID del producto
+     * @param lang - Código de idioma
+     */
+    async getProductWithTranslation(productId: string, lang: string = 'en'): Promise<Product> {
+        try {
+            const product = await this.productModel.findById(productId);
+            
+            if (!product) {
+                throw new NotFoundException('Product not found');
+            }
+
+            if (lang === 'en') {
+                return product;
+            }
+
+            return this.applyTranslation(product, lang);
+        } catch (error) {
+            if (error instanceof NotFoundException) {
+                throw error;
+            }
+            throw new InternalServerErrorException(error.message);
+        }
+    }
+
+    /**
+     * Guarda o actualiza la traducción de un producto
+     * @param productId - ID del producto
+     * @param lang - Código de idioma
+     * @param translation - Objeto con las traducciones
+     */
+    async updateProductTranslation(
+        productId: string,
+        lang: string,
+        translation: { name?: string; description?: string; category?: string },
+    ): Promise<{ message: string; product: Product }> {
+        try {
+            const product = await this.productModel.findById(productId);
+
+            if (!product) {
+                throw new NotFoundException('Product not found');
+            }
+
+            // Actualizar o crear traducciones
+            const translations = product.translations || {};
+            translations[lang] = {
+                ...translations[lang],
+                ...translation,
+            };
+
+            const updatedProduct = await this.productModel.findByIdAndUpdate(
+                productId,
+                { translations },
+                { new: true },
+            );
+
+            if (!updatedProduct) {
+                throw new NotFoundException('Product not found after update');
+            }
+
+            return {
+                message: `Translation for ${lang} updated successfully`,
+                product: updatedProduct,
+            };
+        } catch (error) {
+            if (error instanceof NotFoundException) {
+                throw error;
+            }
+            throw new InternalServerErrorException(error.message);
+        }
+    }
+
+    /**
+     * Actualiza traducciones de múltiples productos a la vez (bulk)
+     * @param lang - Código de idioma
+     * @param translations - Array de { productId, name, description, category }
+     */
+    async bulkUpdateTranslations(
+        lang: string,
+        translations: Array<{
+            productId: string;
+            name?: string;
+            description?: string;
+            category?: string;
+        }>,
+    ): Promise<{ message: string; updatedCount: number }> {
+        try {
+            let updatedCount = 0;
+
+            for (const translation of translations) {
+                const product = await this.productModel.findById(translation.productId);
+                
+                if (product) {
+                    const productTranslations = product.translations || {};
+                    productTranslations[lang] = {
+                        name: translation.name,
+                        description: translation.description,
+                        category: translation.category,
+                    };
+
+                    await this.productModel.findByIdAndUpdate(
+                        translation.productId,
+                        { translations: productTranslations },
+                    );
+                    updatedCount++;
+                }
+            }
+
+            return {
+                message: `Translations updated for ${updatedCount} products`,
+                updatedCount,
+            };
+        } catch (error) {
+            throw new InternalServerErrorException(error.message);
+        }
+    }
+
+    /**
+     * Aplica la traducción a un producto
+     */
+    private applyTranslation(product: ProductDocument, lang: string): Product {
+        const productObj = product.toObject();
+        const translation = productObj.translations?.[lang];
+
+        if (translation) {
+            return {
+                ...productObj,
+                name: translation.name || productObj.name,
+                description: translation.description || productObj.description,
+                category: translation.category || productObj.category,
+            };
+        }
+
+        return productObj;
+    }
+
+    /**
+     * Obtiene las traducciones disponibles para un producto
+     */
+    async getProductTranslations(productId: string): Promise<{ translations: Record<string, any> }> {
+        try {
+            const product = await this.productModel.findById(productId);
+
+            if (!product) {
+                throw new NotFoundException('Product not found');
+            }
+
+            return {
+                translations: product.translations || {},
+            };
+        } catch (error) {
+            if (error instanceof NotFoundException) {
+                throw error;
+            }
+            throw new InternalServerErrorException(error.message);
+        }
+    }
 }

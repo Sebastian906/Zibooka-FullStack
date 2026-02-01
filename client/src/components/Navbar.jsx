@@ -3,20 +3,23 @@ import { TbBrandBlogger, TbHome } from 'react-icons/tb'
 import { IoLibraryOutline } from 'react-icons/io5'
 import { PiEnvelopeDuotone } from 'react-icons/pi'
 import { NavLink } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 
 const Navbar = ({ containerStyles, setMenuOpened }) => {
 
+    const { t } = useTranslation();
+
     const navItems = [
-        { to: '/', label: 'Home', icon: <TbHome /> },
-        { to: '/shop', label: 'Shop', icon: <IoLibraryOutline /> },
-        { to: '/blog', label: 'Blog', icon: <TbBrandBlogger /> },
-        { to: '/contact', label: 'Contact', icon: <PiEnvelopeDuotone /> },
+        { to: '/', label: t('nav.home'), icon: <TbHome /> },
+        { to: '/shop', label: t('nav.shop'), icon: <IoLibraryOutline /> },
+        { to: '/blog', label: t('nav.blog'), icon: <TbBrandBlogger /> },
+        { to: '/contact', label: t('nav.contact'), icon: <PiEnvelopeDuotone /> },
     ]
 
     return (
         <nav className={containerStyles}>
             {navItems.map(({ to, label, icon }) => (
-                <div key={label}>
+                <div key={to}>
                     <NavLink
                         onClick={()=>setMenuOpened(false)}
                         to={to}

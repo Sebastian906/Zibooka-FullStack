@@ -7,18 +7,21 @@ import { Link, NavLink, Outlet } from 'react-router-dom';
 import { BiLogOut } from 'react-icons/bi';
 import toast from 'react-hot-toast';
 import { IoBarChart } from 'react-icons/io5';
+import { useTranslation } from 'react-i18next';
+import LanguageToggle from '../LanguageToggle';
 
 const Sidebar = () => {
 
     const { navigate, axios } = useContext(ShopContext);
+    const { t } = useTranslation();
 
     const navItems = [
-        {path: "/admin", label: "Add Item", icon: <FaSquarePlus />},
-        {path: "/admin/list", label: "List", icon: <FaListAlt />},
-        { path: "/admin/orders", label: "Orders", icon: <MdFactCheck /> },
-        { path: "/admin/shelves", label: "Shelves", icon: <FaWarehouse /> },
-        { path: "/admin/loans", label: "Loans", icon: <FaBook /> },
-        { path: "/admin/reports", label: "Reports", icon: <IoBarChart /> }
+        {path: "/admin", label: t('admin.addProduct'), icon: <FaSquarePlus />},
+        {path: "/admin/list", label: t('admin.products'), icon: <FaListAlt />},
+        { path: "/admin/orders", label: t('admin.orders'), icon: <MdFactCheck /> },
+        { path: "/admin/shelves", label: t('admin.shelves'), icon: <FaWarehouse /> },
+        { path: "/admin/loans", label: t('admin.loans'), icon: <FaBook /> },
+        { path: "/admin/reports", label: t('admin.reports'), icon: <IoBarChart /> }
     ]
 
     const logout = async () => {
@@ -47,10 +50,14 @@ const Sidebar = () => {
                     >
                         Zibooka<span className='text-secondary bold-28'>.</span>
                     </Link>
+                    { /* SELECTOR DE IDIOMA */}
+                    <div className='lg:pl-[15%]'>
+                        <LanguageToggle />
+                    </div>
                     <div className='flex sm:flex-col sm:gap-x-5 gap-y-8 sm:pt-10'>
                         {navItems.map((link)=>(
                             <NavLink
-                                key={link.label}
+                                key={link.path}
                                 to={link.path}
                                 end={link.path === "/admin"}
                                 className={({ isActive }) => 
@@ -69,7 +76,7 @@ const Sidebar = () => {
                                 className='flexStart gap-x-2 lg:pl-12 p-5 medium-15 cursor-pointer h-10 rounded-xl text-red-500'
                             >
                                 <BiLogOut className='text-lg' />
-                                <div className='hidden sm:flex'>Logout</div>
+                                <div className='hidden sm:flex'>{t('admin.logout')}</div>
                             </button>
                         </div>
                     </div>

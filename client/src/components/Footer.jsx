@@ -1,25 +1,28 @@
 import { Link } from "react-router-dom"
 import logoImg from '../assets/logo.png'
+import { useTranslation } from 'react-i18next'
 
 const Footer = () => {
 
+    const { t } = useTranslation();
+
     const linkSections = [
         {
-            title: "Quick Links",
-            links: ["Home", "Best Sellers", "Offers & Deals", "Contact Us", "FAQs"],
+            title: t('footer.quickLinks'),
+            links: [t('nav.home'), t('popular.title'), t('hero.shopNow'), t('contact.title'), "FAQs"],
         },
         {
-            title: "Need Help?",
+            title: t('contact.title'),
             links: [
-                "Delivery Information",
-                "Return & Refund Policy",
-                "Payment Methods",
-                "Track your Order",
-                "Contact Us"
+                t('checkout.shippingAddress'),
+                t('footer.termsOfService'),
+                t('checkout.paymentMethod'),
+                t('orders.trackOrder'),
+                t('contact.title')
             ],
         },
         {
-            title: "Follow Us",
+            title: t('footer.newsletter'),
             links: ["Instagram", "Twitter", "Facebook", "YouTube"],
         },
     ];
@@ -39,7 +42,7 @@ const Footer = () => {
                             </Link>
                         </div>
                         <p className="max-w-102.5 mt-6">
-                            Discover the joy of reading with our carefully curated selection of books. Wether you're searching for the latest bestsellers, timeless classics, or hidden gems, we've got something for every reader. Enjoy fast delivery, secure checkout, and unbeatable prices. Your next great read is just a click away!
+                            {t('footer.aboutText')}
                         </p>
                     </div>
                     <div className="flex flex-wrap justify-between w-full md:w-[45%] gap-5">
@@ -62,7 +65,7 @@ const Footer = () => {
                     </div>
                 </div>
                 <p className="py-4 text-center">
-                    Copyright 2025 © ZiBooka. All rights reserved.
+                    Copyright 2025 © ZiBooka. {t('footer.rights')}.
                 </p>
             </div>
         </footer>

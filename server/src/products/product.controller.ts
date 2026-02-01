@@ -573,4 +573,186 @@ export class ProductController {
             throw new BadRequestException(error.message);
         }
     }
+
+    // ENDPOINTS DE TRADUCCIÓN
+    @Get('list/:lang')
+    @ApiOperation({ summary: 'Get all products with translations applied' })
+    @ApiParam({ name: 'lang', description: 'Language code (en, es)', example: 'es' })
+    @ApiResponse({ status: 200, description: 'Products retrieved with translations' })
+    async listProductsWithTranslation(
+        @Param('lang') lang: string,
+        @Res() res: Response,
+    ) {
+        try {
+            const products = await this.productService.listProductsWithTranslation(lang);
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                language: lang,
+                products,
+            });
+        } catch (error) {
+            return res
+                .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
+                .json({
+                    success: false,
+                    message: error.message,
+                });
+        }
+    }
+
+    @Post('single/:lang')
+    @ApiOperation({ summary: 'Get a single product with translation' })
+    @ApiParam({ name: 'lang', description: 'Language code (en, es)', example: 'es' })
+    @ApiBody({ type: SingleProductDto })
+    @ApiResponse({ status: 200, description: 'Product retrieved with translation' })
+    async singleProductWithTranslation(
+        @Param('lang') lang: string,
+        @Body() singleProductDto: SingleProductDto,
+        @Res() res: Response,
+    ) {
+        try {
+            const product = await this.productService.getProductWithTranslation(
+                singleProductDto.productId,
+                lang,
+            );
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                language: lang,
+                product,
+            });
+        } catch (error) {
+            return res
+                .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
+                .json({
+                    success: false,
+                    message: error.message,
+                });
+        }
+    }
+
+    @Post('translation/:productId/:lang')
+    @UseGuards(AdminAuthGuard)
+    @ApiCookieAuth('adminToken')
+    @ApiOperation({ summary: 'Add or update product translation (Admin only)' })
+    @ApiParam({ name: 'productId', description: 'Product ID' })
+    @ApiParam({ name: 'lang', description: 'Language code (es, fr, etc.)', example: 'es' })
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                name: { type: 'string', example: 'Nombre del libro en español' },
+                description: { type: 'string', example: 'Descripción del libro en español' },
+                category: { type: 'string', example: 'Ficción' },
+            },
+        },
+    })
+    @ApiResponse({ status: 200, description: 'Translation updated successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Product not found' })
+    async updateProductTranslation(
+        @Param('productId') productId: string,
+        @Param('lang') lang: string,
+        @Body() translation: { name?: string; description?: string; category?: string },
+        @Res() res: Response,
+    ) {
+        try {
+            const result = await this.productService.updateProductTranslation(
+                productId,
+                lang,
+                translation,
+            );
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                message: result.message,
+                product: result.product,
+            });
+        } catch (error) {
+            return res
+                .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
+                .json({
+                    success: false,
+                    message: error.message,
+                });
+        }
+    }
+
+    @Post('translations/bulk/:lang')
+    @UseGuards(AdminAuthGuard)
+    @ApiCookieAuth('adminToken')
+    @ApiOperation({ summary: 'Bulk update translations for multiple products (Admin only)' })
+    @ApiParam({ name: 'lang', description: 'Language code', example: 'es' })
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                translations: {
+                    type: 'array',
+                    items: {
+                        type: 'object',
+                        properties: {
+                            productId: { type: 'string' },
+                            name: { type: 'string' },
+                            description: { type: 'string' },
+                            category: { type: 'string' },
+                        },
+                    },
+                },
+            },
+        },
+    })
+    @ApiResponse({ status: 200, description: 'Translations updated successfully' })
+    async bulkUpdateTranslations(
+        @Param('lang') lang: string,
+        @Body() body: { translations: Array<{ productId: string; name?: string; description?: string; category?: string }> },
+        @Res() res: Response,
+    ) {
+        try {
+            const result = await this.productService.bulkUpdateTranslations(
+                lang,
+                body.translations,
+            );
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                message: result.message,
+                updatedCount: result.updatedCount,
+            });
+        } catch (error) {
+            return res
+                .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
+                .json({
+                    success: false,
+                    message: error.message,
+                });
+        }
+    }
+
+    @Get('translations/:productId')
+    @ApiOperation({ summary: 'Get all translations for a product' })
+    @ApiParam({ name: 'productId', description: 'Product ID' })
+    @ApiResponse({ status: 200, description: 'Translations retrieved successfully' })
+    async getProductTranslations(
+        @Param('productId') productId: string,
+        @Res() res: Response,
+    ) {
+        try {
+            const result = await this.productService.getProductTranslations(productId);
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                productId,
+                translations: result.translations,
+            });
+        } catch (error) {
+            return res
+                .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
+                .json({
+                    success: false,
+                    message: error.message,
+                });
+        }
+    }
 }

@@ -1,11 +1,12 @@
 import React, { useContext, useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import Title from '../components/Title'
 import CartTotal from '../components/CartTotal'
 import { ShopContext } from '../context/ShopContext'
 import toast from 'react-hot-toast'
 
 const AddressForm = () => {
-
+    const { t } = useTranslation()
     const { navigate, user, method, setMethod, axios } = useContext(ShopContext);
     const [address, setAddress] = useState({
         firstName: "",
@@ -57,8 +58,8 @@ const AddressForm = () => {
                     className='flex flex-2 flex-col gap-3 text-[95%]'
                 >
                     <Title
-                        title1={"Delivery"}
-                        title2={"Information"}
+                        title1={t('address.title1')}
+                        title2={t('address.title2')}
                         titleStyles={"pb-5"}
                     />
                     <div className='flex gap-3'>
@@ -67,7 +68,7 @@ const AddressForm = () => {
                             value={address.firstName}
                             type="text"
                             name='firstName'
-                            placeholder='First Name'
+                            placeholder={t('address.firstName')}
                             className='ring-1 ring-slate-900/15 p-1 pl-3 rounded-sm bg-primary outline-none w-1/2'
                             required
                         />
@@ -76,7 +77,7 @@ const AddressForm = () => {
                             value={address.lastName}
                             type="text"
                             name='lastName'
-                            placeholder='Last Name'
+                            placeholder={t('address.lastName')}
                             className='ring-1 ring-slate-900/15 p-1 pl-3 rounded-sm bg-primary outline-none w-1/2'
                             required
                         />
@@ -86,7 +87,7 @@ const AddressForm = () => {
                         value={address.email}
                         type="email"
                         name='email'
-                        placeholder='Email'
+                        placeholder={t('address.email')}
                         className='ring-1 ring-slate-900/15 p-1 pl-3 rounded-sm bg-primary outline-none'
                         required
                     />
@@ -95,7 +96,7 @@ const AddressForm = () => {
                         value={address.phone}
                         type="phone"
                         name='phone'
-                        placeholder='Phone Number'
+                        placeholder={t('address.phone')}
                         className='ring-1 ring-slate-900/15 p-1 pl-3 rounded-sm bg-primary outline-none'
                         required
                     />
@@ -104,7 +105,7 @@ const AddressForm = () => {
                         value={address.street}
                         type="street"
                         name='street'
-                        placeholder='Street Address'
+                        placeholder={t('address.street')}
                         className='ring-1 ring-slate-900/15 p-1 pl-3 rounded-sm bg-primary outline-none'
                         required
                     />
@@ -114,7 +115,7 @@ const AddressForm = () => {
                             value={address.city}
                             type="city"
                             name='city'
-                            placeholder='City'
+                            placeholder={t('address.city')}
                             className='ring-1 ring-slate-900/15 p-1 pl-3 rounded-sm bg-primary outline-none w-1/2'
                             required
                         />
@@ -123,7 +124,7 @@ const AddressForm = () => {
                             value={address.state}
                             type="state"
                             name='state'
-                            placeholder='State'
+                            placeholder={t('address.state')}
                             className='ring-1 ring-slate-900/15 p-1 pl-3 rounded-sm bg-primary outline-none w-1/2'
                             required
                         />
@@ -134,7 +135,7 @@ const AddressForm = () => {
                             value={address.zipcode}
                             type="zipcode"
                             name='zipcode'
-                            placeholder='Zip Code'
+                            placeholder={t('address.zipcode')}
                             className='ring-1 ring-slate-900/15 p-1 pl-3 rounded-sm bg-primary outline-none w-1/2'
                             required
                         />
@@ -143,7 +144,7 @@ const AddressForm = () => {
                             value={address.country}
                             type="country"
                             name='country'
-                            placeholder='Country'
+                            placeholder={t('address.country')}
                             className='ring-1 ring-slate-900/15 p-1 pl-3 rounded-sm bg-primary outline-none w-1/2'
                             required
                         />
@@ -152,7 +153,7 @@ const AddressForm = () => {
                         type='submit'
                         className='btn-dark rounded-md w-1/2 mt-2'
                     >
-                        Add Address
+                        {t('address.addAddress')}
                     </button>
                 </form>
                 { /* DERECHA */ }

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { FaEnvelope, FaPhone, FaMapMarkerAlt, FaClock } from 'react-icons/fa'
 import { RiCustomerService2Fill } from 'react-icons/ri'
 import { TbTargetArrow } from 'react-icons/tb'
@@ -6,28 +7,30 @@ import blog6 from '../assets/blogs/blog8.jpg'
 import Title from '../components/Title'
 
 const Contact = () => {
+    const { t } = useTranslation();
+    
     const contactInfo = [
         {
             icon: <FaEnvelope className="text-2xl text-secondary" />,
-            title: "Email",
+            title: t('contact.email'),
             details: "info@zibooka.com",
             subDetails: "support@zibooka.com"
         },
         {
             icon: <FaPhone className="text-2xl text-secondary" />,
-            title: "Phone",
+            title: t('contact.phone'),
             details: "+1 (555) 123-4567",
             subDetails: "+1 (555) 987-6543"
         },
         {
             icon: <FaMapMarkerAlt className="text-2xl text-secondary" />,
-            title: "Location",
+            title: t('contact.location'),
             details: "123 Book Street",
             subDetails: "New York, NY 10001"
         },
         {
             icon: <FaClock className="text-2xl text-secondary" />,
-            title: "Business Hours",
+            title: t('contact.businessHours'),
             details: "Mon - Fri: 9AM - 6PM",
             subDetails: "Sat - Sun: 10AM - 4PM"
         }
@@ -36,18 +39,18 @@ const Contact = () => {
     const features = [
         {
             icon: <RiCustomerService2Fill className="text-3xl text-secondary" />,
-            title: "Customer Support",
-            description: "24/7 dedicated support team ready to assist you with any inquiries"
+            title: t('contact.customerSupport'),
+            description: t('contact.customerSupportDesc')
         },
         {
             icon: <TbTargetArrow className="text-3xl text-tertiary" />,
-            title: "Our Mission",
-            description: "To inspire readers worldwide by providing access to quality literature"
+            title: t('contact.ourMission'),
+            description: t('contact.ourMissionDesc')
         },
         {
             icon: <MdVisibility className="text-3xl text-blue-500" />,
-            title: "Our Vision",
-            description: "Becoming the leading online bookstore that connects readers with their next favorite book"
+            title: t('contact.ourVision'),
+            description: t('contact.ourVisionDesc')
         }
     ]
 
@@ -55,11 +58,11 @@ const Contact = () => {
         <div className='max-padd-container py-16 pt-28'>
             {/* HEADER */}
             <Title
-                title1={"Get In"}
-                title2={"Touch"}
+                title1={t('contact.title1')}
+                title2={t('contact.title2')}
                 title1Styles={"pb-2"}
                 paraStyles={"pb-6"}
-                para={"We'd love to hear from you! Whether you have questions about our books, need assistance, or just want to share your reading experience, we're here to help."}
+                para={t('contact.introText')}
             />
 
             {/* CONTENIDO */}
@@ -80,20 +83,16 @@ const Contact = () => {
                     {/* SOBRE NOSOTROS */}
                     <div className='bg-primary p-6 rounded-xl mb-6'>
                         <Title
-                            title1={"About"}
-                            title2={"Zibooka"}
+                            title1={t('contact.aboutZibooka').split(' ')[0] || "About"}
+                            title2={t('contact.aboutZibooka').split(' ')[1] || "Zibooka"}
                             title1Styles={"pb-4"}
                             paraStyles={"hidden"}
                         />
                         <p className='mb-4'>
-                            Welcome to Zibooka, your trusted destination for discovering amazing books.
-                            We are passionate about connecting readers with stories that inspire, educate,
-                            and entertain.
+                            {t('contact.aboutZibookaIntro')}
                         </p>
                         <p>
-                            Founded with a love for literature, we carefully curate our collection to bring
-                            you the best titles across all genres. From timeless classics to the latest
-                            bestsellers, we have something for every reader.
+                            {t('contact.aboutZibookaText')}
                         </p>
                     </div>
 
@@ -119,34 +118,30 @@ const Contact = () => {
 
                     {/* PORQUE ELEGIRNOS */}
                     <div className='bg-linear-to-r from-primary/50 to-tertiary/30 p-6 rounded-xl'>
-                        <h4 className='h4 mb-4'>Why Choose Zibooka?</h4>
+                        <h4 className='h4 mb-4'>{t('contact.whyChooseUs')}</h4>
                         <ul className='space-y-3'>
                             <li className='flex items-start gap-3'>
                                 <span className='h-2 w-2 rounded-full bg-secondary mt-2'></span>
                                 <p className='flex-1'>
-                                    <span className='font-semibold'>Curated Selection:</span> Every book is
-                                    handpicked for quality and reader satisfaction
+                                    <span className='font-semibold'>{t('contact.curatedSelection')}:</span> {t('contact.curatedSelectionDesc')}
                                 </p>
                             </li>
                             <li className='flex items-start gap-3'>
                                 <span className='h-2 w-2 rounded-full bg-secondary mt-2'></span>
                                 <p className='flex-1'>
-                                    <span className='font-semibold'>Fast Delivery:</span> Get your books
-                                    delivered quickly and securely to your doorstep
+                                    <span className='font-semibold'>{t('contact.fastDelivery')}:</span> {t('contact.fastDeliveryDesc')}
                                 </p>
                             </li>
                             <li className='flex items-start gap-3'>
                                 <span className='h-2 w-2 rounded-full bg-secondary mt-2'></span>
                                 <p className='flex-1'>
-                                    <span className='font-semibold'>Expert Recommendations:</span> Our team
-                                    of book lovers helps you discover your next great read
+                                    <span className='font-semibold'>{t('contact.expertRecommendations')}:</span> {t('contact.expertRecommendationsDesc')}
                                 </p>
                             </li>
                             <li className='flex items-start gap-3'>
                                 <span className='h-2 w-2 rounded-full bg-secondary mt-2'></span>
                                 <p className='flex-1'>
-                                    <span className='font-semibold'>Competitive Prices:</span> Enjoy amazing
-                                    deals and discounts on your favorite titles
+                                    <span className='font-semibold'>{t('contact.competitivePrices')}:</span> {t('contact.competitivePricesDesc')}
                                 </p>
                             </li>
                         </ul>
@@ -157,8 +152,8 @@ const Contact = () => {
             {/* INFORMACIÓN DE CONTACTO */}
             <div className='mb-12'>
                 <Title
-                    title1={"Contact"}
-                    title2={"Information"}
+                    title1={t('contact.contactInfo').split(' ')[0] || "Contact"}
+                    title2={t('contact.contactInfo').split(' ')[1] || "Information"}
                     title1Styles={"pb-6"}
                     paraStyles={"hidden"}
                 />
@@ -185,33 +180,32 @@ const Contact = () => {
 
             {/* ENVÍO DE CORREO */}
             <div className='bg-linear-to-r from-secondary/10 via-primary to-tertiary/10 p-8 rounded-2xl text-center'>
-                <h3 className='h3 mb-3'>Have Questions?</h3>
+                <h3 className='h3 mb-3'>{t('contact.haveQuestions')}</h3>
                 <p className='mb-6 max-w-2xl mx-auto'>
-                    We're here to help! Send us an email and our team will get back to you within 24 hours.
-                    Whether it's about an order, a recommendation, or just a chat about books, we'd love to hear from you.
+                    {t('contact.haveQuestionsDesc')}
                 </p>
                 <a
                     href="mailto:info@zibooka.com"
                     className='btn-secondary inline-block'
                 >
                     <FaEnvelope className='inline mr-2' />
-                    Send Us an Email
+                    {t('contact.sendEmail')}
                 </a>
             </div>
 
             {/* INFORMACIÓN ADICIONAL */}
             <div className='mt-12 grid grid-cols-1 md:grid-cols-3 gap-6'>
                 <div className='bg-white p-6 rounded-xl ring-1 ring-slate-900/15 text-center'>
-                    <h5 className='h5 mb-2'>Free Shipping</h5>
-                    <p className='text-sm'>On orders over $50</p>
+                    <h5 className='h5 mb-2'>{t('contact.freeShipping')}</h5>
+                    <p className='text-sm'>{t('contact.freeShippingDesc')}</p>
                 </div>
                 <div className='bg-white p-6 rounded-xl ring-1 ring-slate-900/15 text-center'>
-                    <h5 className='h5 mb-2'>Easy Returns</h5>
-                    <p className='text-sm'>30-day return policy</p>
+                    <h5 className='h5 mb-2'>{t('contact.easyReturns')}</h5>
+                    <p className='text-sm'>{t('contact.easyReturnsDesc')}</p>
                 </div>
                 <div className='bg-white p-6 rounded-xl ring-1 ring-slate-900/15 text-center'>
-                    <h5 className='h5 mb-2'>Secure Payment</h5>
-                    <p className='text-sm'>SSL encrypted checkout</p>
+                    <h5 className='h5 mb-2'>{t('contact.securePayment')}</h5>
+                    <p className='text-sm'>{t('contact.securePaymentDesc')}</p>
                 </div>
             </div>
         </div>
