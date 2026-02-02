@@ -58,15 +58,7 @@ Develop a library management system that allows:
 
 The system implements a **Layered Architecture** combined with the **MVC (Model-View-Controller)** pattern on the backend and a **Component-based** architecture on the frontend.
 
-```
-[GENERAL ARCHITECTURE DIAGRAM]
-
-Insert diagram showing:
-- Client (React SPA)
-- Server (NestJS REST API)
-- Database (MongoDB)
-- External Services (Cloudinary, Stripe, SMTP)
-```
+[GENERAL ARCHITECTURE DIAGRAM](docs/images/diagrams/architecture.png)
 
 ### Backend Structure (NestJS)
 

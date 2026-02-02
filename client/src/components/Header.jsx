@@ -115,9 +115,9 @@ const Header = () => {
                         ) : (
                             <button
                                 onClick={() => setShowUserLogin(true)}
-                                className='btn-light flexCenter gap-x-2'
+                                className='btn-light flexCenter gap-x-1 sm:gap-x-2 px-3 sm:px-7 py-2 sm:py-3 text-xs sm:text-sm -mr-2 sm:mr-0'
                             >
-                                {t('header.login')} <RiUserLine className='text-xl' />
+                                {t('header.login')} <RiUserLine className='text-lg sm:text-xl' />
                             </button>
                         )}
                     </div>

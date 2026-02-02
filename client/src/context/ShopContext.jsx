@@ -357,6 +357,12 @@ const ShopContextProvider = ({ children }) => {
 
     // Adding items to cart
     const addToCart = async (itemId) => {
+        // Verificar si el usuario está logueado
+        if (!user) {
+            setShowUserLogin(true)
+            return
+        }
+
         const cartData = { ...cartItems } // Use shallow copy
         if (cartData[itemId]) {
             cartData[itemId] += 1
@@ -364,13 +370,11 @@ const ShopContextProvider = ({ children }) => {
             cartData[itemId] = 1
         }
         setCartItems(cartData)
-        if (user) {
-            try {
-                const { data } = await axios.post('/api/cart/add', { itemId })
-                data.success ? toast.success(data.message) : toast.error(data.message)
-            } catch (error) {
-                toast.error(error.message)
-            }
+        try {
+            const { data } = await axios.post('/api/cart/add', { itemId })
+            data.success ? toast.success(data.message) : toast.error(data.message)
+        } catch (error) {
+            toast.error(error.message)
         }
     }
 
