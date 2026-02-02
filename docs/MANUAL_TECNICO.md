@@ -726,7 +726,7 @@ Crear archivo `.env` en la carpeta `server/`:
 
 ```env
 # Base de datos
-MONGODB_URI=mongodb+srv://usuario:password@cluster.mongodb.net/zibooka
+MONGODB_URI=enlace_proporcionado_por_mongodb_atlas
 
 # Seguridad
 JWT_SECRET=clave_secreta_jwt_muy_larga_y_segura
