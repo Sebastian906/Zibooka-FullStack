@@ -14,8 +14,95 @@ const Login = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [phone, setPhone] = useState("");
 
+    // Validation errors state
+    const [errors, setErrors] = useState({
+        email: "",
+        password: "",
+        phone: "",
+        name: ""
+    });
+
+    // Validation functions
+    const validateEmail = (email) => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    };
+
+    const validatePhone = (phone) => {
+        const phoneRegex = /^[0-9+\-\s()]+$/;
+        return phoneRegex.test(phone);
+    };
+
+    const validatePassword = (password) => {
+        return password.length >= 8;
+    };
+
+    const handleEmailChange = (e) => {
+        const value = e.target.value;
+        setEmail(value);
+        if (value && !validateEmail(value)) {
+            setErrors(prev => ({ ...prev, email: t('validation.invalidEmail') }));
+        } else {
+            setErrors(prev => ({ ...prev, email: "" }));
+        }
+    };
+
+    const handlePasswordChange = (e) => {
+        const value = e.target.value;
+        setPassword(value);
+        if (state === "register" && value && !validatePassword(value)) {
+            setErrors(prev => ({ ...prev, password: t('validation.passwordMinLength') }));
+        } else {
+            setErrors(prev => ({ ...prev, password: "" }));
+        }
+    };
+
+    const handlePhoneChange = (e) => {
+        const value = e.target.value;
+        if (value === "" || validatePhone(value)) {
+            setPhone(value);
+            setErrors(prev => ({ ...prev, phone: "" }));
+        } else {
+            setErrors(prev => ({ ...prev, phone: t('validation.phoneInvalid') }));
+        }
+    };
+
+    const validateForm = () => {
+        let isValid = true;
+        const newErrors = { email: "", password: "", phone: "", name: "" };
+
+        if (!validateEmail(email)) {
+            newErrors.email = t('validation.invalidEmail');
+            isValid = false;
+        }
+
+        if (state === "register" && !validatePassword(password)) {
+            newErrors.password = t('validation.passwordMinLength');
+            isValid = false;
+        }
+
+        if (!validatePhone(phone)) {
+            newErrors.phone = t('validation.phoneInvalid');
+            isValid = false;
+        }
+
+        if (state === "register" && !name.trim()) {
+            newErrors.name = t('validation.nameRequired');
+            isValid = false;
+        }
+
+        setErrors(newErrors);
+        return isValid;
+    };
+
     const onSubmitHandler = async (event) => {
         event.preventDefault();
+
+        if (!validateForm()) {
+            toast.error(t('validation.invalidEmail'));
+            return;
+        }
+
         try {
             let payload;
             if (state === "login") {
@@ -75,24 +162,31 @@ const Login = () => {
                         <p className='medium-14'>{t('auth.name')}</p>
                         <input
                             type="text"
-                            onChange={(e) => setName(e.target.value)}
+                            onChange={(e) => {
+                                setName(e.target.value);
+                                if (e.target.value.trim()) {
+                                    setErrors(prev => ({ ...prev, name: "" }));
+                                }
+                            }}
                             value={name}
                             placeholder={t('common.typeHere')}
-                            className='border border-gray-200 rounded w-full p-2 mt-1 outline-black/80'
+                            className={`border rounded w-full p-2 mt-1 outline-black/80 ${errors.name ? 'border-red-500' : 'border-gray-200'}`}
                             required
                         />
+                        {errors.name && <p className='text-red-500 text-xs mt-1'>{errors.name}</p>}
                     </div>
                 )}
                 <div className='w-full'>
                     <p className='medium-14'>{t('auth.email')}</p>
                     <input
                         type="text"
-                        onChange={(e) => setEmail(e.target.value)}
+                        onChange={handleEmailChange}
                         value={email}
                         placeholder={t('common.typeHere')}
-                        className='border border-gray-200 rounded w-full p-2 mt-1 outline-black/80'
+                        className={`border rounded w-full p-2 mt-1 outline-black/80 ${errors.email ? 'border-red-500' : 'border-gray-200'}`}
                         required
                     />
+                    {errors.email && <p className='text-red-500 text-xs mt-1'>{errors.email}</p>}
                 </div>
                 <div className='w-full'>
                     <div className='flex justify-between items-center mb-1'>
@@ -109,23 +203,29 @@ const Login = () => {
                     </div>
                     <input
                         type={showPassword ? "text" : "password"}
-                        onChange={(e) => setPassword(e.target.value)}
+                        onChange={handlePasswordChange}
                         value={password}
                         placeholder={t('common.typeHere')}
-                        className='border border-gray-200 rounded w-full p-2 mt-1 outline-black/80'
+                        className={`border rounded w-full p-2 mt-1 outline-black/80 ${errors.password ? 'border-red-500' : 'border-gray-200'}`}
                         required
                     />
+                    {state === "register" && (
+                        <p className={`text-xs mt-1 ${errors.password ? 'text-red-500' : 'text-gray-500'}`}>
+                            {errors.password || t('validation.passwordRequirements')}
+                        </p>
+                    )}
                 </div>
                 <div className='w-full'>
                     <p className='medium-14'>{t('auth.phone')}</p>
                     <input
                         type="text"
-                        onChange={(e) => setPhone(e.target.value)}
+                        onChange={handlePhoneChange}
                         value={phone}
                         placeholder={t('common.typeHere')}
-                        className='border border-gray-200 rounded w-full p-2 mt-1 outline-black/80'
+                        className={`border rounded w-full p-2 mt-1 outline-black/80 ${errors.phone ? 'border-red-500' : 'border-gray-200'}`}
                         required
                     />
+                    {errors.phone && <p className='text-red-500 text-xs mt-1'>{errors.phone}</p>}
                 </div>
 
                 {/* Forgot Password Link - Only show on login */}

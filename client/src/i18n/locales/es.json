@@ -540,5 +540,18 @@
         "en": "Inglés",
         "es": "Español",
         "selectLanguage": "Seleccionar Idioma"
+    },
+    "validation": {
+        "invalidEmail": "Por favor ingresa un correo electrónico válido",
+        "emailRequired": "El correo electrónico es requerido",
+        "passwordRequired": "La contraseña es requerida",
+        "passwordMinLength": "La contraseña debe tener al menos 8 caracteres",
+        "passwordRequirements": "La contraseña debe contener al menos 8 caracteres",
+        "phoneInvalid": "El número de teléfono solo debe contener números",
+        "phoneRequired": "El número de teléfono es requerido",
+        "nameRequired": "El nombre es requerido",
+        "fieldRequired": "Este campo es requerido",
+        "invalidNumber": "Por favor ingresa un número válido",
+        "zipcodeInvalid": "El código postal solo debe contener números"
     }
 }

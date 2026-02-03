@@ -10,9 +10,33 @@ const ForgotPassword = () => {
     const [email, setEmail] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [emailSent, setEmailSent] = useState(false);
+    const [emailError, setEmailError] = useState("");
+
+    // Validation function
+    const validateEmail = (emailValue) => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(emailValue);
+    };
+
+    const handleEmailChange = (e) => {
+        const value = e.target.value;
+        setEmail(value);
+        if (value && !validateEmail(value)) {
+            setEmailError(t('validation.invalidEmail'));
+        } else {
+            setEmailError("");
+        }
+    };
 
     const onSubmitHandler = async (event) => {
         event.preventDefault();
+
+        if (!validateEmail(email)) {
+            setEmailError(t('validation.invalidEmail'));
+            toast.error(t('validation.invalidEmail'));
+            return;
+        }
+
         setIsLoading(true);
 
         try {
@@ -61,14 +85,15 @@ const ForgotPassword = () => {
                             <div className='w-full'>
                                 <p className='medium-14'>{t('forgotPassword.email')}</p>
                                 <input
-                                    type="email"
-                                    onChange={(e) => setEmail(e.target.value)}
+                                    type="text"
+                                    onChange={handleEmailChange}
                                     value={email}
                                     placeholder={t('common.typeHere')}
-                                    className='border border-gray-200 rounded w-full p-2 mt-1 outline-black/80'
+                                    className={`border rounded w-full p-2 mt-1 outline-black/80 ${emailError ? 'border-red-500' : 'border-gray-200'}`}
                                     required
                                     disabled={isLoading}
                                 />
+                                {emailError && <p className='text-red-500 text-xs mt-1'>{emailError}</p>}
                             </div>
 
                             <button

@@ -540,5 +540,18 @@
         "en": "English",
         "es": "Spanish",
         "selectLanguage": "Select Language"
+    },
+    "validation": {
+        "invalidEmail": "Please enter a valid email address",
+        "emailRequired": "Email is required",
+        "passwordRequired": "Password is required",
+        "passwordMinLength": "Password must be at least 8 characters",
+        "passwordRequirements": "Password must contain at least 8 characters",
+        "phoneInvalid": "Phone number must contain only numbers",
+        "phoneRequired": "Phone number is required",
+        "nameRequired": "Name is required",
+        "fieldRequired": "This field is required",
+        "invalidNumber": "Please enter a valid number",
+        "zipcodeInvalid": "Zip code must contain only numbers"
     }
 }

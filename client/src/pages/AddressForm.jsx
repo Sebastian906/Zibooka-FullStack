@@ -20,15 +20,95 @@ const AddressForm = () => {
         phone: ""
     });
 
+    // Validation errors state
+    const [errors, setErrors] = useState({
+        email: "",
+        phone: "",
+        zipcode: ""
+    });
+
+    // Validation functions
+    const validateEmail = (emailValue) => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(emailValue);
+    };
+
+    const validatePhone = (phoneValue) => {
+        const phoneRegex = /^[0-9+\-\s()]+$/;
+        return phoneRegex.test(phoneValue);
+    };
+
+    const validateZipcode = (zipcodeValue) => {
+        const zipcodeRegex = /^[0-9\-\s]+$/;
+        return zipcodeRegex.test(zipcodeValue);
+    };
+
     const onChangeHandler = (e) => {
         const name = e.target.name;
         const value = e.target.value;
-        setAddress((data)=>({...data, [name]: value}));
+
+        // Special validation for specific fields
+        if (name === 'email') {
+            if (value && !validateEmail(value)) {
+                setErrors(prev => ({ ...prev, email: t('validation.invalidEmail') }));
+            } else {
+                setErrors(prev => ({ ...prev, email: "" }));
+            }
+        }
+
+        if (name === 'phone') {
+            if (value && !validatePhone(value)) {
+                setErrors(prev => ({ ...prev, phone: t('validation.phoneInvalid') }));
+                return; // Don't update if invalid
+            } else {
+                setErrors(prev => ({ ...prev, phone: "" }));
+            }
+        }
+
+        if (name === 'zipcode') {
+            if (value && !validateZipcode(value)) {
+                setErrors(prev => ({ ...prev, zipcode: t('validation.zipcodeInvalid') }));
+                return; // Don't update if invalid
+            } else {
+                setErrors(prev => ({ ...prev, zipcode: "" }));
+            }
+        }
+
+        setAddress((data) => ({ ...data, [name]: value }));
         console.log(address);
     }
 
+    const validateForm = () => {
+        let isValid = true;
+        const newErrors = { email: "", phone: "", zipcode: "" };
+
+        if (!validateEmail(address.email)) {
+            newErrors.email = t('validation.invalidEmail');
+            isValid = false;
+        }
+
+        if (!validatePhone(address.phone)) {
+            newErrors.phone = t('validation.phoneInvalid');
+            isValid = false;
+        }
+
+        if (address.zipcode && !validateZipcode(address.zipcode)) {
+            newErrors.zipcode = t('validation.zipcodeInvalid');
+            isValid = false;
+        }
+
+        setErrors(newErrors);
+        return isValid;
+    };
+
     const onSubmitHandler = async (e) => {
         e.preventDefault();
+
+        if (!validateForm()) {
+            toast.error(t('validation.invalidEmail'));
+            return;
+        }
+
         try {
             const { data } = await axios.post('/api/address/add', { address })
             if (data.success) {
@@ -82,28 +162,34 @@ const AddressForm = () => {
                             required
                         />
                     </div>
-                    <input
-                        onChange={onChangeHandler}
-                        value={address.email}
-                        type="email"
-                        name='email'
-                        placeholder={t('address.email')}
-                        className='ring-1 ring-slate-900/15 p-1 pl-3 rounded-sm bg-primary outline-none'
-                        required
-                    />
-                    <input
-                        onChange={onChangeHandler}
-                        value={address.phone}
-                        type="phone"
-                        name='phone'
-                        placeholder={t('address.phone')}
-                        className='ring-1 ring-slate-900/15 p-1 pl-3 rounded-sm bg-primary outline-none'
-                        required
-                    />
+                    <div>
+                        <input
+                            onChange={onChangeHandler}
+                            value={address.email}
+                            type="email"
+                            name='email'
+                            placeholder={t('address.email')}
+                            className={`ring-1 p-1 pl-3 rounded-sm bg-primary outline-none w-full ${errors.email ? 'ring-red-500' : 'ring-slate-900/15'}`}
+                            required
+                        />
+                        {errors.email && <p className='text-red-500 text-xs mt-1'>{errors.email}</p>}
+                    </div>
+                    <div>
+                        <input
+                            onChange={onChangeHandler}
+                            value={address.phone}
+                            type="tel"
+                            name='phone'
+                            placeholder={t('address.phone')}
+                            className={`ring-1 p-1 pl-3 rounded-sm bg-primary outline-none w-full ${errors.phone ? 'ring-red-500' : 'ring-slate-900/15'}`}
+                            required
+                        />
+                        {errors.phone && <p className='text-red-500 text-xs mt-1'>{errors.phone}</p>}
+                    </div>
                     <input
                         onChange={onChangeHandler}
                         value={address.street}
-                        type="street"
+                        type="text"
                         name='street'
                         placeholder={t('address.street')}
                         className='ring-1 ring-slate-900/15 p-1 pl-3 rounded-sm bg-primary outline-none'
@@ -113,7 +199,7 @@ const AddressForm = () => {
                         <input
                             onChange={onChangeHandler}
                             value={address.city}
-                            type="city"
+                            type="text"
                             name='city'
                             placeholder={t('address.city')}
                             className='ring-1 ring-slate-900/15 p-1 pl-3 rounded-sm bg-primary outline-none w-1/2'
@@ -122,7 +208,7 @@ const AddressForm = () => {
                         <input
                             onChange={onChangeHandler}
                             value={address.state}
-                            type="state"
+                            type="text"
                             name='state'
                             placeholder={t('address.state')}
                             className='ring-1 ring-slate-900/15 p-1 pl-3 rounded-sm bg-primary outline-none w-1/2'
@@ -130,19 +216,22 @@ const AddressForm = () => {
                         />
                     </div>
                     <div className='flex gap-3'>
-                        <input
-                            onChange={onChangeHandler}
-                            value={address.zipcode}
-                            type="zipcode"
-                            name='zipcode'
-                            placeholder={t('address.zipcode')}
-                            className='ring-1 ring-slate-900/15 p-1 pl-3 rounded-sm bg-primary outline-none w-1/2'
-                            required
-                        />
+                        <div className='w-1/2'>
+                            <input
+                                onChange={onChangeHandler}
+                                value={address.zipcode}
+                                type="text"
+                                name='zipcode'
+                                placeholder={t('address.zipcode')}
+                                className={`ring-1 p-1 pl-3 rounded-sm bg-primary outline-none w-full ${errors.zipcode ? 'ring-red-500' : 'ring-slate-900/15'}`}
+                                required
+                            />
+                            {errors.zipcode && <p className='text-red-500 text-xs mt-1'>{errors.zipcode}</p>}
+                        </div>
                         <input
                             onChange={onChangeHandler}
                             value={address.country}
-                            type="country"
+                            type="text"
                             name='country'
                             placeholder={t('address.country')}
                             className='ring-1 ring-slate-900/15 p-1 pl-3 rounded-sm bg-primary outline-none w-1/2'
@@ -156,10 +245,10 @@ const AddressForm = () => {
                         {t('address.addAddress')}
                     </button>
                 </form>
-                { /* DERECHA */ }
+                { /* DERECHA */}
                 <div className='flex flex-1 flex-col'>
                     <div className='max-w-94.75 w-full bg-primary p-5 py-10 max-md:mt-16 rounded-xl'>
-                        <CartTotal 
+                        <CartTotal
                             method={method}
                             setMethod={setMethod}
                         />

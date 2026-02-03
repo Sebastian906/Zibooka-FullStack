@@ -11,6 +11,40 @@ const Profile = () => {
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
 
+    // Validation errors state
+    const [errors, setErrors] = useState({
+        email: "",
+        newPassword: ""
+    });
+
+    // Validation functions
+    const validateEmail = (emailValue) => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(emailValue);
+    };
+
+    const validatePassword = (password) => {
+        return !password || password.length >= 8;
+    };
+
+    const handleEmailUpdate = (value) => {
+        updateProfileField('email', value);
+        if (value && !validateEmail(value)) {
+            setErrors(prev => ({ ...prev, email: t('validation.invalidEmail') }));
+        } else {
+            setErrors(prev => ({ ...prev, email: "" }));
+        }
+    };
+
+    const handleNewPasswordUpdate = (value) => {
+        updateProfileField('newPassword', value);
+        if (value && !validatePassword(value)) {
+            setErrors(prev => ({ ...prev, newPassword: t('validation.passwordMinLength') }));
+        } else {
+            setErrors(prev => ({ ...prev, newPassword: "" }));
+        }
+    };
+
     useEffect(() => {
         loadProfileData();
     }, [user]);
@@ -71,13 +105,14 @@ const Profile = () => {
                     <div>
                         <label className='medium-14 block mb-1'>{t('profile.emailAddress')}</label>
                         <input
-                            type="email"
+                            type="text"
                             value={profileData.email}
-                            onChange={(e) => updateProfileField('email', e.target.value)}
+                            onChange={(e) => handleEmailUpdate(e.target.value)}
                             placeholder={t('profile.enterEmail')}
-                            className='w-full px-4 py-2.5 rounded-lg ring-1 ring-slate-900/10 bg-white outline-none focus:ring-secondary transition-all'
+                            className={`w-full px-4 py-2.5 rounded-lg ring-1 bg-white outline-none transition-all ${errors.email ? 'ring-red-500' : 'ring-slate-900/10 focus:ring-secondary'}`}
                             required
                         />
+                        {errors.email && <p className='text-red-500 text-xs mt-1'>{errors.email}</p>}
                     </div>
 
                     {/* PHONE NUMBER */}
@@ -152,10 +187,13 @@ const Profile = () => {
                             <input
                                 type={showNewPassword ? "text" : "password"}
                                 value={profileData.newPassword}
-                                onChange={(e) => updateProfileField('newPassword', e.target.value)}
+                                onChange={(e) => handleNewPasswordUpdate(e.target.value)}
                                 placeholder={t('profile.enterNewPassword')}
-                                className='w-full px-4 py-2.5 rounded-lg ring-1 ring-slate-900/10 bg-white outline-none focus:ring-secondary transition-all'
+                                className={`w-full px-4 py-2.5 rounded-lg ring-1 bg-white outline-none transition-all ${errors.newPassword ? 'ring-red-500' : 'ring-slate-900/10 focus:ring-secondary'}`}
                             />
+                            <p className={`text-xs mt-1 ${errors.newPassword ? 'text-red-500' : 'text-gray-500'}`}>
+                                {errors.newPassword || t('validation.passwordRequirements')}
+                            </p>
                         </div>
 
                         {/* CONFIRM PASSWORD */}
