@@ -99,59 +99,20 @@ client/src/
 
 ### Flow Diagram - Purchase Process
 
-```
-[FLOW DIAGRAM - PURCHASE PROCESS]
-
-Insert diagram showing:
-1. User adds products to cart
-2. User proceeds to checkout
-3. User enters shipping address
-4. User selects payment method (COD/Stripe)
-5. System processes the order
-6. Order confirmation
-```
+[PURCHASE PROCESS](docs/images/diagrams/flow-diagram.png)
 
 ### Flow Diagram - Loan System
 
-```
-[FLOW DIAGRAM - LOANS]
-
-Insert diagram showing:
-1. User requests a book loan
-2. System verifies availability
-3. System registers the loan (14 days)
-4. User returns the book
-5. System checks pending reservations
-6. If reserved: assign book to next in queue
-```
+[LOAN SYSTEM](docs/images/diagrams/loan-diagram.png)
 
 ### Class Diagram - Main Models
 
-```
-[UML DIAGRAM - MODELS]
-
-Insert class diagram including:
-- User (id, name, email, password, cartData, profileImage)
-- Product (id, name, author, ISBN, price, stock, category, images)
-- Order (id, userId, items, address, amount, status, paymentType)
-- Loan (id, userId, bookId, loanDate, dueDate, status)
-- Reservation (id, userId, bookId, priority, status, expiryDate)
-- Shelf (id, code, location, maxWeight, books)
-```
+[MODELS](docs/images/diagrams/models.png)
+[RELATIONS](docs/images/diagrams/relations.png)
 
 ### Sequence Diagram - Authentication
 
-```
-[SEQUENCE DIAGRAM - AUTHENTICATION]
-
-Insert diagram showing:
-1. User sends credentials
-2. Backend validates credentials
-3. Backend generates JWT
-4. Backend sends token in cookie
-5. Client stores token
-6. Subsequent requests include token
-```
+[AUTHENTICATION](docs/images/diagrams/authentication.png)
 
 ---
 

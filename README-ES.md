@@ -58,15 +58,7 @@ Desarrollar un sistema de gestion de libreria que permita:
 
 El sistema implementa una **Arquitectura de Capas (Layered Architecture)** combinada con el patron **MVC (Modelo-Vista-Controlador)** en el backend y una arquitectura basada en **Componentes** en el frontend.
 
-```
-[DIAGRAMA DE ARQUITECTURA GENERAL]
-
-Insertar diagrama que muestre:
-- Cliente (React SPA)
-- Servidor (NestJS API REST)
-- Base de Datos (MongoDB)
-- Servicios Externos (Cloudinary, Stripe, SMTP)
-```
+[DIAGRAMA DE ARQUITECTURA GENERAL](docs/images/diagrams/architecture.png)
 
 ### Estructura del Backend (NestJS)
 
@@ -107,31 +99,11 @@ client/src/
 
 ### Diagrama de Flujo - Proceso de Compra
 
-```
-[DIAGRAMA DE FLUJO - PROCESO DE COMPRA]
-
-Insertar diagrama que muestre:
-1. Usuario agrega productos al carrito
-2. Usuario procede al checkout
-3. Usuario ingresa direccion de envio
-4. Usuario selecciona metodo de pago (COD/Stripe)
-5. Sistema procesa el pedido
-6. Confirmacion del pedido
-```
+[PROCESO DE COMPRA](docs/images/diagrams/flow-diagram.png)
 
 ### Diagrama de Flujo - Sistema de Prestamos
 
-```
-[DIAGRAMA DE FLUJO - PRESTAMOS]
-
-Insertar diagrama que muestre:
-1. Usuario solicita prestamo de un libro
-2. Sistema verifica disponibilidad
-3. Sistema registra el prestamo (14 dias)
-4. Usuario devuelve el libro
-5. Sistema verifica reservaciones pendientes
-6. Si hay reserva: asignar libro al siguiente en cola
-```
+[SISTEMA DE PRESTAMOS](docs/images/diagrams/loan-diagram.png)
 
 ### Diagrama de Clases - Modelos Principales
 
@@ -147,19 +119,12 @@ Insertar diagrama de clases que incluya:
 - Shelf (id, code, location, maxWeight, books)
 ```
 
+[MODELOS](docs/images/diagrams/models.png)
+[RELACIONES](docs/images/diagrams/relations.png)
+
 ### Diagrama de Secuencia - Autenticacion
 
-```
-[DIAGRAMA DE SECUENCIA - AUTENTICACION]
-
-Insertar diagrama que muestre:
-1. Usuario envia credenciales
-2. Backend valida credenciales
-3. Backend genera JWT
-4. Backend envia token en cookie
-5. Cliente almacena token
-6. Peticiones subsecuentes incluyen token
-```
+[AUTENTICACION](docs/images/diagrams/authentication.png)
 
 ---
 
