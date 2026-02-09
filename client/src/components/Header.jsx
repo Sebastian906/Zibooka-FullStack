@@ -15,7 +15,7 @@ const Header = () => {
     const { t } = useTranslation();
     const [menuOpened, setMenuOpened] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
-    const { navigate, user, setUser, searchQuery, setSearchQuery, getCartCount, showUserLogin, setShowUserLogin, logoutUser, fetchUser } = useContext(ShopContext);
+    const { navigate, user, setUser, searchQuery, setSearchQuery, getCartCount, showUserLogin, setShowUserLogin, logoutUser, fetchUser, isAdmin } = useContext(ShopContext);
     const isShopPage = useLocation().pathname.endsWith('/shop');
 
     const toggleMenu = async () => setMenuOpened(prev => !prev);
@@ -128,6 +128,9 @@ const Header = () => {
                             <li onClick={() => navigate('/my-orders')} className='p-2 rounded-md hover:bg-primary cursor-pointer'>{t('header.orders')}</li>
                             <li onClick={() => navigate('/my-loans')} className='p-2 rounded-md hover:bg-primary cursor-pointer'>{t('header.myLoans')}</li>
                             <li onClick={() => navigate('/my-reservations')} className='p-2 rounded-md hover:bg-primary cursor-pointer'>{t('header.reservations')}</li>
+                            {isAdmin && (
+                                <li onClick={() => navigate('/admin')} className='p-2 rounded-md hover:bg-primary cursor-pointer font-medium'>{t('header.adminPanel')}</li>
+                            )}
                             <li
                                 onClick={logoutUser}
                                 className='p-2 rounded-md hover:bg-primary cursor-pointer'

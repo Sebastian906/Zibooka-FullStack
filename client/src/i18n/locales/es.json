@@ -13,6 +13,7 @@
         "orders": "Pedidos",
         "myLoans": "Mis Préstamos",
         "reservations": "Reservaciones",
+        "adminPanel": "Panel de Admin",
         "logout": "Cerrar Sesión"
     },
     "hero": {

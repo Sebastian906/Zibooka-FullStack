@@ -81,7 +81,7 @@ export class UserController {
         @Res() res: express.Response,
     ) {
         try {
-            const { token, user } = await this.userService.login(userLoginDto);
+            const { token, user, isAdmin } = await this.userService.login(userLoginDto);
 
             res.cookie('token', token, this.getCookieOptions());
 
@@ -89,6 +89,7 @@ export class UserController {
                 success: true,
                 user,
                 token,
+                isAdmin,
             });
         } catch (error) {
             return res.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).json({
@@ -149,6 +150,7 @@ export class UserController {
             return res.status(HttpStatus.OK).json({
                 success: true,
                 user: result.user,
+                isAdmin: result.isAdmin,
             });
         } catch (error) {
             return res.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).json({

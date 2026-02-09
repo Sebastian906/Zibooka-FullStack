@@ -13,6 +13,7 @@
         "orders": "Orders",
         "myLoans": "My Loans",
         "reservations": "Reservations",
+        "adminPanel": "Admin Panel",
         "logout": "Logout"
     },
     "hero": {

@@ -153,6 +153,7 @@ const ShopContextProvider = ({ children }) => {
             if (!token) {
                 setUser(null);
                 setCartItems({});
+                setIsAdmin(false);
                 return;
             }
 
@@ -160,6 +161,8 @@ const ShopContextProvider = ({ children }) => {
             if (data.success) {
                 setUser(data.user);
                 setCartItems(data.user.cartData || {});
+                // Set isAdmin based on backend response
+                setIsAdmin(data.isAdmin || false);
 
                 if (!localStorage.getItem('loginTime')) {
                     localStorage.setItem('loginTime', Date.now().toString());
@@ -170,6 +173,7 @@ const ShopContextProvider = ({ children }) => {
                 localStorage.removeItem('loginTime');
                 setUser(null);
                 setCartItems({});
+                setIsAdmin(false);
             }
         } catch (error) {
             // Solo limpiar token si es un error 401 de sesión expirada
@@ -241,6 +245,7 @@ const ShopContextProvider = ({ children }) => {
                 localStorage.removeItem('loginTime')
                 setUser(null)
                 setCartItems({})
+                setIsAdmin(false)
                 navigate('/')
             } else {
                 toast.error(data.message)

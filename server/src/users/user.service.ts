@@ -22,7 +22,7 @@ export class UserService {
         @InjectModel(User.name) private userModel: Model<UserDocument>,
         private configService: ConfigService,
         private emailService: EmailService,
-    ) { 
+    ) {
         // Configure cloudinary
         cloudinary.config({
             cloud_name: this.configService.get<string>('CLDN_NAME'),
@@ -78,7 +78,7 @@ export class UserService {
         }
     }
 
-    async login(userLoginDto: UserLoginDto): Promise<{ token: string; user: UserResponseDto; expiresIn: number }> {
+    async login(userLoginDto: UserLoginDto): Promise<{ token: string; user: UserResponseDto; expiresIn: number; isAdmin: boolean }> {
         try {
             const { email, password, phone } = userLoginDto;
 
@@ -93,6 +93,10 @@ export class UserService {
             if (!isPasswordValid) {
                 throw new UnauthorizedException('Invalid credentials');
             }
+
+            // Check if user email matches admin email
+            const adminEmail = this.configService.get<string>('ADMIN_EMAIL');
+            const isAdmin = user.email === adminEmail;
 
             // Generar session token único
             const sessionToken = jwt.sign(
@@ -128,6 +132,7 @@ export class UserService {
                     profileImage: user.profileImage ?? '',
                 },
                 expiresIn,
+                isAdmin,
             };
         } catch (error) {
             if (error instanceof UnauthorizedException) {
@@ -137,7 +142,7 @@ export class UserService {
         }
     }
 
-    async isAuthenticated(userId: string): Promise<{ user: UserResponseDto }> {
+    async isAuthenticated(userId: string): Promise<{ user: UserResponseDto; isAdmin: boolean }> {
         try {
             const user = await this.userModel.findById(userId).select('-password');
 
@@ -145,12 +150,17 @@ export class UserService {
                 throw new NotFoundException('User not found');
             }
 
+            // Check if user email matches admin email
+            const adminEmail = this.configService.get<string>('ADMIN_EMAIL');
+            const isAdmin = user.email === adminEmail;
+
             return {
                 user: {
                     email: user.email,
                     name: user.name,
                     profileImage: user.profileImage ?? '',
                 },
+                isAdmin,
             };
         } catch (error) {
             if (error instanceof NotFoundException) {
