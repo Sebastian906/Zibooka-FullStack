@@ -15,6 +15,7 @@ import { LoanModule } from './loans/loan.module';
 import { ReservationModule } from './reservations/reservation.module';
 import { ReportModule } from './reports/report.module';
 import { EmailModule } from './email/email.module';
+import { MigrationModule } from './migration/migration.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { EmailModule } from './email/email.module';
     ReservationModule,
     ReportModule,
     EmailModule,
+    MigrationModule,
   ],
   controllers: [AppController, CartController],
   providers: [AppService],
