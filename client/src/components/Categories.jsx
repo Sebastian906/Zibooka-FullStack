@@ -8,7 +8,7 @@ const Categories = () => {
 
     const { t } = useTranslation();
     const {navigate} = useContext(ShopContext);
-    const colors = ["bg-[#aedae6]", "bg-[#fff6c9]", "bg-[#fddbdb]"]
+    const colors = ["bg-[#aedae6]", "bg-[#fff6c9]", "bg-[#fddbdb]", "bg-[#e1bee7]", "bg-[#c8e6c9]", "bg-[#d8d2e1]", "bg-[#f8f5e9]"]
 
     // Mapeo de nombres de categorías a claves de traducción
     const getCategoryName = (name) => {
@@ -29,7 +29,7 @@ const Categories = () => {
                         onClick={()=>navigate(`/shop/${cat.name.toLowerCase()}`)}
                         className='flexCenter flex-col cursor-pointer group'
                     >
-                        <div className={`flexCenter flex-col h-36 w-36 sm:h-40 sm:w-40 rounded-xl ${colors[index % 3]}`}>
+                        <div className={`flexCenter flex-col h-36 w-36 sm:h-40 sm:w-40 rounded-xl ${colors[index % 7]}`}>
                             <img 
                                 src={cat.image} 
                                 alt={cat.name} 
