@@ -14,6 +14,33 @@ export interface RequestWithUser extends Request {
   userId?: string;
 }
 
+// Retrieves the raw JWT from cookie or Authorization header.
+function extractToken(request: Request): string | undefined {
+  const cookieToken = (request as any).cookies?.token;
+  if (cookieToken) return cookieToken;
+
+  const authHeader = request.headers.authorization;
+  if (authHeader?.startsWith('Bearer ')) {
+    return authHeader.substring(7);
+  }
+
+  return undefined;
+}
+
+// Maps jwt.verify errors to a descriptive UnauthorizedException.
+function mapJwtError(error: unknown): UnauthorizedException {
+  if (error instanceof jwt.TokenExpiredError) {
+    return new UnauthorizedException('Session expired. Login again');
+  }
+  if (error instanceof jwt.JsonWebTokenError) {
+    return new UnauthorizedException('Invalid token. Login again');
+  }
+  if (error instanceof UnauthorizedException) {
+    return error;
+  }
+  return new UnauthorizedException('Not authorized. Login again');
+}
+
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
@@ -23,26 +50,23 @@ export class AuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     // Check if this route should skip auth guard
-    const skipAuthGuard = this.reflector.get<boolean>('skipAuthGuard', context.getHandler());
-    if (skipAuthGuard) {
-      return true;
-    }
+    const skipAuthGuard = this.reflector.get<boolean>(
+      'skipAuthGuard',
+      context.getHandler(),
+    );
+    if (skipAuthGuard) return true;
 
     const request = context.switchToHttp().getRequest<RequestWithUser>();
 
     // Intentar obtener token de cookie O header
-    let token = request.cookies?.token;
+    const token = extractToken(request);
 
     // Si no hay cookie, buscar en header Authorization
-    if (!token) {
-      const authHeader = request.headers.authorization;
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        token = authHeader.substring(7);
-      }
-    }
-
     console.log('Auth Guard - Token presente:', !!token);
-    console.log('Token source:', request.cookies?.token ? 'cookie' : 'header');
+    console.log(
+      'Token source:',
+      (request as any).cookies?.token ? 'cookie' : 'header',
+    );
 
     if (!token) {
       throw new UnauthorizedException('Not authorized. Login again');
@@ -54,7 +78,7 @@ export class AuthGuard implements CanActivate {
         throw new UnauthorizedException('JWT_SECRET is not configured');
       }
 
-      const decoded = jwt.verify(token, jwtSecret) as unknown as {
+      const decoded = jwt.verify(token, jwtSecret) as {
         id: string;
         session?: string;
         exp: number;
@@ -73,16 +97,7 @@ export class AuthGuard implements CanActivate {
       request.userId = decoded.id;
       return true;
     } catch (error) {
-      if (error instanceof jwt.TokenExpiredError) {
-        throw new UnauthorizedException('Session expired. Login again');
-      }
-      if (error instanceof jwt.JsonWebTokenError) {
-        throw new UnauthorizedException('Invalid token. Login again');
-      }
-      if (error instanceof UnauthorizedException) {
-        throw error;
-      }
-      throw new UnauthorizedException('Not authorized. Login again');
+      throw mapJwtError(error);
     }
   }
 }

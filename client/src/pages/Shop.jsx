@@ -5,6 +5,18 @@ import { ShopContext } from '../context/ShopContext'
 import Item from '../components/Item';
 import { FaChevronDown, FaSearch } from 'react-icons/fa';
 
+// Extract the sort-label mapping outside the component so the
+// inline ternary chain inside JSX is eliminated.
+const SORT_LABEL_KEYS = {
+    default: 'shop.sortDefault',
+    'price-asc': 'shop.sortPriceLowHigh',
+    'price-desc': 'shop.sortPriceHighLow',
+    'title-asc': 'shop.sortTitleAZ',
+    'title-desc': 'shop.sortTitleZA',
+}
+
+const getSortLabel = (t, sortBy) => t(SORT_LABEL_KEYS[sortBy] ?? SORT_LABEL_KEYS.default)
+
 const Shop = () => {
 
     const { t } = useTranslation();
@@ -15,7 +27,7 @@ const Shop = () => {
 
     // Filter and sort states
     const [selectedCategory, setSelectedCategory] = useState('all')
-    const [authorSearch, setAuthorSearch] = useState('') 
+    const [authorSearch, setAuthorSearch] = useState('')
     const [sortBy, setSortBy] = useState('default')
 
     // Dropdown states
@@ -53,6 +65,18 @@ const Shop = () => {
         authorSearch !== '' ||
         sortBy !== 'default';
 
+    // Handlers for category selections
+    const handleCategorySelect = (category) => {
+        setSelectedCategory(category)
+        setShowCategoryDropdown(false)
+    }
+
+    // Handler for sort selection
+    const handleSortSelect = (value) => {
+        setSortBy(value)
+        setShowSortDropdown(false)
+    }
+
     return (
         <div className='max-padd-container py-16 pt-28'>
             <Title
@@ -86,10 +110,7 @@ const Shop = () => {
                         {showCategoryDropdown && (
                             <div className='absolute top-12 left-0 bg-white ring-1 ring-slate-900/10 rounded-lg shadow-lg z-50 min-w-40 max-h-60 overflow-y-auto'>
                                 <button
-                                    onClick={() => {
-                                        setSelectedCategory('all');
-                                        setShowCategoryDropdown(false);
-                                    }}
+                                    onClick={() => handleCategorySelect('all')}
                                     className='w-full text-left px-4 py-2 text-xs hover:bg-primary transition-all'
                                 >
                                     {t('shop.allCategories')}
@@ -97,10 +118,7 @@ const Shop = () => {
                                 {availableCategories.map((category) => (
                                     <button
                                         key={category}
-                                        onClick={() => {
-                                            setSelectedCategory(category);
-                                            setShowCategoryDropdown(false);
-                                        }}
+                                        onClick={() => handleCategorySelect(category)}
                                         className={`w-full text-left px-4 py-2 text-xs hover:bg-primary transition-all ${selectedCategory === category ? 'bg-primary font-medium' : ''
                                             }`}
                                     >
@@ -137,65 +155,21 @@ const Shop = () => {
                                     : 'bg-primary hover:bg-primary/80'
                                 } transition-all duration-300`}
                         >
-                            <span>
-                                {t('shop.sort')}: {
-                                    sortBy === 'default' ? t('shop.sortDefault') :
-                                        sortBy === 'price-asc' ? t('shop.sortPriceLowHigh') :
-                                            sortBy === 'price-desc' ? t('shop.sortPriceHighLow') :
-                                                sortBy === 'title-asc' ? t('shop.sortTitleAZ') :
-                                                    t('shop.sortTitleZA')
-                                }
-                            </span>
+                            <span>{t('shop.sort')}: {getSortLabel(t, sortBy)}</span>
                             <FaChevronDown className={`text-xs transition-transform ${showSortDropdown ? 'rotate-180' : ''}`} />
                         </button>
 
                         {showSortDropdown && (
                             <div className='absolute top-12 left-0 bg-white ring-1 ring-slate-900/10 rounded-lg shadow-lg z-50 min-w-52'>
-                                <button
-                                    onClick={() => {
-                                        setSortBy('default');
-                                        setShowSortDropdown(false);
-                                    }}
-                                    className='w-full text-left px-4 py-2 text-xs hover:bg-primary transition-all'
-                                >
-                                    {t('shop.sortDefault')}
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setSortBy('price-asc');
-                                        setShowSortDropdown(false);
-                                    }}
-                                    className='w-full text-left px-4 py-2 text-xs hover:bg-primary transition-all'
-                                >
-                                    {t('shop.sortPriceLowHigh')}
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setSortBy('price-desc');
-                                        setShowSortDropdown(false);
-                                    }}
-                                    className='w-full text-left px-4 py-2 text-xs hover:bg-primary transition-all'
-                                >
-                                    {t('shop.sortPriceHighLow')}
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setSortBy('title-asc');
-                                        setShowSortDropdown(false);
-                                    }}
-                                    className='w-full text-left px-4 py-2 text-xs hover:bg-primary transition-all'
-                                >
-                                    {t('shop.sortTitleAZ')}
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setSortBy('title-desc');
-                                        setShowSortDropdown(false);
-                                    }}
-                                    className='w-full text-left px-4 py-2 text-xs hover:bg-primary transition-all'
-                                >
-                                    {t('shop.sortTitleZA')}
-                                </button>
+                                {Object.entries(SORT_LABEL_KEYS).map(([value, labelKey]) => (
+                                    <button
+                                        key={value}
+                                        onClick={() => handleSortSelect(value)}
+                                        className='w-full text-left px-4 py-2 text-xs hover:bg-primary transition-all'
+                                    >
+                                        {t(labelKey)}
+                                    </button>
+                                ))}
                             </div>
                         )}
                     </div>

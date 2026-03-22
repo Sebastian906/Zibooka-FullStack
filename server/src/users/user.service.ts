@@ -31,68 +31,48 @@ export class UserService {
         });
     }
 
-    async register(registerUserDto: RegisterUserDto): Promise<{ token: string, user: UserResponseDto }> {
+    async register(registerUserDto: RegisterUserDto): Promise<{ token: string; user: UserResponseDto }> {
         try {
             const { name, email, password, phone } = registerUserDto;
 
             // Checking if user already exists
             const exists = await this.userModel.findOne({ email });
-            if (exists) {
-                throw new ConflictException('User already exists');
-            }
+            if (exists) throw new ConflictException('User already exists');
 
             // Hash user password
             const hashedPassword = await bcrypt.hash(password, 10);
 
             // Create new user
-            const newUser = new this.userModel({
-                name,
-                email,
-                password: hashedPassword,
-                phone,
-            });
-
+            const newUser = new this.userModel({ name, email, password: hashedPassword, phone });
             const user = await newUser.save();
 
             // Generate JWT token
             const token = jwt.sign(
                 { id: user._id },
                 this.configService.getOrThrow<string>('JWT_SECRET'),
-                { expiresIn: '7d' }
+                { expiresIn: '7d' },
             );
 
             // Return user data without password
             return {
                 token,
-                user: {
-                    email: user.email,
-                    name: user.name,
-                    profileImage: user.profileImage ?? '',
-                },
+                user: { email: user.email, name: user.name, profileImage: user.profileImage ?? '' },
             };
         } catch (error) {
-            if (error instanceof ConflictException) {
-                throw error;
-            }
+            if (error instanceof ConflictException) throw error;
             throw new InternalServerErrorException(error.message);
         }
     }
 
     async login(userLoginDto: UserLoginDto): Promise<{ token: string; user: UserResponseDto; expiresIn: number; isAdmin: boolean }> {
         try {
-            const { email, password, phone } = userLoginDto;
+            const { email, password } = userLoginDto;
 
             const user = await this.userModel.findOne({ email });
-
-            if (!user) {
-                throw new UnauthorizedException('Invalid credentials');
-            }
+            if (!user) throw new UnauthorizedException('Invalid credentials');
 
             const isPasswordValid = await bcrypt.compare(password, user.password);
-
-            if (!isPasswordValid) {
-                throw new UnauthorizedException('Invalid credentials');
-            }
+            if (!isPasswordValid) throw new UnauthorizedException('Invalid credentials');
 
             // Check if user email matches admin email
             const adminEmail = this.configService.get<string>('ADMIN_EMAIL');
@@ -105,14 +85,11 @@ export class UserService {
             );
 
             // Token de acceso con expiración de 7 días
-            const expiresIn = 7 * 24 * 60 * 60; // 7 días en segundos
+            const expiresIn = 7 * 24 * 60 * 60;
             const token = jwt.sign(
-                {
-                    id: user._id,
-                    session: sessionToken,
-                },
+                { id: user._id, session: sessionToken },
                 this.configService.getOrThrow<string>('JWT_SECRET'),
-                { expiresIn: '7d' }
+                { expiresIn: '7d' },
             );
 
             // Actualizar última actividad y sesión
@@ -126,18 +103,12 @@ export class UserService {
 
             return {
                 token,
-                user: {
-                    email: user.email,
-                    name: user.name,
-                    profileImage: user.profileImage ?? '',
-                },
+                user: { email: user.email, name: user.name, profileImage: user.profileImage ?? '' },
                 expiresIn,
                 isAdmin,
             };
         } catch (error) {
-            if (error instanceof UnauthorizedException) {
-                throw error;
-            }
+            if (error instanceof UnauthorizedException) throw error;
             throw new InternalServerErrorException(error.message);
         }
     }
@@ -145,27 +116,18 @@ export class UserService {
     async isAuthenticated(userId: string): Promise<{ user: UserResponseDto; isAdmin: boolean }> {
         try {
             const user = await this.userModel.findById(userId).select('-password');
-
-            if (!user) {
-                throw new NotFoundException('User not found');
-            }
+            if (!user) throw new NotFoundException('User not found');
 
             // Check if user email matches admin email
             const adminEmail = this.configService.get<string>('ADMIN_EMAIL');
             const isAdmin = user.email === adminEmail;
 
             return {
-                user: {
-                    email: user.email,
-                    name: user.name,
-                    profileImage: user.profileImage ?? '',
-                },
+                user: { email: user.email, name: user.name, profileImage: user.profileImage ?? '' },
                 isAdmin,
             };
         } catch (error) {
-            if (error instanceof NotFoundException) {
-                throw error;
-            }
+            if (error instanceof NotFoundException) throw error;
             throw new InternalServerErrorException(error.message);
         }
     }
@@ -173,19 +135,14 @@ export class UserService {
     async logout(userId: string): Promise<{ message: string }> {
         try {
             const user = await this.userModel.findById(userId);
-
             if (user) {
                 // Registrar última actividad
                 await this.userModel.findByIdAndUpdate(userId, {
                     lastLogout: new Date(),
                 });
-
                 console.log(`[UserService] User ${user.email} logged out at ${new Date().toISOString()}`);
             }
-
-            return {
-                message: 'Successfully logged out',
-            };
+            return { message: 'Successfully logged out' };
         } catch (error) {
             throw new InternalServerErrorException('Error during logout');
         }
@@ -195,19 +152,11 @@ export class UserService {
         try {
             const user = await this.userModel.findById(userId).select('-password');
 
-            if (!user) {
-                throw new NotFoundException('User not found');
-            }
+            if (!user) throw new NotFoundException('User not found');
 
-            return {
-                email: user.email,
-                name: user.name,
-                profileImage: user.profileImage ?? '',
-            };
+            return { email: user.email, name: user.name, profileImage: user.profileImage ?? '' };
         } catch (error) {
-            if (error instanceof NotFoundException) {
-                throw error;
-            }
+            if (error instanceof NotFoundException) throw error;
             throw new InternalServerErrorException(error.message);
         }
     }
@@ -215,10 +164,7 @@ export class UserService {
     async getProfile(userId: string): Promise<{ user: any }> {
         try {
             const user = await this.userModel.findById(userId).select('-password');
-
-            if (!user) {
-                throw new NotFoundException('User not found');
-            }
+            if (!user) throw new NotFoundException('User not found');
 
             return {
                 user: {
@@ -229,9 +175,7 @@ export class UserService {
                 },
             };
         } catch (error) {
-            if (error instanceof NotFoundException) {
-                throw error;
-            }
+            if (error instanceof NotFoundException) throw error;
             throw new InternalServerErrorException(error.message);
         }
     }
@@ -239,62 +183,30 @@ export class UserService {
     async updateProfile(
         userId: string,
         updateProfileDto: UpdateProfileDto,
-        profileImage?: Express.Multer.File,
+        profileImageFile?: Express.Multer.File,
     ): Promise<{ message: string; user: any }> {
         try {
             const user = await this.userModel.findById(userId);
-
-            if (!user) {
-                throw new NotFoundException('User not found');
-            }
+            if (!user) throw new NotFoundException('User not found');
 
             // Check if email is being changed and if it's already taken
-            if (updateProfileDto.email !== user.email) {
-                const emailExists = await this.userModel.findOne({
-                    email: updateProfileDto.email,
-                    _id: { $ne: userId }
-                });
-
-                if (emailExists) {
-                    throw new ConflictException('Email already in use');
-                }
-            }
+            await this.checkEmailUniqueness(updateProfileDto.email, userId, user.email);
 
             // Handle password change
             if (updateProfileDto.newPassword) {
-                if (!updateProfileDto.currentPassword) {
-                    throw new BadRequestException('Current password is required to change password');
-                }
-
-                const isPasswordValid = await bcrypt.compare(
+                user.password = await this.validatePasswordChange(
                     updateProfileDto.currentPassword,
-                    user.password
+                    updateProfileDto.newPassword,
+                    user.password,
                 );
-
-                if (!isPasswordValid) {
-                    throw new UnauthorizedException('Current password is incorrect');
-                }
-
-                user.password = await bcrypt.hash(updateProfileDto.newPassword, 10);
             }
 
             // Handle profile image upload
-            if (profileImage) {
-                // Delete old image from cloudinary if exists
-                if (user.profileImage) {
-                    const publicId = user.profileImage.split('/').pop()?.split('.')[0];
-                    if (publicId) {
-                        await cloudinary.uploader.destroy(publicId);
-                    }
-                }
-
-                // Upload new image
-                const result = await cloudinary.uploader.upload(profileImage.path, {
-                    resource_type: 'image',
-                    folder: 'profile_images',
-                });
-
-                user.profileImage = result.secure_url;
+            if (profileImageFile) {
+                user.profileImage = await this.uploadProfileImage(
+                    profileImageFile,
+                    user.profileImage,
+                );
             }
 
             // Update other fields
@@ -340,32 +252,28 @@ export class UserService {
             if (!user) {
                 // Por seguridad, no revelamos si el email existe o no
                 return {
-                    message: 'If this email exists, a password reset link has been sent'
+                    message: 'If this email exists, a password reset link has been sent',
                 };
             }
 
             // Generar token de reseteo con expiración de 1 hora
             const resetToken = jwt.sign(
-                {
-                    id: user._id,
-                    email: user.email,
-                    type: 'password-reset'
-                },
+                { id: user._id, email: user.email, type: 'password-reset' },
                 this.configService.getOrThrow<string>('JWT_SECRET'),
-                { expiresIn: '1h' }
+                { expiresIn: '1h' },
             );
 
             // Enviar email
             await this.emailService.sendPasswordResetEmail(
                 user.email,
                 resetToken,
-                user.name
+                user.name,
             );
 
             console.log(`[UserService] Password reset email sent to: ${user.email}`);
 
             return {
-                message: 'If this email exists, a password reset link has been sent'
+                message: 'If this email exists, a password reset link has been sent',
             };
         } catch (error) {
             console.error('[UserService] Error in forgotPassword:', error);
@@ -391,7 +299,7 @@ export class UserService {
             try {
                 decoded = jwt.verify(
                     token,
-                    this.configService.getOrThrow<string>('JWT_SECRET')
+                    this.configService.getOrThrow<string>('JWT_SECRET'),
                 );
             } catch (error) {
                 if (error.name === 'TokenExpiredError') {
@@ -407,10 +315,7 @@ export class UserService {
 
             // Buscar usuario
             const user = await this.userModel.findById(decoded.id);
-
-            if (!user) {
-                throw new NotFoundException('User not found');
-            }
+            if (!user) throw new NotFoundException('User not found');
 
             // Verificar que el email del token coincida con el del usuario
             if (user.email !== decoded.email) {
@@ -418,22 +323,20 @@ export class UserService {
             }
 
             // Hashear nueva contraseña
-            const hashedPassword = await bcrypt.hash(newPassword, 10);
-
             // Actualizar contraseña
-            user.password = hashedPassword;
+            user.password = await bcrypt.hash(newPassword, 10);
             await user.save();
 
             // Enviar email de confirmación
             await this.emailService.sendPasswordChangedConfirmation(
                 user.email,
-                user.name
+                user.name,
             );
 
             console.log(`[UserService] Password reset successful for: ${user.email}`);
 
             return {
-                message: 'Password has been reset successfully. You can now log in with your new password'
+                message: 'Password has been reset successfully. You can now log in with your new password',
             };
         } catch (error) {
             if (
@@ -453,28 +356,16 @@ export class UserService {
     ): Promise<{ message: string }> {
         try {
             const { itemId } = addToCartDto;
-
             const userData = await this.userModel.findById(userId);
-
-            if (!userData) {
-                throw new NotFoundException('User not found');
-            }
+            if (!userData) throw new NotFoundException('User not found');
 
             const cartData = userData.cartData || {};
-
-            if (cartData[itemId]) {
-                cartData[itemId] += 1;
-            } else {
-                cartData[itemId] = 1;
-            }
+            cartData[itemId] = (cartData[itemId] ?? 0) + 1;
 
             await this.userModel.findByIdAndUpdate(userId, { cartData });
-
             return { message: 'Added to Cart' };
         } catch (error) {
-            if (error instanceof NotFoundException) {
-                throw error;
-            }
+            if (error instanceof NotFoundException) throw error;
             throw new InternalServerErrorException(error.message);
         }
     }
@@ -485,12 +376,8 @@ export class UserService {
     ): Promise<{ message: string }> {
         try {
             const { itemId, quantity } = updateCartDto;
-
             const userData = await this.userModel.findById(userId);
-
-            if (!userData) {
-                throw new NotFoundException('User not found');
-            }
+            if (!userData) throw new NotFoundException('User not found');
 
             const cartData = userData.cartData || {};
 
@@ -501,13 +388,65 @@ export class UserService {
             }
 
             await this.userModel.findByIdAndUpdate(userId, { cartData });
-
             return { message: 'Cart Updated' };
         } catch (error) {
-            if (error instanceof NotFoundException) {
-                throw error;
-            }
+            if (error instanceof NotFoundException) throw error;
             throw new InternalServerErrorException(error.message);
         }
+    }
+
+    // PRIVATE HELPERS
+    // Throws ConflictException when the new email is already taken by another user.
+    private async checkEmailUniqueness(
+        newEmail: string,
+        currentUserId: string,
+        currentEmail: string,
+    ): Promise<void> {
+        if (newEmail === currentEmail) return;
+
+        const emailExists = await this.userModel.findOne({
+            email: newEmail,
+            _id: { $ne: currentUserId },
+        });
+
+        if (emailExists) throw new ConflictException('Email already in use');
+    }
+
+    // Validates the current password and returns the bcrypt hash of the new password. Throws BadRequestException / UnauthorizedException on failure.
+    private async validatePasswordChange(
+        currentPassword: string | undefined,
+        newPassword: string,
+        storedHash: string,
+    ): Promise<string> {
+        if (!currentPassword) {
+            throw new BadRequestException(
+                'Current password is required to change password',
+            );
+        }
+
+        const isValid = await bcrypt.compare(currentPassword, storedHash);
+        if (!isValid) {
+            throw new UnauthorizedException('Current password is incorrect');
+        }
+
+        return bcrypt.hash(newPassword, 10);
+    }
+
+    // Deletes the old Cloudinary image (if any), uploads the new file, and returns the secure URL.
+    private async uploadProfileImage(
+        file: Express.Multer.File,
+        existingImageUrl?: string | null,
+    ): Promise<string> {
+        if (existingImageUrl) {
+            const publicId = existingImageUrl.split('/').pop()?.split('.')[0];
+            if (publicId) await cloudinary.uploader.destroy(publicId);
+        }
+
+        const result = await cloudinary.uploader.upload(file.path, {
+            resource_type: 'image',
+            folder: 'profile_images',
+        });
+
+        return result.secure_url;
     }
 }

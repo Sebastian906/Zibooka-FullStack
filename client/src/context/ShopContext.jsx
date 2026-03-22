@@ -56,9 +56,9 @@ const ShopContextProvider = ({ children }) => {
 
     // Obtiene categorías únicas de los libros
     const availableCategories = useMemo(() => {
-        const categories = [...new Set(books.map(book => book.category))];
-        return categories.sort();
-    }, [books]);
+        const categories = [...new Set(books.map(book => book.category))]
+        return categories.sort((a, b) => a.localeCompare(b))
+    }, [books])
 
     // Fetch all books (con soporte de idioma)
     const fetchBooks = async (lang = null) => {

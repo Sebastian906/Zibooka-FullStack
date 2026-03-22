@@ -4,6 +4,48 @@ import toast from 'react-hot-toast'
 import Title from '../../components/Title'
 import { FaPlus, FaBook, FaExclamationTriangle, FaChartLine, FaGlobe } from 'react-icons/fa'
 
+// Renders the category-grouped breakdown returned by the brute-force algorithm */
+const GroupedCategoriesPanel = ({ groupedByCategory }) => {
+    if (!groupedByCategory) return null
+
+    return (
+        <div className='bg-blue-50 border border-blue-200 p-4 rounded-xl mb-4'>
+            <h5 className='h5 mb-3 text-blue-800'>Combinations by Category:</h5>
+            <div className='grid grid-cols-2 md:grid-cols-3 gap-2'>
+                {Object.entries(groupedByCategory).map(([category, count]) => (
+                    <div key={category} className='bg-white p-3 rounded-lg border border-blue-100'>
+                        <p className='font-semibold text-sm'>{category}</p>
+                        <p className='text-blue-600 text-lg font-bold'>{count} combinations</p>
+                    </div>
+                ))}
+            </div>
+        </div>
+    )
+}
+
+// Returns the Tailwind colour classes for a shelf status badge */
+const getStatusColor = (status) => {
+    const map = {
+        safe: 'bg-green-100 text-green-700',
+        'at-risk': 'bg-yellow-100 text-yellow-700',
+        overloaded: 'bg-red-100 text-red-700',
+    }
+    return map[status] ?? 'bg-gray-100 text-gray-700'
+}
+
+const LOCATION_CATEGORIES = [
+    'Fiction Section',
+    'Non-Fiction Section',
+    'Academic Section',
+    'Children Section',
+    'History Section',
+    'Science Section',
+    'Adventure Section',
+    'Business Section',
+    'Health Section',
+    'Horror Section',
+]
+
 const Shelves = () => {
     const context = useContext(ShopContext)
 
@@ -26,7 +68,7 @@ const Shelves = () => {
         assignBookToShelf,
         removeBookFromShelf,
         findDangerousCombinations,
-        optimizeShelf
+        optimizeShelf,
     } = context
 
     const [selectedShelf, setSelectedShelf] = useState(null)
@@ -38,7 +80,7 @@ const Shelves = () => {
     const [optimizedResult, setOptimizedResult] = useState(null)
     const [isLoading, setIsLoading] = useState(true)
 
-    // NUEVOS ESTADOS para modos de análisis
+    // Estados para modos de análisis
     const [analyzeAllDangerous, setAnalyzeAllDangerous] = useState(false)
     const [analyzeAllOptimize, setAnalyzeAllOptimize] = useState(false)
     const [groupedByCategory, setGroupedByCategory] = useState(null)
@@ -47,7 +89,7 @@ const Shelves = () => {
         code: '',
         location: '',
         maxWeight: 8,
-        description: ''
+        description: '',
     })
     const [selectedBookId, setSelectedBookId] = useState('')
 
@@ -55,9 +97,7 @@ const Shelves = () => {
         const loadShelves = async () => {
             try {
                 setIsLoading(true)
-                if (fetchShelves) {
-                    await fetchShelves()
-                }
+                if (fetchShelves) await fetchShelves()
             } catch (error) {
                 console.error('Error loading shelves:', error)
                 toast.error('Error loading shelves')
@@ -116,7 +156,7 @@ const Shelves = () => {
         }
     }
 
-    // FUNCIÓN MEJORADA - Fuerza Bruta
+    // Función de combinaciones peligrosas - Fuerza Bruta
     const handleFindDangerous = async (shelf) => {
         setSelectedShelf(shelf)
         setAnalyzeAllDangerous(false) // Resetear modo
@@ -142,7 +182,7 @@ const Shelves = () => {
         }
     }
 
-    // FUNCIÓN MEJORADA - Backtracking
+    // Función de optimización - Backtracking
     const handleOptimize = async (shelf) => {
         setSelectedShelf(shelf)
         setAnalyzeAllOptimize(false) // Resetear modo
@@ -162,50 +202,7 @@ const Shelves = () => {
         }
     }
 
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'safe': return 'bg-green-100 text-green-700'
-            case 'at-risk': return 'bg-yellow-100 text-yellow-700'
-            case 'overloaded': return 'bg-red-100 text-red-700'
-            default: return 'bg-gray-100 text-gray-700'
-        }
-    }
-
-    const availableBooks = books.filter(book =>
-        !book.shelfLocation && book.pageCount
-    )
-
-    const locationCategories = [
-        'Fiction Section',
-        'Non-Fiction Section',
-        'Academic Section',
-        'Children Section',
-        'History Section',
-        'Science Section',
-        'Adventure Section',
-        'Business Section',
-        'Health Section',
-        'Horror Section'
-    ]
-
-    // Renderizar categorías agrupadas
-    const renderGroupedCategories = () => {
-        if (!groupedByCategory) return null
-
-        return (
-            <div className='bg-blue-50 border border-blue-200 p-4 rounded-xl mb-4'>
-                <h5 className='h5 mb-3 text-blue-800'>Combinations by Category:</h5>
-                <div className='grid grid-cols-2 md:grid-cols-3 gap-2'>
-                    {Object.entries(groupedByCategory).map(([category, count]) => (
-                        <div key={category} className='bg-white p-3 rounded-lg border border-blue-100'>
-                            <p className='font-semibold text-sm'>{category}</p>
-                            <p className='text-blue-600 text-lg font-bold'>{count} combinations</p>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        )
-    }
+    const availableBooks = books.filter(book => !book.shelfLocation && book.pageCount)
 
     return (
         <div className='px-2 sm:px-6 py-12 mt-2 h-[97vh] bg-primary overflow-y-scroll lg:w-4/5 rounded-xl'>
@@ -263,12 +260,13 @@ const Shelves = () => {
                                 </div>
                                 <div className='w-full bg-gray-200 rounded-full h-2'>
                                     <div
-                                        className={`h-2 rounded-full transition-all duration-300 ${(shelf.currentWeight || 0) / shelf.maxWeight > 0.8
-                                            ? 'bg-red-500'
-                                            : (shelf.currentWeight || 0) / shelf.maxWeight > 0.6
-                                                ? 'bg-yellow-500'
-                                                : 'bg-green-500'
-                                            }`}
+                                        className={`h-2 rounded-full transition-all duration-300 ${
+                                            (shelf.currentWeight || 0) / shelf.maxWeight > 0.8
+                                                ? 'bg-red-500'
+                                                : (shelf.currentWeight || 0) / shelf.maxWeight > 0.6
+                                                    ? 'bg-yellow-500'
+                                                    : 'bg-green-500'
+                                        }`}
                                         style={{ width: `${Math.min(((shelf.currentWeight || 0) / shelf.maxWeight) * 100, 100)}%` }}
                                     />
                                 </div>
@@ -358,7 +356,7 @@ const Shelves = () => {
                                     className='w-full border border-gray-200 rounded p-2 outline-black/80'
                                 >
                                     <option value="">Select a category...</option>
-                                    {locationCategories.map((cat) => (
+                                    {LOCATION_CATEGORIES.map((cat) => (
                                         <option key={cat} value={cat}>{cat}</option>
                                     ))}
                                 </select>
@@ -466,7 +464,6 @@ const Shelves = () => {
                             Combinations of 4 books exceeding 8 Kg weight limit
                         </p>
 
-                        {/* NUEVO: Selector de modo */}
                         <div className='bg-blue-50 border border-blue-200 p-4 rounded-xl mb-4'>
                             <label className='flex items-center gap-3 cursor-pointer'>
                                 <input
@@ -496,10 +493,8 @@ const Shelves = () => {
                             </button>
                         </div>
 
-                        {/* Mostrar agrupación por categoría */}
-                        {renderGroupedCategories()}
+                        <GroupedCategoriesPanel groupedByCategory={groupedByCategory} />
 
-                        {/* Resultados */}
                         <div className='space-y-4'>
                             {dangerousCombinations.length > 0 ? (
                                 dangerousCombinations.map((combo, index) => (
@@ -557,7 +552,6 @@ const Shelves = () => {
                             Optimized Shelf (Backtracking)
                         </h3>
 
-                        {/* NUEVO: Selector de modo */}
                         <div className='bg-green-50 border border-green-200 p-4 rounded-xl mb-4'>
                             <label className='flex items-center gap-3 cursor-pointer'>
                                 <input
@@ -587,10 +581,8 @@ const Shelves = () => {
                             </button>
                         </div>
 
-                        {/* Resultados */}
-                        {(optimizedResult && (
+                        {optimizedResult ? (
                             <>
-                                {/* Recomendación */}
                                 {optimizedResult.recommendation && (
                                     <div className='bg-blue-50 border border-blue-200 p-4 rounded-xl mb-4'>
                                         <p className='text-sm font-medium text-blue-800'>
@@ -599,7 +591,6 @@ const Shelves = () => {
                                     </div>
                                 )}
 
-                                {/* Comparación actual vs óptimo */}
                                 {optimizedResult.currentVsOptimal && (
                                     <div className='bg-linear-to-r from-yellow-50 to-green-50 border border-green-200 p-4 rounded-xl mb-4'>
                                         <h5 className='h5 mb-3'>Current vs Optimal Comparison:</h5>
@@ -625,7 +616,6 @@ const Shelves = () => {
                                     </div>
                                 )}
 
-                                {/* Estadísticas principales */}
                                 <div className='bg-green-50 border border-green-200 p-4 rounded-xl mb-4'>
                                     <div className='grid grid-cols-3 gap-4 text-center'>
                                         <div>
@@ -652,7 +642,6 @@ const Shelves = () => {
                                     </div>
                                 </div>
 
-                                {/* Lista de libros */}
                                 <h5 className='h5 mb-2'>
                                     {analyzeAllOptimize ? 'Recommended Books:' : 'Optimal Book Selection:'}
                                 </h5>
@@ -668,11 +657,12 @@ const Shelves = () => {
                                     ))}
                                 </div>
                             </>
-                        )) || (
-                                <p className='text-center text-gray-500 py-8'>
-                                    Click "Optimize" button to find the best book combination
-                                </p>
-                            )}
+                        ) : (
+                            <p className='text-center text-gray-500 py-8'>
+                                Click "Optimize" button to find the best book combination
+                            </p>
+                        )}
+
                         <button
                             onClick={() => {
                                 setShowOptimizeModal(false)
