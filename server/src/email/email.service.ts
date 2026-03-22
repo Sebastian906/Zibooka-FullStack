@@ -1,14 +1,16 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 
 @Injectable()
-export class EmailService {
+export class EmailService implements OnModuleInit {
     private transporter: nodemailer.Transporter;
-    private transporterReady: Promise<void>;
 
-    constructor(private configService: ConfigService) {
-        this.transporterReady = this.setupTransporter();
+    constructor(private configService: ConfigService) {}
+
+    // Called by NestJS after dependency injection is complete.
+    async onModuleInit(): Promise<void> {
+        await this.setupTransporter();
     }
 
     private async setupTransporter(): Promise<void> {
@@ -16,7 +18,6 @@ export class EmailService {
         const port = this.configService.get<number>('EMAIL_PORT') || 587;
         const user = this.configService.get<string>('EMAIL_USER');
         const pass = this.configService.get<string>('EMAIL_PASS');
-
         const forceSmtp = this.configService.get<string>('EMAIL_FORCE_SMTP') === 'true';
 
         console.log('[EmailService] SMTP env presence:', {
@@ -38,16 +39,14 @@ export class EmailService {
                 try {
                     await this.transporter.verify();
                     console.log('[EmailService] SMTP transporter verified and ready.');
-                    return;
                 } catch (err) {
                     console.error('[EmailService] SMTP verify failed:', err);
                     console.log('[EmailService] Continuing without verification. Emails will be attempted on-demand.');
-                    return; // NO lanzar error, solo advertir
                 }
             } else {
                 console.log('[EmailService] EMAIL_FORCE_SMTP enabled — skipping verification.');
-                return;
             }
+            return;
         }
 
         // Fallback: Ethereal (solo para testing local)
@@ -74,7 +73,9 @@ export class EmailService {
         resetToken: string,
         userName: string,
     ): Promise<void> {
-        const frontendUrl = this.configService.get<string>('VITE_FRONTEND_URL') || 'http://localhost:5173';
+        const frontendUrl =
+            this.configService.get<string>('VITE_FRONTEND_URL') ||
+            'http://localhost:5173';
         const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
 
         const mailOptions = {
@@ -108,31 +109,12 @@ export class EmailService {
                             padding: 30px;
                             text-align: center;
                         }
-                        .header h1 {
-                            margin: 0;
-                            color: #2e3031;
-                            font-size: 28px;
-                        }
-                        .header .brand {
-                            color: #ac81fd;
-                        }
-                        .content {
-                            padding: 40px 30px;
-                        }
-                        .content h2 {
-                            color: #2e3031;
-                            font-size: 24px;
-                            margin-top: 0;
-                        }
-                        .content p {
-                            color: #7b7b7b;
-                            font-size: 14px;
-                            margin: 16px 0;
-                        }
-                        .button-container {
-                            text-align: center;
-                            margin: 30px 0;
-                        }
+                        .header h1 { margin: 0; color: #2e3031; font-size: 28px; }
+                        .header .brand { color: #ac81fd; }
+                        .content { padding: 40px 30px; }
+                        .content h2 { color: #2e3031; font-size: 24px; margin-top: 0; }
+                        .content p { color: #7b7b7b; font-size: 14px; margin: 16px 0; }
+                        .button-container { text-align: center; margin: 30px 0; }
                         .reset-button {
                             display: inline-block;
                             background-color: #ac81fd;
@@ -142,10 +124,6 @@ export class EmailService {
                             border-radius: 50px;
                             font-weight: 500;
                             font-size: 14px;
-                            transition: background-color 0.3s;
-                        }
-                        .reset-button:hover {
-                            background-color: #9a6eeb;
                         }
                         .info-box {
                             background-color: #e7f2f3;
@@ -154,11 +132,7 @@ export class EmailService {
                             margin: 20px 0;
                             border-radius: 4px;
                         }
-                        .info-box p {
-                            margin: 0;
-                            color: #2e3031;
-                            font-size: 13px;
-                        }
+                        .info-box p { margin: 0; color: #2e3031; font-size: 13px; }
                         .footer {
                             background-color: #f5f5f5;
                             padding: 20px 30px;
@@ -166,11 +140,7 @@ export class EmailService {
                             color: #7b7b7b;
                             font-size: 12px;
                         }
-                        .link {
-                            color: #ac81fd;
-                            text-decoration: none;
-                            word-break: break-all;
-                        }
+                        .link { color: #ac81fd; text-decoration: none; word-break: break-all; }
                     </style>
                 </head>
                 <body>
@@ -178,28 +148,20 @@ export class EmailService {
                         <div class="header">
                             <h1>ZiBook<span class="brand">a.</span></h1>
                         </div>
-                        
                         <div class="content">
                             <h2>Password Reset Request</h2>
                             <p>Hello ${userName},</p>
                             <p>We received a request to reset your password for your Zibooka account. If you didn't make this request, you can safely ignore this email.</p>
-                            
                             <div class="button-container">
                                 <a href="${resetUrl}" class="reset-button">Reset Password</a>
                             </div>
-                            
                             <div class="info-box">
                                 <p><strong>Important:</strong> This link will expire in 1 hour for security reasons.</p>
                             </div>
-                            
                             <p>If the button doesn't work, copy and paste this link into your browser:</p>
                             <p><a href="${resetUrl}" class="link">${resetUrl}</a></p>
-                            
-                            <p>If you have any questions or need help, feel free to contact our support team.</p>
-                            
                             <p>Best regards,<br>The Zibooka Team</p>
                         </div>
-                        
                         <div class="footer">
                             <p>© ${new Date().getFullYear()} Zibooka. All rights reserved.</p>
                             <p>This is an automated message, please do not reply to this email.</p>
@@ -211,11 +173,11 @@ export class EmailService {
         };
 
         try {
-            await this.transporterReady;
             const info = await this.transporter.sendMail(mailOptions);
             console.log(`[EmailService] Password reset email sent to: ${email}`);
             const previewUrl = nodemailer.getTestMessageUrl(info);
-            if (previewUrl) console.log(`[EmailService] Preview URL: ${previewUrl}`);
+            if (previewUrl)
+                console.log(`[EmailService] Preview URL: ${previewUrl}`);
         } catch (error) {
             console.error('[EmailService] Error sending email:', error);
             throw new Error('Failed to send password reset email');
@@ -258,33 +220,12 @@ export class EmailService {
                             padding: 30px;
                             text-align: center;
                         }
-                        .header h1 {
-                            margin: 0;
-                            color: #2e3031;
-                            font-size: 28px;
-                        }
-                        .header .brand {
-                            color: #ac81fd;
-                        }
-                        .content {
-                            padding: 40px 30px;
-                        }
-                        .content h2 {
-                            color: #2e3031;
-                            font-size: 24px;
-                            margin-top: 0;
-                        }
-                        .content p {
-                            color: #7b7b7b;
-                            font-size: 14px;
-                            margin: 16px 0;
-                        }
-                        .success-icon {
-                            text-align: center;
-                            font-size: 48px;
-                            color: #4CAF50;
-                            margin: 20px 0;
-                        }
+                        .header h1 { margin: 0; color: #2e3031; font-size: 28px; }
+                        .header .brand { color: #ac81fd; }
+                        .content { padding: 40px 30px; }
+                        .content h2 { color: #2e3031; font-size: 24px; margin-top: 0; }
+                        .content p { color: #7b7b7b; font-size: 14px; margin: 16px 0; }
+                        .success-icon { text-align: center; font-size: 48px; color: #4CAF50; margin: 20px 0; }
                         .warning-box {
                             background-color: #fff3cd;
                             border-left: 4px solid #ffc107;
@@ -292,11 +233,7 @@ export class EmailService {
                             margin: 20px 0;
                             border-radius: 4px;
                         }
-                        .warning-box p {
-                            margin: 0;
-                            color: #856404;
-                            font-size: 13px;
-                        }
+                        .warning-box p { margin: 0; color: #856404; font-size: 13px; }
                         .footer {
                             background-color: #f5f5f5;
                             padding: 20px 30px;
@@ -311,27 +248,16 @@ export class EmailService {
                         <div class="header">
                             <h1>ZiBook<span class="brand">a.</span></h1>
                         </div>
-                        
                         <div class="content">
                             <div class="success-icon">✓</div>
                             <h2>Password Changed Successfully</h2>
                             <p>Hello ${userName},</p>
                             <p>Your password has been changed successfully. You can now log in with your new password.</p>
-                            
                             <div class="warning-box">
                                 <p><strong>Security Alert:</strong> If you didn't make this change, please contact our support team immediately.</p>
                             </div>
-                            
-                            <p>For your security, we recommend:</p>
-                            <ul>
-                                <li>Using a strong, unique password</li>
-                                <li>Not sharing your password with anyone</li>
-                                <li>Changing your password regularly</li>
-                            </ul>
-                            
                             <p>Best regards,<br>The Zibooka Team</p>
                         </div>
-                        
                         <div class="footer">
                             <p>© ${new Date().getFullYear()} Zibooka. All rights reserved.</p>
                             <p>This is an automated message, please do not reply to this email.</p>
@@ -343,11 +269,11 @@ export class EmailService {
         };
 
         try {
-            await this.transporterReady;
             const info = await this.transporter.sendMail(mailOptions);
             console.log(`[EmailService] Password changed confirmation sent to: ${email}`);
             const previewUrl = nodemailer.getTestMessageUrl(info);
-            if (previewUrl) console.log(`[EmailService] Preview URL: ${previewUrl}`);
+            if (previewUrl)
+                console.log(`[EmailService] Preview URL: ${previewUrl}`);
         } catch (error) {
             console.error('[EmailService] Error sending confirmation email:', error);
         }
