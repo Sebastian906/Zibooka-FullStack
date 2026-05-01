@@ -37,9 +37,11 @@ const App = () => {
   const isResetPasswordPath = useLocation().pathname === '/reset-password'
 
   return (
-    <main>
+    <main className='bg-mist-100'>
       {showUserLogin && <Login />}
-      {!isAdminPath && !isForgotPasswordPath && !isResetPasswordPath && <Header />}
+      <div className={showUserLogin ? 'pointer-events-none opacity-50' : ''}>
+        {!isAdminPath && !isForgotPasswordPath && !isResetPasswordPath && <Header />}
+      </div>
       <Toaster position='bottom-right'/>
       <Routes>
         <Route path='/' element={<Home />} /> 

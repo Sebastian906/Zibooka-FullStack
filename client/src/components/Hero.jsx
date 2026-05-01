@@ -23,20 +23,52 @@ const Hero = () => {
     }, [books]);
 
     return (
-        <section className='max-padd-container flex gap-6 h-158.5 mt-16'>
+        <section
+            className='max-padd-container flex gap-6 mt-16'
+            style={{ minHeight: '35rem' }}
+        >
             <div 
-                className="flex-5 bg-cover bg-center bg-no-repeat rounded-2xl"
+                className="flex-5 bg-cover bg-center bg-no-repeat rounded-2xl overflow-hidden"
                 style={{ backgroundImage: `url(${bg})` }}
             >
                 { /* IZQUIERDA */}
-                <div className='max-padd-container flex flex-col h-full justify-center pt-8'>
-                    <h3 className='bold-24 text-secondary font-thin'>{t('hero.exploreBooks')}</h3>
-                    <h1 className='h1 max-w-174.75 font-extrabold! leading-none'>{t('hero.findYourNextBook')}</h1>
-                    <h2 className='capitalize h2 tracking-wider'>{t('hero.upTo40Off')}</h2>
-                    <p className='max-w-xl text-gray-700 pt-5'>{t('hero.description')}</p>
+                <div className='max-padd-container flex flex-col h-full justify-center py-10'>
+                    <h3 className='bold-24 text-secondary font-thin whitespace-nowrap overflow-hidden text-ellipsis'>
+                        {t('hero.exploreBooks')}
+                    </h3>
+                    <h1
+                        className='font-extrabold leading-none mt-1'
+                        style={{
+                            fontSize: 'clamp(1.75rem, 4vw, 3.5rem)',
+                            maxWidth: '16ch',       
+                            wordBreak: 'break-word',
+                            overflowWrap: 'break-word',
+                            lineHeight: 1.1,
+                        }}
+                    >
+                        {t('hero.findYourNextBook')}
+                    </h1>
+                    <h2
+                        className='capitalize h2 tracking-wider mt-2'
+                        style={{ fontSize: 'clamp(1.1rem, 2.5vw, 1.7rem)' }}
+                    >
+                        {t('hero.upTo40Off')}
+                    </h2>
+                    <p
+                        className='max-w-xl text-gray-700 pt-4'
+                        style={{
+                            maxWidth: '50ch',
+                            overflow: 'hidden',
+                        }}
+                    >
+                        {t('hero.description')}
+                    </p>
                     { /* BOTÓN */}
-                    <div className='flex mt-4'>
-                        <Link to={'/shop'} className='bg-white text-xs font-medium pl-6 rounded-full flexCenter gap-x-6 group' >
+                    <div className='flex mt-5'>
+                        <Link
+                            to={'/shop'}
+                            className='bg-white text-xs font-medium pl-6 rounded-full flexCenter gap-x-6 group'
+                        >
                             {t('hero.checkLatestStock')}
                             <FaArrowRight className='bg-secondary text-white rounded-full h-11 w-11 p-3 m-0.75 border border-white group-hover:bg-primary group-hover:text-black transition-all duration-500' />
                         </Link>

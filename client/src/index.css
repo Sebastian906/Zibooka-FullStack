@@ -12,7 +12,7 @@
 
 html,
 body {
-    background-color: white;
+    background-color: oklch(98.7% 0.002 197.1);
     color: #2e3031;
     overflow-x: hidden;
     scroll-behavior: smooth;
