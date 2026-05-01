@@ -81,9 +81,13 @@ export class UserController {
         @Res() res: express.Response,
     ) {
         try {
-            const { token, user, isAdmin } = await this.userService.login(userLoginDto);
+            const { token, adminToken, user, isAdmin } = await this.userService.login(userLoginDto);
 
             res.cookie('token', token, this.getCookieOptions());
+
+            if (adminToken) {
+                res.cookie('adminToken', adminToken, this.getCookieOptions());
+            }
 
             return res.status(HttpStatus.OK).json({
                 success: true,

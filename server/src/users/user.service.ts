@@ -64,7 +64,7 @@ export class UserService {
         }
     }
 
-    async login(userLoginDto: UserLoginDto): Promise<{ token: string; user: UserResponseDto; expiresIn: number; isAdmin: boolean }> {
+    async login(userLoginDto: UserLoginDto): Promise<{ token: string; adminToken?: string; user: UserResponseDto; expiresIn: number; isAdmin: boolean }> {
         try {
             const { email, password } = userLoginDto;
 
@@ -78,6 +78,9 @@ export class UserService {
             const adminEmail = this.configService.get<string>('ADMIN_EMAIL');
             const isAdmin = user.email === adminEmail;
 
+            const jwtSecret = this.configService.getOrThrow<string>('JWT_SECRET');
+            const tokenExpiry = '7d';
+
             // Generar session token único
             const sessionToken = jwt.sign(
                 { session: new Date().getTime() },
@@ -88,9 +91,18 @@ export class UserService {
             const expiresIn = 7 * 24 * 60 * 60;
             const token = jwt.sign(
                 { id: user._id, session: sessionToken },
-                this.configService.getOrThrow<string>('JWT_SECRET'),
-                { expiresIn: '7d' },
+                jwtSecret,
+                { expiresIn: tokenExpiry },
             );
+
+            let adminToken: string | undefined;
+            if (isAdmin) {
+                adminToken = jwt.sign(
+                    { email: user.email },
+                    jwtSecret,
+                    { expiresIn: tokenExpiry },
+                );
+            }
 
             // Actualizar última actividad y sesión
             await this.userModel.findByIdAndUpdate(user._id, {
@@ -103,6 +115,7 @@ export class UserService {
 
             return {
                 token,
+                adminToken,
                 user: { email: user.email, name: user.name, profileImage: user.profileImage ?? '' },
                 expiresIn,
                 isAdmin,
