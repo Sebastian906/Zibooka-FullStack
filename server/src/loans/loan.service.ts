@@ -6,6 +6,7 @@ import { ProductService } from 'src/products/product.service';
 import { ReservationService } from 'src/reservations/reservation.service';
 import { Product } from 'src/products/schemas/product.schema';
 
+
 @Injectable()
 export class LoanService {
     constructor(
@@ -32,7 +33,7 @@ export class LoanService {
 
             console.log(`[LoanService] Retrieved ${loans.length} loans for user (LIFO order)`);
             return loans;
-        } catch (error) {
+        } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }
     }
@@ -87,7 +88,7 @@ export class LoanService {
 
             console.log(`[LoanService] Loan created successfully for book ${bookId} by user ${userId}`);
             return newLoan;
-        } catch (error) {
+        } catch (error: any) {
             if (error instanceof NotFoundException || error instanceof BadRequestException) {
                 throw error;
             }
@@ -113,7 +114,7 @@ export class LoanService {
                 .exec();
 
             return loan;
-        } catch (error) {
+        } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }
     }
@@ -158,8 +159,7 @@ export class LoanService {
 
             await loan.save();
 
-            // BÚSQUEDA BINARIA CRÍTICA
-            const bookISBN = (loan.bookId as any).isbn;
+            const bookId = (loan.bookId as any)._id.toString();
             let assignedToReservation = false;
             let reservationInfo: {
                 userId: Types.ObjectId;
@@ -167,38 +167,30 @@ export class LoanService {
                 priority: number;
             } | undefined;
 
-            if (bookISBN) {
-                const searchResult = this.productService.searchByISBN(bookISBN);
+            // La búsqueda por ISBN ya no actúa como gate — el libro existe por definición
+            // si el préstamo existe. La condición relevante es si hay una reserva pendiente.
+            const nextReservation = await this.reservationService.getNextPendingReservation(bookId);
 
-                if (searchResult.found) {
-                    console.log(`[LoanService] Book found via binary search: ${bookISBN}`);
+            if (nextReservation) {
+                const reservationDoc = nextReservation as any;
 
-                    const nextReservation = await this.reservationService.getNextPendingReservation(
-                        (loan.bookId as any)._id.toString()
-                    );
+                await this.reservationService.fulfillReservation(
+                    reservationDoc._id.toString()
+                );
 
-                    if (nextReservation) {
-                        const reservationDoc = nextReservation as any;
+                assignedToReservation = true;
+                reservationInfo = {
+                    userId: nextReservation.userId,
+                    reservationId: reservationDoc._id.toString(),
+                    priority: nextReservation.priority
+                };
 
-                        await this.reservationService.fulfillReservation(
-                            reservationDoc._id.toString()
-                        );
-
-                        assignedToReservation = true;
-                        reservationInfo = {
-                            userId: nextReservation.userId,
-                            reservationId: reservationDoc._id.toString(),
-                            priority: nextReservation.priority
-                        };
-
-                        console.log(`[LoanService] Book assigned to reservation: ${reservationDoc._id}`);
-                    } else {
-                        await this.productService.changeStock({
-                            productId: (loan.bookId as any)._id.toString(),
-                            inStock: true
-                        });
-                    }
-                }
+                console.log(`[LoanService] Book ${bookId} assigned to reservation: ${reservationDoc._id}`);
+            } else {
+                await this.productService.changeStock({
+                    productId: bookId,
+                    inStock: true
+                });
             }
 
             console.log(`[LoanService] Book returned: ${loanId}, Assigned to reservation: ${assignedToReservation}`);
@@ -208,7 +200,7 @@ export class LoanService {
                 assignedToReservation,
                 reservationInfo
             };
-        } catch (error) {
+        } catch (error: any) {
             if (error instanceof NotFoundException) {
                 throw error;
             }
@@ -232,7 +224,7 @@ export class LoanService {
 
             console.log(`[LoanService] Loan stats for user ${userId}:`, stats);
             return stats;
-        } catch (error) {
+        } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }
     }
@@ -252,7 +244,7 @@ export class LoanService {
 
             console.log(`[LoanService] Retrieved ${loans.length} total loans`);
             return loans;
-        } catch (error) {
+        } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }
     }

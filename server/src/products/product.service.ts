@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, InternalServerErrorException, NotFoundException, OnModuleInit } from '@nestjs/common';
+import { ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Product, ProductDocument } from './schemas/product.schema';
 import { Model } from 'mongoose';
@@ -9,10 +9,7 @@ import { ChangeStockDto } from './dto/change-stock.dto';
 import { generateISBN, estimatePageCount, assignDefaultAuthor, assignDefaultPublisher, generatePublicationYear } from './utils/migration.utils';
 
 @Injectable()
-export class ProductService implements OnModuleInit {
-    // Inventario Ordenado - Se mantiene siempre ordenado por ISBN (ascendente)
-    private sortedInventory: Product[] = [];
-
+export class ProductService {
     constructor(
         @InjectModel(Product.name) private productModel: Model<ProductDocument>,
         private configService: ConfigService,
@@ -23,10 +20,6 @@ export class ProductService implements OnModuleInit {
             api_key: this.configService.get<string>('CLDN_API_KEY'),
             api_secret: this.configService.get<string>('CLDN_SECRET_KEY'),
         });
-    }
-
-    async onModuleInit(): Promise<void> {
-        await this.initializeSortedInventory();
     }
 
     /**
@@ -75,11 +68,8 @@ export class ProductService implements OnModuleInit {
                 publicationYear: productData.publicationYear || generatePublicationYear(),
             });
 
-            // Insertar en inventario ordenado usando Insertion Sort
-            this.insertIntoSortedInventory(newProduct);
-
             return { message: 'Product added' };
-        } catch (error) {
+        } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }
     }
@@ -91,7 +81,7 @@ export class ProductService implements OnModuleInit {
     async listProducts(): Promise<Product[]> {
         try {
             return await this.productModel.find({});
-        } catch (error) {
+        } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }
     }
@@ -105,40 +95,65 @@ export class ProductService implements OnModuleInit {
             const product = await this.productModel.findById(productId);
             if (!product) throw new NotFoundException('Product not found');
             return product;
-        } catch (error) {
+        } catch (error: any) {
             if (error instanceof NotFoundException) throw error;
             throw new InternalServerErrorException(error.message);
         }
     }
 
-    // Obtiene Inventario Ordenado por ISBN
-    getSortedInventory(): Product[] {
-        return [...this.sortedInventory];
-    }
-
-    // Búsqueda lineal por título o autor
-    async searchByTitleOrAuthor(
-        searchTerm: string,
-        searchBy: 'title' | 'author' = 'title',
-    ): Promise<Product[]> {
+    /**
+     * Obtiene inventario ordenado por ISBN directamente desde MongoDB.
+     * Reemplaza el array en memoria — siempre refleja el estado actual de la BD.
+     */
+    async getSortedInventory(): Promise<Product[]> {
         try {
-            const products = await this.listProducts();
-            const results = this.linearSearch(products, searchTerm, searchBy);
-            console.log(`[ProductService] Linear search "${searchTerm}" by ${searchBy}: ${results.length} results`);
-            return results;
-        } catch (error) {
+            return await this.productModel
+                .find({ isbn: { $exists: true, $nin: [null, ''] } })
+                .sort({ isbn: 1 })
+                .lean()
+                .exec();
+        } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }
     }
 
     /**
-     * Búsqueda binaria por ISBN 
-     * Usado por LoanService para verificar reservas pendientes
+     * Búsqueda lineal por nombre o autor directamente en MongoDB.
+     * Usa $regex case-insensitive — semánticamente equivalente al loop anterior,
+     * sin necesidad de cargar todos los productos en memoria.
      */
-    searchByISBN(isbn: string): { found: boolean; product?: Product } {
-        const result = this.binarySearchByISBN(isbn);
-        console.log(`[ProductService] Binary search ISBN ${isbn}: ${result.found ? 'FOUND' : 'NOT FOUND'}`);
-        return { found: result.found, product: result.product };
+    async searchByTitleOrAuthor(
+        searchTerm: string,
+        searchBy: 'title' | 'author' = 'title',
+    ): Promise<Product[]> {
+        try {
+            // El campo en el schema es 'name', no 'title'
+            const field = searchBy === 'title' ? 'name' : 'author';
+            const results = await this.productModel
+                .find({ [field]: { $regex: searchTerm, $options: 'i' } })
+                .lean()
+                .exec();
+            console.log(`[ProductService] Linear search "${searchTerm}" by ${searchBy} (field: ${field}): ${results.length} results`);
+            return results;
+        } catch (error: any) {
+            throw new InternalServerErrorException(error.message);
+        }
+    }
+
+    /**
+     * Búsqueda por ISBN directamente en MongoDB usando el índice único sparse.
+     * equivalente a la búsqueda binaria anterior pero
+     * sin depender de estado en memoria.
+     */
+    async searchByISBN(isbn: string): Promise<{ found: boolean; product?: Product }> {
+        try {
+            const product = await this.productModel.findOne({ isbn }).lean().exec();
+            const found = product !== null;
+            console.log(`[ProductService] ISBN search ${isbn}: ${found ? 'FOUND' : 'NOT FOUND'}`);
+            return { found, product: product ?? undefined };
+        } catch (error: any) {
+            throw new InternalServerErrorException(error.message);
+        }
     }
 
     /**
@@ -155,7 +170,7 @@ export class ProductService implements OnModuleInit {
             );
             if (!product) throw new NotFoundException('Product not found');
             return { message: 'Stock Updated' };
-        } catch (error) {
+        } catch (error: any) {
             if (error instanceof NotFoundException) throw error;
             throw new InternalServerErrorException(error.message);
         }
@@ -168,7 +183,7 @@ export class ProductService implements OnModuleInit {
             const sortedProducts = this.mergeSortByValue(products, ascending);
             console.log(`[ProductService] Value report: ${sortedProducts.length} products (${ascending ? 'ASC' : 'DESC'})`);
             return sortedProducts;
-        } catch (error) {
+        } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }
     }
@@ -230,7 +245,7 @@ export class ProductService implements OnModuleInit {
 
                     migratedCount++;
                     console.log(`[Migration] ✓ ${migratedCount}/${productsWithoutISBN.length} - ${product.name}`);
-                } catch (error) {
+                } catch (error: any) {
                     const errorMsg = `Failed to migrate ${product.name}: ${error.message}`;
                     errors.push(errorMsg);
                     console.error(`[Migration] ✗ ${errorMsg}`);
@@ -242,7 +257,7 @@ export class ProductService implements OnModuleInit {
             console.log(`[Migration] ${message}`);
 
             return { message, migrated: migratedCount, skipped: skippedCount, errors };
-        } catch (error) {
+        } catch (error: any) {
             throw new InternalServerErrorException(`Migration failed: ${error.message}`);
         }
     }
@@ -264,7 +279,7 @@ export class ProductService implements OnModuleInit {
                 total > 0 ? Math.round((migrated / total) * 100) : 0;
 
             return { total, migrated, pending, percentage };
-        } catch (error) {
+        } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }
     }
@@ -324,7 +339,7 @@ export class ProductService implements OnModuleInit {
 
             console.log(`[ProductService] Stack recursion completed: ${totalValue} COP for ${books.length} books`);
             return { category, totalValue, bookCount: books.length, executionLog: log };
-        } catch (error) {
+        } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }
     }
@@ -393,19 +408,17 @@ export class ProductService implements OnModuleInit {
                 bookCount: books.length,
                 executionLog: log,
             };
-        } catch (error) {
+        } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }
     }
 
     /**
-      * Ordena productos por precio usando Merge Sort
-      * Método público accesible para todos los usuarios
-      * @param ascending - true para orden ascendente, false para descendente
-    */
+     * Ordena productos por precio usando Merge Sort.
+     * Delegado a mergeSortByValue que cubre el mismo caso.
+     */
     async sortProductsByPrice(ascending: boolean = true): Promise<Product[]> {
-        const products = await this.productModel.find();
-        return this.mergeSortByPrice(products, ascending);
+        return this.generateValueReport(ascending);
     }
 
     /**
@@ -417,7 +430,7 @@ export class ProductService implements OnModuleInit {
             const products = await this.productModel.find({});
             if (lang === 'en') return products;
             return products.map((product) => this.applyTranslation(product, lang));
-        } catch (error) {
+        } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }
     }
@@ -436,7 +449,7 @@ export class ProductService implements OnModuleInit {
             if (!product) throw new NotFoundException('Product not found');
             if (lang === 'en') return product;
             return this.applyTranslation(product, lang);
-        } catch (error) {
+        } catch (error: any) {
             if (error instanceof NotFoundException) throw error;
             throw new InternalServerErrorException(error.message);
         }
@@ -472,7 +485,7 @@ export class ProductService implements OnModuleInit {
                 message: `Translation for ${lang} updated successfully`,
                 product: updatedProduct,
             };
-        } catch (error) {
+        } catch (error: any) {
             if (error instanceof NotFoundException) throw error;
             throw new InternalServerErrorException(error.message);
         }
@@ -515,7 +528,7 @@ export class ProductService implements OnModuleInit {
                 message: `Translations updated for ${updatedCount} products`,
                 updatedCount,
             };
-        } catch (error) {
+        } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }
     }
@@ -528,125 +541,10 @@ export class ProductService implements OnModuleInit {
             const product = await this.productModel.findById(productId);
             if (!product) throw new NotFoundException('Product not found');
             return { translations: product.translations || {} };
-        } catch (error) {
+        } catch (error: any) {
             if (error instanceof NotFoundException) throw error;
             throw new InternalServerErrorException(error.message);
         }
-    }
-
-    // PRIVATE ALGORITHM HELPERS
-    // Inicializa el inventario ordenado cargando productos con ISBN
-    private async initializeSortedInventory(): Promise<void> {
-        try {
-            const products = await this.productModel
-                .find({ isbn: { $exists: true, $ne: null, $nin: [''] } })
-                .exec();
-
-            this.sortedInventory = this.insertionSortByISBN(products);
-            console.log(`[ProductService] Sorted inventory initialized with ${this.sortedInventory.length} products`);
-        } catch (error) {
-            console.error('[ProductService] Error initializing sorted inventory:', error);
-        }
-    }
-
-    /**
-     * INSERTION SORT - Ordena productos por ISBN (ascendente)
-     * Se usa para mantener el Inventario Ordenado
-     */
-    private insertionSortByISBN(products: Product[]): Product[] {
-        const arr = [...products];
-
-        for (let i = 1; i < arr.length; i++) {
-            const key = arr[i];
-            const keyISBN = key.isbn || '';
-            let j = i - 1;
-
-            while (j >= 0 && (arr[j].isbn || '') > keyISBN) {
-                arr[j + 1] = arr[j];
-                j--;
-            }
-            arr[j + 1] = key;
-        }
-
-        return arr;
-    }
-
-    // Inserta un producto en el inventario ordenado manteniendo el orden
-    private insertIntoSortedInventory(product: Product): void {
-        if (!product.isbn) {
-            console.warn('[ProductService] Product without ISBN cannot be added to sorted inventory');
-            return;
-        }
-
-        let position = this.sortedInventory.length;
-
-        for (let i = this.sortedInventory.length - 1; i >= 0; i--) {
-            if ((this.sortedInventory[i].isbn || '') > product.isbn) {
-                this.sortedInventory[i + 1] = this.sortedInventory[i];
-                position = i;
-            } else {
-                break;
-            }
-        }
-
-        this.sortedInventory[position] = product;
-        console.log(`[ProductService] Product inserted at position ${position} in sorted inventory`);
-    }
-
-    // Busca por título o autor en Inventario General (desordenado)
-    private linearSearch(
-        products: Product[],
-        searchTerm: string,
-        searchBy: 'title' | 'author',
-    ): Product[] {
-        const results: Product[] = [];
-        const searchLower = searchTerm.toLowerCase();
-
-        for (const product of products) {
-            const target =
-                searchBy === 'title' ? product.name : (product.author ?? '');
-            if (target.toLowerCase().includes(searchLower)) {
-                results.push(product);
-            }
-        }
-
-        return results;
-    }
-
-    // Busca por ISBN en Inventario Ordenado
-    // Se usa para verificar reservas pendientes al devolver libros
-    private binarySearchByISBN(isbn: string): {
-        found: boolean;
-        index: number;
-        product?: Product;
-    } {
-        if (!isbn || this.sortedInventory.length === 0) {
-            return { found: false, index: -1 };
-        }
-
-        let start = 0;
-        let end = this.sortedInventory.length - 1;
-
-        while (start <= end) {
-            const middle = Math.floor((start + end) / 2);
-            const middleISBN = this.sortedInventory[middle].isbn || '';
-
-            if (middleISBN === isbn) {
-                return {
-                    found: true,
-                    index: middle,
-                    product: this.sortedInventory[middle],
-                };
-            }
-
-            if (isbn < middleISBN) {
-                end = middle - 1;
-            } else {
-                start = middle + 1;
-            }
-        }
-
-        return { found: false, index: -1 };
     }
 
     // Ordena productos por valor (precio de oferta)
@@ -693,6 +591,43 @@ export class ProductService implements OnModuleInit {
         return result.concat(left.slice(l)).concat(right.slice(r));
     }
 
+    // Aplica la traducción a un producto
+    private applyTranslation(product: ProductDocument, lang: string): Product {
+        const productObj = product.toObject();
+        const translation = productObj.translations?.[lang];
+
+        if (translation) {
+            return {
+                ...productObj,
+                name: translation.name || productObj.name,
+                description: translation.description || productObj.description,
+                category: translation.category || productObj.category,
+            };
+        }
+
+        return productObj;
+    }
+
+    // Busca por título o autor en Inventario General (desordenado)
+    private linearSearch(
+        products: Product[],
+        searchTerm: string,
+        searchBy: 'title' | 'author',
+    ): Product[] {
+        const results: Product[] = [];
+        const searchLower = searchTerm.toLowerCase();
+
+        for (const product of products) {
+            const target =
+                searchBy === 'title' ? product.name : (product.author ?? '');
+            if (target.toLowerCase().includes(searchLower)) {
+                results.push(product);
+            }
+        }
+
+        return results;
+    }
+
     // Implementación de Merge Sort para ordenar por precio (offerPrice)
     private mergeSortByPrice(arr: Product[], ascending: boolean): Product[] {
         if (arr.length <= 1) return arr;
@@ -728,22 +663,5 @@ export class ProductService implements OnModuleInit {
         }
 
         return result.concat(left.slice(l)).concat(right.slice(r));
-    }
-
-    // Aplica la traducción a un producto
-    private applyTranslation(product: ProductDocument, lang: string): Product {
-        const productObj = product.toObject();
-        const translation = productObj.translations?.[lang];
-
-        if (translation) {
-            return {
-                ...productObj,
-                name: translation.name || productObj.name,
-                description: translation.description || productObj.description,
-                category: translation.category || productObj.category,
-            };
-        }
-
-        return productObj;
     }
 }

@@ -68,7 +68,7 @@ export class ProductController {
                 success: true,
                 message: result.message,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res
                 .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
                 .json({
@@ -89,7 +89,7 @@ export class ProductController {
                 success: true,
                 products,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res
                 .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
                 .json({
@@ -117,7 +117,7 @@ export class ProductController {
                 success: true,
                 product,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res
                 .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
                 .json({
@@ -133,7 +133,7 @@ export class ProductController {
     @Get('sorted-inventory')
     @ApiOperation({
         summary: 'Get sorted inventory by ISBN',
-        description: 'Returns the sorted inventory maintained for binary search operations'
+        description: 'Returns all products with ISBN sorted ascending, queried directly from MongoDB'
     })
     @ApiResponse({
         status: 200,
@@ -141,14 +141,14 @@ export class ProductController {
     })
     async getSortedInventory(@Res() res: Response) {
         try {
-            const products = this.productService.getSortedInventory();
+            const products = await this.productService.getSortedInventory();
 
             return res.status(HttpStatus.OK).json({
                 success: true,
                 count: products.length,
                 products,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res
                 .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
                 .json({
@@ -219,7 +219,7 @@ export class ProductController {
                 count: results.length,
                 results,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res
                 .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
                 .json({
@@ -234,8 +234,8 @@ export class ProductController {
      */
     @Post('search/binary')
     @ApiOperation({
-        summary: 'Binary search by ISBN (CRITICAL)',
-        description: 'Searches in the sorted inventory using binary search algorithm (O(log n)). Used to verify pending reservations when returning books.'
+        summary: 'Search by ISBN',
+        description: 'Finds a product by ISBN using the unique sparse index in MongoDB (O(log n) in the DB). Used to verify pending reservations when returning books.'
     })
     @ApiBody({
         schema: {
@@ -269,7 +269,7 @@ export class ProductController {
     ) {
         try {
             const { isbn } = body;
-            const result = this.productService.searchByISBN(isbn);
+            const result = await this.productService.searchByISBN(isbn);
 
             return res.status(HttpStatus.OK).json({
                 success: true,
@@ -277,7 +277,7 @@ export class ProductController {
                 found: result.found,
                 product: result.product,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res
                 .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
                 .json({
@@ -306,7 +306,7 @@ export class ProductController {
                 success: true,
                 message: result.message,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res
                 .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
                 .json({
@@ -358,7 +358,7 @@ export class ProductController {
                 count: products.length,
                 products,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res
                 .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
                 .json({
@@ -398,7 +398,7 @@ export class ProductController {
                 success: true,
                 ...result,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res
                 .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
                 .json({
@@ -443,7 +443,7 @@ export class ProductController {
                 success: true,
                 status,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res
                 .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
                 .json({
@@ -492,7 +492,7 @@ export class ProductController {
                 success: true,
                 ...result,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res
                 .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
                 .json({
@@ -542,7 +542,7 @@ export class ProductController {
                 success: true,
                 ...result,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res
                 .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
                 .json({
@@ -569,7 +569,7 @@ export class ProductController {
                 products: sortedProducts,
                 message: `Products sorted by price ${isAscending ? 'ascending' : 'descending'}`,
             };
-        } catch (error) {
+        } catch (error: any) {
             throw new BadRequestException(error.message);
         }
     }
@@ -591,7 +591,7 @@ export class ProductController {
                 language: lang,
                 products,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res
                 .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
                 .json({
@@ -622,7 +622,7 @@ export class ProductController {
                 language: lang,
                 product,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res
                 .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
                 .json({
@@ -669,7 +669,7 @@ export class ProductController {
                 message: result.message,
                 product: result.product,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res
                 .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
                 .json({
@@ -720,7 +720,7 @@ export class ProductController {
                 message: result.message,
                 updatedCount: result.updatedCount,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res
                 .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
                 .json({
@@ -746,7 +746,7 @@ export class ProductController {
                 productId,
                 translations: result.translations,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res
                 .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
                 .json({
