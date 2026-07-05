@@ -157,6 +157,34 @@ export class ProductService {
     }
 
     /**
+     * Búsqueda unified: detecta ISBN vs texto y delega al método apropiado.
+     * El cliente no necesita saber qué algoritmo se usa internamente.
+     */
+    async search(query: string, limit: number = 20): Promise<Product[]> {
+        const cleanQuery = query.replace(/-/g, '');
+        const isIsbn = /^\d{9}[\dX]$/.test(cleanQuery) || /^\d{13}$/.test(cleanQuery);
+
+        if (isIsbn) {
+            const result = await this.searchByISBN(cleanQuery);
+            return result.product ? [result.product] : [];
+        }
+
+        // Búsqueda de texto: busca en nombre Y autor simultáneamente
+        const results = await this.productModel
+            .find({
+                $or: [
+                    { name: { $regex: query, $options: 'i' } },
+                    { author: { $regex: query, $options: 'i' } }
+                ]
+            })
+            .limit(limit)
+            .lean()
+            .exec();
+
+        return results;
+    }
+
+    /**
      * Cambia el estado de stock de un producto
      * @returns Booleano. True si está en stock, false si no
      */

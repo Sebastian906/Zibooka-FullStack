@@ -1,5 +1,5 @@
 import { BadRequestException, Body, Controller, Get, HttpStatus, Param, Post, Query, Res, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
-import { ApiBody, ApiConsumes, ApiCookieAuth, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiConsumes, ApiCookieAuth, ApiExcludeEndpoint, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ProductService } from './product.service';
 import { AdminAuthGuard } from 'src/common/guards/admin-auth/admin-auth.guard';
 import { FilesInterceptor } from '@nestjs/platform-express';
@@ -8,6 +8,7 @@ import type { Response } from 'express';
 import { AddProductDto } from './dto/add-product.dto';
 import { SingleProductDto } from './dto/single-product.dto';
 import { ChangeStockDto } from './dto/change-stock.dto';
+import { SearchProductDto } from './dto/search-product.dto';
 
 @ApiTags('Product')
 @Controller('product')
@@ -159,9 +160,10 @@ export class ProductController {
     }
 
     /**
-     * Búsqueda Lineal por título o autor
+     * @deprecated Usar POST /api/product/search en su lugar
      */
     @Post('search/linear')
+    @ApiExcludeEndpoint(true)
     @ApiOperation({
         summary: 'Linear search by title or author',
         description: 'Searches in the unsorted general inventory using linear search algorithm (O(n))'
@@ -230,9 +232,10 @@ export class ProductController {
     }
 
     /**
-     * Búsqueda Binaria por ISBN (CRÍTICO)
+     * @deprecated Usar POST /api/product/search en su lugar
      */
     @Post('search/binary')
+    @ApiExcludeEndpoint()
     @ApiOperation({
         summary: 'Search by ISBN',
         description: 'Finds a product by ISBN using the unique sparse index in MongoDB (O(log n) in the DB). Used to verify pending reservations when returning books.'
@@ -276,6 +279,60 @@ export class ProductController {
                 isbn,
                 found: result.found,
                 product: result.product,
+            });
+        } catch (error: any) {
+            return res
+                .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
+                .json({
+                    success: false,
+                    message: error.message,
+                });
+        }
+    }
+
+    /**
+     * Búsqueda unificada de productos
+     * Detecta automáticamente si el query es ISBN o texto.
+     */
+    @Post('search')
+    @ApiOperation({
+        summary: 'Search products by ISBN, title or author',
+        description: 'Unified search endpoint. Automatically detects ISBN format and delegates to the appropriate search strategy.'
+    })
+    @ApiBody({ type: SearchProductDto })
+    @ApiResponse({
+        status: 200,
+        description: 'Search completed successfully',
+        schema: {
+            type: 'object',
+            properties: {
+                success: { type: 'boolean', example: true },
+                query: { type: 'string', example: 'Harry Potter' },
+                searchType: { type: 'string', enum: ['isbn', 'text'], example: 'text' },
+                count: { type: 'number', example: 3 },
+                products: { type: 'array', items: { type: 'object' } }
+            }
+        }
+    })
+    async searchProducts(
+        @Body() dto: SearchProductDto,
+        @Res() res: Response
+    ) {
+        try {
+            const { query, limit } = dto;
+            const cleanQuery = query.replace(/-/g, '');
+            const searchType: 'isbn' | 'text' = /^\d{9}[\dX]$/.test(cleanQuery) || /^\d{13}$/.test(cleanQuery)
+                ? 'isbn'
+                : 'text';
+
+            const results = await this.productService.search(query, limit);
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                query,
+                searchType,
+                count: results.length,
+                products: results,
             });
         } catch (error: any) {
             return res

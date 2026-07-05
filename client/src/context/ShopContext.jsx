@@ -255,42 +255,41 @@ const ShopContextProvider = ({ children }) => {
         }
     }
 
-    // Búsqueda Lineal usando el endpoint del backend
-    const searchByTitleOrAuthor = async (searchTerm, searchBy = 'title') => {
+    // Búsqueda unificada de productos (detecta ISBN vs texto automáticamente)
+    const searchProducts = async (query, searchBy, limit = 20) => {
         try {
-            const { data } = await axios.post('/api/product/search/linear', {
-                searchTerm,
-                searchBy
-            });
+            const body = { query, limit };
+            if (searchBy) body.searchBy = searchBy;
 
-            if (data.success) {
-                return data.results;
-            }
-            return [];
-        } catch (error) {
-            console.error('Linear search error:', error);
-            return [];
-        }
-    }
-
-    // Búsqueda Binaria usando el endpoint del backend
-    const searchByISBN = async (isbn) => {
-        try {
-            const { data } = await axios.post('/api/product/search/binary', {
-                isbn
-            });
+            const { data } = await axios.post('/api/product/search', body);
 
             if (data.success) {
                 return {
-                    found: data.found,
-                    product: data.product
+                    products: data.products,
+                    searchType: data.searchType,
+                    count: data.count
                 };
             }
-            return { found: false, product: null };
+            return { products: [], searchType: 'text', count: 0 };
         } catch (error) {
-            console.error('Binary search error:', error);
-            return { found: false, product: null };
+            console.error('Search error:', error);
+            return { products: [], searchType: 'text', count: 0 };
         }
+    }
+
+    // Wrapper para compatibilidad hacia atrás (deprecado - usar searchProducts)
+    const searchByTitleOrAuthor = async (searchTerm, searchBy = 'title') => {
+        const result = await searchProducts(searchTerm, searchBy);
+        return result.products;
+    }
+
+    // Wrapper para compatibilidad hacia atrás (deprecado - usar searchProducts)
+    const searchByISBN = async (isbn) => {
+        const result = await searchProducts(isbn);
+        if (result.products.length > 0) {
+            return { found: true, product: result.products[0] };
+        }
+        return { found: false, product: null };
     }
 
     // Ordena productos por precio usando Merge Sort del backend
@@ -1025,7 +1024,7 @@ const ShopContextProvider = ({ children }) => {
     }, [])
 
     const value = {
-        books, navigate, user, setUser, currency, searchQuery, setSearchQuery, cartItems, setCartItems, addToCart, getCartCount, getCartAmount, updateQuantity, method, setMethod, delivery_charges, showUserLogin, setShowUserLogin, isAdmin, setIsAdmin, axios, fetchBooks, fetchUser, fetchAdmin, logoutUser, availableCategories, searchByTitleOrAuthor, searchByISBN, sortProductsByPrice, applyFiltersAndSort, profileData, setProfileData, profileImage, setProfileImage, imagePreview, setImagePreview, profileLoading, setProfileLoading, countryCodes, selectedCountryCode, setSelectedCountryCode, phoneNumber, setPhoneNumber, getUserProfile, loadProfileData, handleProfileImageChange, handlePhoneChange, updateProfileField, submitProfileUpdate, cancelProfileUpdate, resetProfileForm, shelves, fetchShelves, createShelf, assignBookToShelf, removeBookFromShelf, findDangerousCombinations, optimizeShelf, getUserLoans, getUserLoanStats, createLoan, returnBook, getAllLoans, getUserReservationStats, getUserReservationList, getWaitingList, createReservation, cancelReservation, reportLoading, downloadInventoryPDF, downloadInventoryXLSX, downloadLoansPDF, downloadLoansXLSX, getRecursionPreview, currentLanguage
+        books, navigate, user, setUser, currency, searchQuery, setSearchQuery, cartItems, setCartItems, addToCart, getCartCount, getCartAmount, updateQuantity, method, setMethod, delivery_charges, showUserLogin, setShowUserLogin, isAdmin, setIsAdmin, axios, fetchBooks, fetchUser, fetchAdmin, logoutUser, availableCategories, searchProducts, searchByTitleOrAuthor, searchByISBN, sortProductsByPrice, applyFiltersAndSort, profileData, setProfileData, profileImage, setProfileImage, imagePreview, setImagePreview, profileLoading, setProfileLoading, countryCodes, selectedCountryCode, setSelectedCountryCode, phoneNumber, setPhoneNumber, getUserProfile, loadProfileData, handleProfileImageChange, handlePhoneChange, updateProfileField, submitProfileUpdate, cancelProfileUpdate, resetProfileForm, shelves, fetchShelves, createShelf, assignBookToShelf, removeBookFromShelf, findDangerousCombinations, optimizeShelf, getUserLoans, getUserLoanStats, createLoan, returnBook, getAllLoans, getUserReservationStats, getUserReservationList, getWaitingList, createReservation, cancelReservation, reportLoading, downloadInventoryPDF, downloadInventoryXLSX, downloadLoansPDF, downloadLoansXLSX, getRecursionPreview, currentLanguage
     }
 
     return (

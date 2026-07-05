@@ -8,7 +8,7 @@ export class LinearSearchDto {
     })
     @IsNotEmpty()
     @IsString()
-    searchTerm: string;
+    searchTerm!: string;
 
     @ApiProperty({
         example: 'title',
