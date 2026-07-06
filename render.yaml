@@ -52,7 +52,7 @@ services:
         sync: false
 
   # ML Service
-  - type: worker
+  - type: web
     name: ms-ml
     runtime: python
     region: oregon

@@ -1,3 +1,4 @@
+from collections import Counter
 from app.models.base import BasePredictor
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.model_selection import cross_val_score
@@ -52,7 +53,8 @@ class DemandPredictor(BasePredictor):
         self.model.fit(X_scaled, y)
 
         # Validación cruzada
-        n_folds = min(5, len(X))
+        min_class_count = min(Counter(y).values())
+        n_folds = min(5, len(X), min_class_count)
         if n_folds >= 2:
             scores = cross_val_score(
                 self.model, X_scaled, y, cv=n_folds, scoring="f1"

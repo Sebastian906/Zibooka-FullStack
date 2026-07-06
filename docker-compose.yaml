@@ -12,7 +12,7 @@ services:
       MONGO_INITDB_DATABASE: Zibooka
 
   zibooka-ml:
-    build: ./zibooka-ml
+    build: ./ms-ml
     container_name: zibooka-ml
     ports:
       - "5000:5000"
@@ -23,7 +23,7 @@ services:
     depends_on:
       - mongodb
     volumes:
-      - ./zibooka-ml/models:/app/models
+      - ./ms-ml/models:/app/models
 
   zibooka-backend:
     build: ./server

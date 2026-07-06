@@ -1,3 +1,4 @@
+from pydantic import Field
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
@@ -20,6 +21,7 @@ class Settings(BaseSettings):
 
     # Seguridad
     ml_api_key: str = ""
+    frontend_url: str = Field(default="http://localhost:5173", validation_alias="VITE_FRONTEND_URL")
 
     class Config:
         env_file = ".env"
