@@ -1,0 +1,124 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+
+export interface WaitTimePrediction {
+    predicted_wait_days: number;
+    confidence: 'low' | 'medium' | 'high';
+}
+
+export interface DemandPrediction {
+    is_high_demand: boolean;
+    probability: number;
+}
+
+export interface OverduePrediction {
+    risk_score: number;
+    is_high_risk: boolean;
+}
+
+export interface AnomalyPrediction {
+    is_anomaly: boolean;
+    anomaly_score: number;
+}
+
+@Injectable()
+export class PredictionClient {
+    private readonly baseUrl: string | undefined;
+    private readonly logger = new Logger(PredictionClient.name);
+    private readonly timeout = 5000;
+
+    constructor(private configService: ConfigService) {
+        this.baseUrl = this.configService.get<string>('ML_SERVICE_URL');
+        if (!this.baseUrl) {
+            throw new Error('ML_SERVICE_URL is not defined in environment variables');
+        }
+    }
+
+    private async post<T>(endpoint: string, body: Record<string, unknown>): Promise<T | null> {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
+            const response = await fetch(`${this.baseUrl}${endpoint}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+                signal: controller.signal,
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                this.logger.warn(`ML service returned ${response.status} for ${endpoint}`);
+                return null;
+            }
+
+            return (await response.json()) as T;
+        } catch (error) {
+            this.logger.warn(`ML service request failed for ${endpoint}: ${error}`);
+            return null;
+        }
+    }
+
+    async healthCheck(): Promise<boolean> {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+            const response = await fetch(`${this.baseUrl}/health`, {
+                signal: controller.signal,
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) return false;
+            const data = await response.json();
+            return data?.status === 'healthy';
+        } catch {
+            return false;
+        }
+    }
+
+    async predictWaitTime(features: {
+        book_popularity_score: number;
+        active_loans_count: number;
+        avg_loan_duration: number;
+        day_of_week: number;
+        user_history_count: number;
+    }): Promise<WaitTimePrediction | null> {
+        return this.post<WaitTimePrediction>('/predict/wait-time', features);
+    }
+
+    async predictDemand(features: {
+        total_loans: number;
+        unique_users: number;
+        avg_rating: number;
+        days_since_added: number;
+        category_encoded: number;
+        author_popularity: number;
+    }): Promise<DemandPrediction | null> {
+        return this.post<DemandPrediction>('/predict/demand', features);
+    }
+
+    async predictOverdue(features: {
+        loan_duration_days: number;
+        user_total_loans: number;
+        user_overdue_rate: number;
+        book_overdue_rate: number;
+        days_until_due: number;
+        is_weekend: boolean;
+    }): Promise<OverduePrediction | null> {
+        return this.post<OverduePrediction>('/predict/overdue', features);
+    }
+
+    async predictAnomaly(features: {
+        loans_per_month: number;
+        avg_loan_duration: number;
+        overdue_rate: number;
+        total_spent: number;
+        unique_categories: number;
+        weekend_loans: number;
+    }): Promise<AnomalyPrediction | null> {
+        return this.post<AnomalyPrediction>('/predict/anomaly', features);
+    }
+}

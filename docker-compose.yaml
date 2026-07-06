@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: zibooka-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: Zibooka
+
+  zibooka-ml:
+    build: ./ms-ml
+    container_name: zibooka-ml
+    ports:
+      - "5000:5000"
+    environment:
+      MONGODB_URI: mongodb://mongodb:27017
+      MONGODB_DB_NAME: Zibooka
+      LOG_LEVEL: INFO
+    depends_on:
+      - mongodb
+    volumes:
+      - ./ms-ml/models:/app/models
+
+  zibooka-backend:
+    build: ./server
+    container_name: zibooka-backend
+    ports:
+      - "4000:4000"
+    environment:
+      MONGODB_URI: mongodb://mongodb:27017
+      ML_SERVICE_URL: http://zibooka-ml:5000
+    depends_on:
+      - mongodb
+
+volumes:
+  mongodb_data:
