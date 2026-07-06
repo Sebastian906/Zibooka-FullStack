@@ -18,6 +18,8 @@ services:
         value: 4000
       - key: MONGODB_URI
         sync: false
+      - key: ML_SERVICE_URL
+        value: https://ms-ml.onrender.com
       - key: JWT_SECRET
         generateValue: true
       - key: ADMIN_EMAIL
@@ -48,6 +50,24 @@ services:
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
+
+  # ML Service
+  - type: worker
+    name: ms-ml
+    runtime: python
+    region: oregon
+    plan: free
+    rootDir: ms-ml
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB_NAME
+        value: Zibooka
+      - key: LOG_LEVEL
+        value: INFO
 
   # Frontend con proxy
   - type: web

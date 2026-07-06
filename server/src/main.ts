@@ -20,7 +20,6 @@ async function bootstrap() {
 
   // Permitir múltiples origenes
   const allowedOrigins = [
-    'http://localhost:5173',
     'https://zibooka.onrender.com',
     'https://zibooka-frontend.onrender.com',
     process.env.VITE_FRONTEND_URL,

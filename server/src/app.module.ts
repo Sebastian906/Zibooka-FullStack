@@ -16,6 +16,7 @@ import { ReservationModule } from './reservations/reservation.module';
 import { ReportModule } from './reports/report.module';
 import { EmailModule } from './email/email.module';
 import { MigrationModule } from './migration/migration.module';
+import { PredictionModule } from './prediction/prediction.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { MigrationModule } from './migration/migration.module';
     ReportModule,
     EmailModule,
     MigrationModule,
+    PredictionModule,
   ],
   controllers: [AppController, CartController],
   providers: [AppService],

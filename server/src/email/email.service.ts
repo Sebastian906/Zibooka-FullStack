@@ -6,7 +6,7 @@ import * as nodemailer from 'nodemailer';
 export class EmailService implements OnModuleInit {
     private transporter: nodemailer.Transporter;
 
-    constructor(private configService: ConfigService) {}
+    constructor(private configService: ConfigService) { }
 
     // Called by NestJS after dependency injection is complete.
     async onModuleInit(): Promise<void> {
@@ -73,9 +73,10 @@ export class EmailService implements OnModuleInit {
         resetToken: string,
         userName: string,
     ): Promise<void> {
-        const frontendUrl =
-            this.configService.get<string>('VITE_FRONTEND_URL') ||
-            'http://localhost:5173';
+        const frontendUrl = this.configService.get<string>('VITE_FRONTEND_URL');
+        if (!frontendUrl) {
+            throw new Error('VITE_FRONTEND_URL is not defined in environment variables');
+        }
         const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
 
         const mailOptions = {
