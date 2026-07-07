@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Logger } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { PredictionClient } from './prediction-client.service';
 import { DemandListRequestDto } from './dto/demand-list.dto';
 import { AdminAuthGuard } from '../common/guards/admin-auth/admin-auth.guard';
@@ -21,7 +21,7 @@ export class PredictionController {
         });
 
         if (!result) {
-            throw new Error('ML service unavailable or model not trained');
+            throw new ServiceUnavailableException('ML service unavailable or model not trained');
         }
 
         return result;
@@ -33,7 +33,7 @@ export class PredictionController {
         this.logger.log('Training demand model from database');
         const result = await this.predictionClient.trainDemandFromDatabase();
         if (!result) {
-            throw new Error('ML training failed');
+            throw new ServiceUnavailableException('ML training failed');
         }
         return result;
     }
