@@ -513,7 +513,8 @@
         "totalProducts": "Total Products",
         "recentOrders": "Recent Orders",
         "topProducts": "Top Products",
-        "logout": "Logout"
+        "logout": "Logout",
+        "predictions": "AI Predictions"
     },
     "validation": {
         "required": "This field is required",

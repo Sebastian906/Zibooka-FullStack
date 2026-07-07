@@ -6,7 +6,7 @@ from app.models import (
     AnomalyDetector,
 )
 from app.schemas.wait_time import WaitTimeRequest, WaitTimeResponse
-from app.schemas.demand import DemandRequest, DemandResponse
+from app.schemas.demand import DemandListRequest, DemandListResponse, DemandListItem
 from app.schemas.overdue import OverdueRequest, OverdueResponse
 from app.schemas.anomaly import AnomalyRequest, AnomalyResponse
 from app.config import settings
@@ -91,27 +91,136 @@ async def predict_wait_time(request: WaitTimeRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 # DEMAND
-@router.post("/demand", response_model=DemandResponse)
-async def predict_demand(request: DemandRequest):
-    """Predice si un libro tendrá alta demanda."""
+@router.post("/demand/list", response_model=DemandListResponse)
+async def predict_demand_for_all_books(request: DemandListRequest):
+    """
+    Predice demanda para todos los libros activos y retorna
+    los que tienen mayor probabilidad de alta demanda.
+    """
     model = await _get_model(DemandPredictor, "demand")
     if model is None:
         raise HTTPException(
             status_code=503,
-            detail="Model not available. Train the model first.",
+            detail="Demand model not available. Train the model first via /train/demand/from-database.",
         )
 
     try:
-        features_df = DataFrame([request.model_dump()])
-        prediction = model.predict(features_df)
-        proba = model.predict_proba(features_df)
+        # Obtener libros activos de MongoDB
+        products_coll = mongodb.get_collection("products")
+        cursor = products_coll.find({"inStock": True}, {"_id": 1, "name": 1, "category": 1})
+        products = await cursor.to_list(length=None)
 
-        return DemandResponse(
-            is_high_demand=bool(prediction[0]),
-            probability=round(float(proba[0][1]), 4),
+        if not products:
+            return DemandListResponse(predictions=[], total_books_evaluated=0)
+
+        # Obtener estadísticas de préstamos
+        loans_coll = mongodb.get_collection("loans")
+        now = pd.Timestamp.now()
+
+        predictions = []
+        for product in products:
+            book_id = str(product["_id"])
+
+            # Contar préstamos históricos
+            total_loans = await loans_coll.count_documents({"bookId": product["_id"]})
+
+            # Préstamos últimos 30 días
+            cutoff_30 = now - pd.Timedelta(days=30)
+            loans_30d = await loans_coll.count_documents({
+                "bookId": product["_id"],
+                "loanDate": {"$gte": cutoff_30.to_pydatetime()}
+            })
+
+            # Préstamos últimos 90 días
+            cutoff_90 = now - pd.Timedelta(days=90)
+            loans_90d = await loans_coll.count_documents({
+                "bookId": product["_id"],
+                "loanDate": {"$gte": cutoff_90.to_pydatetime()}
+            })
+
+            # Usuarios únicos
+            unique_users_pipeline = [
+                {"$match": {"bookId": product["_id"]}},
+                {"$group": {"_id": "$userId"}},
+                {"$count": "total"}
+            ]
+            unique_result = await loans_coll.aggregate(unique_users_pipeline).to_list(1)
+            unique_users = unique_result[0]["total"] if unique_result else 0
+
+            # Último préstamo
+            last_loan_cursor = loans_coll.find(
+                {"bookId": product["_id"]}
+            ).sort("loanDate", -1).limit(1)
+            last_loans = await last_loan_cursor.to_list(1)
+
+            if last_loans:
+                last_loan_date = pd.Timestamp(last_loans[0]["loanDate"])
+                days_since_last = max((now - last_loan_date).days, 0)
+            else:
+                days_since_last = 999
+
+            # Construir feature vector
+            feature_row = {
+                "month": now.month,
+                "week_of_year": now.isocalendar()[1],
+                "day_of_week": now.dayofweek,
+                "is_semester_start": int(now.isocalendar()[1] in range(1, 4) or now.isocalendar()[1] in range(16, 19)),
+                "loan_count_prev_30d": loans_30d,
+                "loan_count_prev_90d": loans_90d,
+                "total_loans_all_time": total_loans,
+                "avg_loan_duration_days": 14.0,  # Default, se puede calcular
+                "days_since_last_loan": days_since_last,
+                "unique_users_loaned": unique_users,
+                "stock_available": 1,
+            }
+
+            # Agregar category_encoded
+            category = product.get("category", "unknown")
+            if model.label_encoder is not None:
+                try:
+                    cat_encoded = int(model.label_encoder.transform([category])[0])
+                except ValueError:
+                    cat_encoded = 0
+            else:
+                cat_encoded = 0
+            feature_row["category_encoded"] = cat_encoded
+
+            # Predecir
+            import pandas as pd
+            features_df = pd.DataFrame([feature_row])
+            # Asegurar que las columnas coinciden con las del entrenamiento
+            for col in model.feature_names:
+                if col not in features_df.columns:
+                    features_df[col] = 0
+            features_df = features_df[model.feature_names]
+
+            proba = model.predict_proba(features_df)
+            demand_score = float(proba[0][1])
+
+            if demand_score >= request.min_score:
+                predictions.append(DemandListItem(
+                    product_id=book_id,
+                    title=product.get("name", "Unknown"),
+                    category=category,
+                    demand_score=round(demand_score, 4),
+                    predicted_loans=loans_30d,  # Proxy
+                    stock_available=bool(product.get("inStock", True)),
+                ))
+
+        # Ordenar por score descendente y limitar
+        predictions.sort(key=lambda x: x.demand_score, reverse=True)
+        predictions = predictions[: request.limit]
+
+        return DemandListResponse(
+            predictions=predictions,
+            model_version="1.0",
+            model_metrics=model.training_metrics,
+            total_books_evaluated=len(products),
+            threshold_used=model.threshold,
         )
+
     except Exception as e:
-        logger.error(f"Prediction error: {e}")
+        logger.error(f"Demand list prediction error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 # OVERDUE 
