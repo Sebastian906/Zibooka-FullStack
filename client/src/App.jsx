@@ -26,6 +26,7 @@ import MyReservations from './pages/MyReservations'
 import MyLoans from './pages/MyLoans'
 import AdminLoans from './pages/admin/AdminLoans'
 import Reports from './pages/admin/Reports'
+import DemandPredictions from './pages/admin/DemandPredictions'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 
@@ -66,6 +67,7 @@ const App = () => {
           <Route path='shelves' element={<Shelves />} />
           <Route path='loans' element={<AdminLoans />} />
           <Route path='reports' element={<Reports />} />
+          <Route path='predictions' element={<DemandPredictions />} />
         </Route>
       </Routes>
       {!isAdminPath && !isForgotPasswordPath && !isResetPasswordPath && <Footer />}

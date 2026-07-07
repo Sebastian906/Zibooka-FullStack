@@ -12,6 +12,7 @@ from app.schemas.anomaly import AnomalyTrainRequest, AnomalyTrainResponse
 from app.config import settings
 from app.database import mongodb
 from pandas import DataFrame
+import pandas as pd
 import os
 import logging
 
@@ -172,6 +173,61 @@ async def train_demand(request: DemandTrainRequest):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Training error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/demand/from-database")
+async def train_demand_from_database():
+    """
+    Entrena el modelo de demanda usando datos directamente de MongoDB.
+    Construye features temporales y de ventanas (30d, 90d).
+    """
+    if not mongodb.is_connected:
+        raise HTTPException(status_code=503, detail="Database not connected")
+
+    try:
+        predictor = DemandPredictor(threshold=settings.demand_threshold)
+        data = await predictor.build_training_data_from_db(mongodb)
+
+        if data.empty or len(data) < 5:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Insufficient data: {len(data)} records. Minimum 5 required."
+            )
+
+        metrics = predictor.train(data)
+
+        # Validar umbral mínimo de calidad
+        if metrics.get("f1", 0) < 0.5:
+            logger.warning(
+                f"Low F1 score: {metrics['f1']:.4f}. "
+                "Model may not be reliable."
+            )
+
+        # Guardar en MongoDB y disco
+        await _save_model_to_mongodb("demand", predictor)
+        await _save_model_to_disk("demand", predictor)
+
+        # Log histórico de métricas 
+        if mongodb.is_connected:
+            logs_coll = mongodb.get_collection("training_logs")
+            await logs_coll.insert_one({
+                "model_name": "demand",
+                "metrics": metrics,
+                "feature_importance": predictor.get_feature_importance(),
+                "n_samples": len(data),
+                "trained_at": pd.Timestamp.now().isoformat(),
+            })
+
+        return {
+            "message": "Demand model trained from database successfully",
+            "metrics": metrics,
+            "feature_importance": predictor.get_feature_importance(),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Demand training error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/overdue", response_model=OverdueTrainResponse)

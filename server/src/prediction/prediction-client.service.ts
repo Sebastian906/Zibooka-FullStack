@@ -21,6 +21,23 @@ export interface AnomalyPrediction {
     anomaly_score: number;
 }
 
+export interface DemandListItem {
+    product_id: string;
+    title: string;
+    category: string;
+    demand_score: number;
+    predicted_loans: number;
+    stock_available: boolean;
+}
+
+export interface DemandListPrediction {
+    predictions: DemandListItem[];
+    model_version: string;
+    model_metrics: Record<string, unknown>;
+    total_books_evaluated: number;
+    threshold_used: number;
+}
+
 @Injectable()
 export class PredictionClient {
     private readonly baseUrl: string | undefined;
@@ -98,6 +115,22 @@ export class PredictionClient {
         author_popularity: number;
     }): Promise<DemandPrediction | null> {
         return this.post<DemandPrediction>('/predict/demand', features);
+    }
+
+    async predictDemandList(features: {
+        days_ahead: number;
+        limit: number;
+        min_score: number;
+    }): Promise<DemandListPrediction | null> {
+        return this.post<DemandListPrediction>('/predict/demand/list', features);
+    }
+
+    async trainDemandFromDatabase(): Promise<{
+        message: string;
+        metrics: Record<string, unknown>;
+        feature_importance: Record<string, number>;
+    } | null> {
+        return this.post('/train/demand/from-database', {});
     }
 
     async predictOverdue(features: {
