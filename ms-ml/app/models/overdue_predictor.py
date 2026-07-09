@@ -84,8 +84,8 @@ class OverduePredictor(BasePredictor):
             
             # Métricas para modelo sin entrenar
             self.training_metrics = {
-                "accuracy": 1.0 if self._single_class_value == 0 else 0.0,
-                "f1": 0.0,
+                "accuracy": 1.0,
+                "f1": 1.0 if self._single_class_value == 1 else 0.0,
                 "roc_auc": 0.5,
                 "cv_auc": 0.5,
                 "n_samples": len(X),

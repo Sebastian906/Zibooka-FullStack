@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpStatus, Param, Post, Put, Query, Res, SetMetadata, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpStatus, NotFoundException, Param, Post, Put, Query, Res, SetMetadata, UseGuards } from '@nestjs/common';
 import { ApiBody, ApiCookieAuth, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { LoanService } from './loan.service';
 import { AuthGuard } from 'src/common/guards/auth/auth.guard';
@@ -286,6 +286,12 @@ export class LoanController {
                 alert,
             });
         } catch (error: any) {
+            if (error instanceof NotFoundException) {
+                return res.status(HttpStatus.NOT_FOUND).json({
+                    success: false,
+                    message: error.message,
+                });
+            }
             return res.status(HttpStatus.BAD_REQUEST).json({
                 success: false,
                 message: error.message,
