@@ -130,8 +130,8 @@ def _prepare_demand_data(
     result["category_encoded"] = 0  # Default
     result["author_popularity"] = 5.0  # Default
 
-    # Target
-    result["loan_count"] = result["total_loans"]
+    # Target (DemandPredictor espera "loan_count_target")
+    result["loan_count_target"] = result["total_loans"]
 
     return result[
         [
@@ -141,7 +141,7 @@ def _prepare_demand_data(
             "days_since_added",
             "category_encoded",
             "author_popularity",
-            "loan_count",
+            "loan_count_target",
         ]
     ]
 

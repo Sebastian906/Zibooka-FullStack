@@ -7,7 +7,7 @@ from app.models import (
 )
 from app.schemas.wait_time import WaitTimeRequest, WaitTimeResponse
 from app.schemas.demand import DemandListRequest, DemandListResponse, DemandListItem
-from app.schemas.overdue import OverdueRequest, OverdueResponse
+from app.schemas.overdue import OverdueRequest, OverdueExtendedRequest, OverdueResponse
 from app.schemas.anomaly import AnomalyRequest, AnomalyResponse
 from app.config import settings
 from app.database import mongodb
@@ -242,6 +242,54 @@ async def predict_overdue(request: OverdueRequest):
         return OverdueResponse(
             risk_score=round(risk_score, 4),
             is_high_risk=risk_score >= settings.overdue_risk_threshold,
+        )
+    except Exception as e:
+        logger.error(f"Prediction error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# OVERDUE EXTENDED
+@router.post("/overdue-extended", response_model=OverdueResponse)
+async def predict_overdue_extended(request: OverdueExtendedRequest):
+    """Predice el riesgo de retraso con 13 features extendidas."""
+    model = await _get_model(OverduePredictor, "overdue")
+    if model is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Model not available. Train the model first.",
+        )
+
+    try:
+        # Verificar el modo del modelo
+        feature_mode = getattr(model, 'feature_mode', 'basic')
+        
+        if feature_mode == 'extended':
+            # Modelo entrenado con 13 features extendidas
+            features_df = DataFrame([request.model_dump()])
+            if hasattr(model, 'predict_with_features'):
+                risk_scores, top_features = model.predict_with_features(features_df)
+            else:
+                risk_scores = model.predict_risk(features_df)
+                top_features = {}
+        else:
+            # Modelo entrenado con 6 features básicas - mapear desde extendidas
+            basic_features = {
+                'loan_duration_days': 14,  # Default
+                'user_total_loans': request.user_previous_loans_count,
+                'user_overdue_rate': request.user_overdue_rate,
+                'book_overdue_rate': request.book_overdue_rate,
+                'days_until_due': 14,  # Default
+                'is_weekend': bool(request.is_weekend),
+            }
+            features_df = DataFrame([basic_features])
+            risk_scores = model.predict_risk(features_df)
+            top_features = {}
+
+        risk_score = float(risk_scores[0])
+
+        return OverdueResponse(
+            risk_score=round(risk_score, 4),
+            is_high_risk=risk_score >= settings.overdue_risk_threshold,
+            top_features=top_features if top_features else None,
         )
     except Exception as e:
         logger.error(f"Prediction error: {e}")
