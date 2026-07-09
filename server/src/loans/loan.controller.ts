@@ -1,5 +1,5 @@
-import { Body, Controller, Get, HttpStatus, Param, Post, Res, SetMetadata, UseGuards } from '@nestjs/common';
-import { ApiBody, ApiCookieAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, HttpStatus, NotFoundException, Param, Post, Put, Query, Res, SetMetadata, UseGuards } from '@nestjs/common';
+import { ApiBody, ApiCookieAuth, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { LoanService } from './loan.service';
 import { AuthGuard } from 'src/common/guards/auth/auth.guard';
 import { UserId } from 'src/common/decorators/users/user-id.decorator';
@@ -44,7 +44,7 @@ export class LoanController {
                 count: history.length,
                 loans: history,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
                 success: false,
                 message: error.message,
@@ -74,7 +74,6 @@ export class LoanController {
         @Res() res: Response
     ) {
         try {
-            // Note: LoanService expects (bookId, userId)
             const loan = await this.loanService.createLoan(createLoanDto.bookId, userId);
 
             return res.status(HttpStatus.CREATED).json({
@@ -82,7 +81,7 @@ export class LoanController {
                 message: 'Loan created successfully',
                 loan,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res.status(HttpStatus.BAD_REQUEST).json({
                 success: false,
                 message: error.message,
@@ -114,7 +113,7 @@ export class LoanController {
                 success: true,
                 loan,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
                 success: false,
                 message: error.message,
@@ -156,7 +155,7 @@ export class LoanController {
                 assignedToReservation: result.assignedToReservation,
                 reservationInfo: result.reservationInfo,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res.status(HttpStatus.BAD_REQUEST).json({
                 success: false,
                 message: error.message,
@@ -179,7 +178,7 @@ export class LoanController {
                 success: true,
                 stats,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
                 success: false,
                 message: error.message,
@@ -217,7 +216,117 @@ export class LoanController {
                 count: loans.length,
                 loans,
             });
-        } catch (error) {
+        } catch (error: any) {
+            return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+                success: false,
+                message: error.message,
+            });
+        }
+    }
+
+    @Get('admin/high-risk')
+    @SkipAuthGuard()
+    @UseGuards(AdminAuthGuard)
+    @ApiCookieAuth('adminToken')
+    @ApiOperation({
+        summary: 'Get high risk loans (Admin only)',
+        description: 'Returns loans flagged as high risk for review'
+    })
+    @ApiQuery({ name: 'reviewed', required: false, type: Boolean, description: 'Filter by reviewed status' })
+    @ApiResponse({
+        status: 200,
+        description: 'High risk loans retrieved successfully',
+    })
+    async getHighRiskLoans(
+        @Query('reviewed') reviewed: string | undefined,
+        @Res() res: Response
+    ) {
+        try {
+            const reviewedBool = reviewed !== undefined ? reviewed === 'true' : undefined;
+            const highRiskLoans = await this.loanService.getHighRiskLoans(reviewedBool);
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                count: highRiskLoans.length,
+                highRiskLoans,
+            });
+        } catch (error: any) {
+            return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+                success: false,
+                message: error.message,
+            });
+        }
+    }
+
+    @Put('admin/high-risk/:alertId/review')
+    @SkipAuthGuard()
+    @UseGuards(AdminAuthGuard)
+    @ApiCookieAuth('adminToken')
+    @ApiOperation({
+        summary: 'Review a high risk loan alert (Admin only)',
+        description: 'Marks a high risk loan alert as reviewed with admin notes'
+    })
+    @ApiParam({ name: 'alertId', description: 'High Risk Loan Alert ID' })
+    @ApiBody({ schema: { properties: { adminNotes: { type: 'string' } } } })
+    @ApiResponse({
+        status: 200,
+        description: 'Alert reviewed successfully',
+    })
+    async reviewHighRiskLoan(
+        @Param('alertId') alertId: string,
+        @Body('adminNotes') adminNotes: string,
+        @Res() res: Response
+    ) {
+        try {
+            const alert = await this.loanService.reviewHighRiskLoan(alertId, adminNotes);
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                message: 'Alert reviewed successfully',
+                alert,
+            });
+        } catch (error: any) {
+            if (error instanceof NotFoundException) {
+                return res.status(HttpStatus.NOT_FOUND).json({
+                    success: false,
+                    message: error.message,
+                });
+            }
+            return res.status(HttpStatus.BAD_REQUEST).json({
+                success: false,
+                message: error.message,
+            });
+        }
+    }
+
+    @Post('admin/train-overdue')
+    @SkipAuthGuard()
+    @UseGuards(AdminAuthGuard)
+    @ApiCookieAuth('adminToken')
+    @ApiOperation({
+        summary: 'Train overdue prediction model (Admin only)',
+        description: 'Triggers retraining of the overdue prediction model using database data'
+    })
+    @ApiResponse({
+        status: 200,
+        description: 'Model trained successfully',
+    })
+    async trainOverdueModel(@Res() res: Response) {
+        try {
+            const result = await this.loanService['predictionClient'].trainOverdueFromDatabase();
+
+            if (!result) {
+                return res.status(HttpStatus.SERVICE_UNAVAILABLE).json({
+                    success: false,
+                    message: 'ML service unavailable or training failed',
+                });
+            }
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                ...result,
+            });
+        } catch (error: any) {
             return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
                 success: false,
                 message: error.message,

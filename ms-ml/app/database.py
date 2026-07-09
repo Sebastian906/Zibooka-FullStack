@@ -13,18 +13,33 @@ class MongoDB:
 
     async def connect(self):
         try:
+            # Construir URI con parámetros para Atlas
+            uri = settings.mongodb_uri
+            
+            # Si la URI no tiene parámetros, agregarlos
+            if "?" not in uri:
+                uri += "?retryWrites=true&w=majority&directConnection=false"
+            
+            logger.info(f"Connecting to MongoDB...")
+            
             self.client = AsyncIOMotorClient(
-                settings.mongodb_uri,
-                serverSelectionTimeoutMS=5000,
+                uri,
+                serverSelectionTimeoutMS=10000,
+                connectTimeoutMS=10000,
+                socketTimeoutMS=10000,
+                maxPoolSize=10,
             )
+            
             self.db = self.client[settings.mongodb_db_name]
+            
+            # Verificar conexión con ping
             await self.db.command("ping")
             self._connected = True
             logger.info("MongoDB connected successfully")
-        except ConnectionFailure as e:
+        except Exception as e:
             logger.error(f"MongoDB connection failed: {e}")
             self._connected = False
-            raise
+            # No lanzar excepción para permitir que el servicio funcione en modo limitado
 
     async def close(self):
         if self.client:

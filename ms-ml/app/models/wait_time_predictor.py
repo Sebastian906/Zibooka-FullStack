@@ -43,20 +43,27 @@ class WaitTimePredictor(BasePredictor):
 
         # Validación cruzada (mínimo 2 folds si hay pocos datos)
         n_folds = min(5, len(X))
+        cv_r2 = 0.0
         if n_folds >= 2:
-            scores = cross_val_score(
-                self.model, X_scaled, y, cv=n_folds, scoring="r2"
-            )
-            cv_r2 = float(np.mean(scores))
-        else:
-            cv_r2 = 0.0
+            try:
+                scores = cross_val_score(
+                    self.model, X_scaled, y, cv=n_folds, scoring="r2"
+                )
+                cv_r2 = float(np.nanmean(scores))
+                if np.isnan(cv_r2):
+                    cv_r2 = 0.0
+            except Exception as e:
+                logger.warning(f"Cross-validation failed: {e}")
+                cv_r2 = 0.0
 
         # Métricas
         predictions = self.model.predict(X_scaled)
         mse = float(np.mean((y - predictions) ** 2))
-        rmse = float(np.sqrt(mse))
+        rmse = float(np.sqrt(mse)) if not np.isnan(np.sqrt(mse)) else 0.0
         mae = float(np.mean(np.abs(y - predictions)))
         r2 = float(self.model.score(X_scaled, y))
+        if np.isnan(r2):
+            r2 = 0.0
 
         self.training_metrics = {
             "r2": r2,

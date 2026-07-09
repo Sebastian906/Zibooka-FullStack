@@ -24,10 +24,13 @@ export class Loan {
     status: string;
 
     @Prop({ type: Number, default: 0 })
-    lateFee: number; 
+    lateFee: number;
 
     @Prop({ type: String })
     notes?: string;
+
+    @Prop({ type: Number, min: 0, max: 1, default: 0.5 })
+    riskScore: number;  // Probabilidad de overdue (0-1)
 }
 
 export const LoanSchema = SchemaFactory.createForClass(Loan);

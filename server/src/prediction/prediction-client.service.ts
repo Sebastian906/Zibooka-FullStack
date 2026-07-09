@@ -14,6 +14,7 @@ export interface DemandPrediction {
 export interface OverduePrediction {
     risk_score: number;
     is_high_risk: boolean;
+    top_features?: Record<string, number>;
 }
 
 export interface AnomalyPrediction {
@@ -133,6 +134,9 @@ export class PredictionClient {
         return this.post('/train/demand/from-database', {});
     }
 
+    /**
+     * Predice riesgo de overdue con las 6 features existentes
+     */
     async predictOverdue(features: {
         loan_duration_days: number;
         user_total_loans: number;
@@ -144,6 +148,28 @@ export class PredictionClient {
         return this.post<OverduePrediction>('/predict/overdue', features);
     }
 
+    /**
+     * Predice riesgo de overdue con 13 features extendidas
+     * Incluye features de usuario, libro y contexto temporal
+     */
+    async predictOverdueExtended(features: {
+        user_previous_loans_count: number;
+        user_overdue_count: number;
+        user_overdue_rate: number;
+        user_avg_late_days: number;
+        user_days_since_last_loan: number;
+        user_total_loans_completed: number;
+        book_overdue_rate: number;
+        book_total_loans: number;
+        book_avg_loan_duration: number;
+        day_of_week_loan: number;
+        category_encoded: number;
+        is_weekend: number;
+        loan_hour: number;
+    }): Promise<OverduePrediction | null> {
+        return this.post<OverduePrediction>('/predict/overdue-extended', features);
+    }
+
     async predictAnomaly(features: {
         loans_per_month: number;
         avg_loan_duration: number;
@@ -153,5 +179,16 @@ export class PredictionClient {
         weekend_loans: number;
     }): Promise<AnomalyPrediction | null> {
         return this.post<AnomalyPrediction>('/predict/anomaly', features);
+    }
+
+    /**
+     * Entrena el modelo de overdue con datos de la base de datos
+     */
+    async trainOverdueFromDatabase(): Promise<{
+        message: string;
+        metrics: Record<string, unknown>;
+        feature_importance: Record<string, number>;
+    } | null> {
+        return this.post('/train/overdue/from-database', {});
     }
 }
