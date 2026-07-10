@@ -514,7 +514,8 @@
         "recentOrders": "Recent Orders",
         "topProducts": "Top Products",
         "logout": "Logout",
-        "predictions": "AI Predictions"
+        "predictions": "AI Predictions",
+        "anomalies": "AI Anomalies"
     },
     "validation": {
         "required": "This field is required",

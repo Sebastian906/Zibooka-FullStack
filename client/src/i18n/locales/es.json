@@ -514,7 +514,8 @@
         "recentOrders": "Pedidos Recientes",
         "topProducts": "Productos Destacados",
         "logout": "Cerrar Sesión",
-        "predictions": "Predicciones IA"
+        "predictions": "Predicciones IA",
+        "anomalies": "Anomalias IA"
     },
     "validation": {
         "required": "Este campo es requerido",

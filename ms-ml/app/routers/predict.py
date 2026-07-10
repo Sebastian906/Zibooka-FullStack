@@ -4,11 +4,15 @@ from app.models import (
     DemandPredictor,
     OverduePredictor,
     AnomalyDetector,
+    ShelfAnomalyDetector,
 )
 from app.schemas.wait_time import WaitTimeRequest, WaitTimeResponse
 from app.schemas.demand import DemandListRequest, DemandListResponse, DemandListItem
 from app.schemas.overdue import OverdueRequest, OverdueExtendedRequest, OverdueResponse
-from app.schemas.anomaly import AnomalyRequest, AnomalyResponse
+from app.schemas.anomaly import (
+    AnomalyRequest, AnomalyResponse,
+    ShelfAnomaliesResponse, ShelfAnomalyItem,
+)
 from app.config import settings
 from app.database import mongodb
 from pandas import DataFrame
@@ -438,10 +442,10 @@ async def predict_overdue_extended(request: OverdueExtendedRequest):
         logger.error(f"Prediction error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# ANOMALY
+# ANOMALY (legacy - loan behavior)
 @router.post("/anomaly", response_model=AnomalyResponse)
 async def predict_anomaly(request: AnomalyRequest):
-    """Detecta comportamientos anómalos."""
+    """Detecta comportamientos anómalos en patrones de préstamo."""
     model = await _get_model(AnomalyDetector, "anomaly")
     if model is None:
         raise HTTPException(
@@ -461,3 +465,193 @@ async def predict_anomaly(request: AnomalyRequest):
     except Exception as e:
         logger.error(f"Prediction error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# SHELF ANOMALY DETECTION
+# Mapeo de ubicaciones a scores de accesibilidad
+LOCATION_ACCESS_MAP = {
+    "Fiction Section": 4,
+    "Non-Fiction Section": 3,
+    "Academic Section": 2,
+    "Children Section": 5,
+    "History Section": 2,
+    "Science Section": 3,
+    "Adventure Section": 4,
+    "Business Section": 3,
+    "Health Section": 3,
+    "Horror Section": 2,
+}
+
+@router.get("/anomalies", response_model=ShelfAnomaliesResponse)
+async def get_shelf_anomalies():
+    """
+    Detecta anomalías en la distribución de estantes.
+
+    Construye features en tiempo real desde MongoDB, aplica el modelo
+    entrenado y retorna anomalías clasificadas con recomendaciones.
+    """
+    model = await _get_model(ShelfAnomalyDetector, "shelf_anomaly")
+    if model is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Shelf anomaly model not available. Train via /train/anomaly/from-database first.",
+        )
+
+    try:
+        shelves_data = await _build_shelf_anomaly_features()
+        if shelves_data.empty:
+            return ShelfAnomaliesResponse(
+                anomalies=[],
+                total_shelves_evaluated=0,
+                total_anomalies=0,
+                model_metrics=model.training_metrics,
+            )
+
+        anomalies = model.detect_anomalies(shelves_data)
+
+        return ShelfAnomaliesResponse(
+            anomalies=[ShelfAnomalyItem(**a) for a in anomalies],
+            total_shelves_evaluated=len(shelves_data),
+            total_anomalies=len(anomalies),
+            model_metrics=model.training_metrics,
+        )
+    except Exception as e:
+        logger.error(f"Shelf anomaly detection error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def _build_shelf_anomaly_features() -> pd.DataFrame:
+    """
+    Construye features de estantes en tiempo real desde MongoDB.
+    Misma lógica que _build_shelf_anomaly_training_data_from_db en train.py
+    pero para predicción en vivo.
+    """
+    shelves_coll = mongodb.get_collection("shelves")
+    products_coll = mongodb.get_collection("products")
+    loans_coll = mongodb.get_collection("loans")
+
+    pipeline = [
+        {
+            "$lookup": {
+                "from": "products",
+                "localField": "books",
+                "foreignField": "_id",
+                "as": "books_detail",
+            }
+        },
+    ]
+
+    cursor = shelves_coll.aggregate(pipeline)
+    shelves = await cursor.to_list(length=None)
+
+    if not shelves:
+        return pd.DataFrame()
+
+    now = pd.Timestamp.now(tz=None)
+    cutoff_30d = now - pd.Timedelta(days=30)
+
+    total_loans_30d = await loans_coll.count_documents(
+        {"loanDate": {"$gte": cutoff_30d.to_pydatetime()}}
+    )
+
+    loans_cursor = loans_coll.find(
+        {"loanDate": {"$gte": cutoff_30d.to_pydatetime()}},
+        {"bookId": 1},
+    )
+    recent_loans = await loans_cursor.to_list(length=None)
+
+    book_loan_counts_30d = {}
+    for loan in recent_loans:
+        bid = str(loan.get("bookId", ""))
+        book_loan_counts_30d[bid] = book_loan_counts_30d.get(bid, 0) + 1
+
+    category_loan_counts = {}
+    for loan in recent_loans:
+        bid = loan.get("bookId")
+        if bid:
+            product = await products_coll.find_one({"_id": bid}, {"category": 1})
+            if product:
+                cat = product.get("category", "unknown")
+                category_loan_counts[cat] = category_loan_counts.get(cat, 0) + 1
+
+    rows = []
+    for shelf in shelves:
+        shelf_id = shelf["_id"]
+        code = shelf.get("code", "UNKNOWN")
+        max_weight = shelf.get("maxWeight", 8)
+        current_weight = shelf.get("currentWeight", 0)
+        books_detail = shelf.get("books_detail", [])
+        updated_at = shelf.get("updatedAt", shelf.get("createdAt", now))
+
+        if max_weight <= 0:
+            continue
+
+        shelf_load_pct = (current_weight / max_weight) * 100
+        shelf_capacity_remaining = max_weight - current_weight
+        shelf_book_count = len(books_detail)
+
+        if shelf_book_count == 0:
+            continue
+
+        categories = [
+            b.get("category", "unknown") for b in books_detail if b.get("category")
+        ]
+        if categories:
+            most_common = max(set(categories), key=categories.count)
+            category_concentration_pct = (
+                categories.count(most_common) / len(categories) * 100
+            )
+        else:
+            category_concentration_pct = 0
+
+        if categories:
+            primary_category = most_common
+            cat_loans = category_loan_counts.get(primary_category, 0)
+            category_loan_rate_30d = (
+                cat_loans / total_loans_30d if total_loans_30d > 0 else 0
+            )
+        else:
+            category_loan_rate_30d = 0
+
+        shelf_category_diversity = len(set(categories)) if categories else 0
+
+        prices = [b.get("offerPrice", b.get("price", 0)) for b in books_detail]
+        prices = [p for p in prices if p and p > 0]
+        avg_book_value_on_shelf = float(np.mean(prices)) if prices else 0
+        total_shelf_value = float(sum(prices)) if prices else 0
+
+        shelf_access_score = LOCATION_ACCESS_MAP.get(
+            shelf.get("location", ""), 3
+        )
+
+        book_loan_rates = []
+        for book in books_detail:
+            bid = str(book.get("_id", ""))
+            count = book_loan_counts_30d.get(bid, 0)
+            book_loan_rates.append(count)
+        book_loan_rate_30d_max = max(book_loan_rates) if book_loan_rates else 0
+
+        if isinstance(updated_at, str):
+            try:
+                updated_at = pd.Timestamp(updated_at)
+            except Exception:
+                updated_at = now
+        days_since_last_assignment = max(0, (now - pd.Timestamp(updated_at)).days)
+
+        rows.append(
+            {
+                "shelf_id": str(shelf_id),
+                "shelf_code": code,
+                "shelf_load_pct": round(shelf_load_pct, 2),
+                "shelf_capacity_remaining": round(shelf_capacity_remaining, 4),
+                "shelf_book_count": shelf_book_count,
+                "category_concentration_pct": round(category_concentration_pct, 2),
+                "category_loan_rate_30d": round(category_loan_rate_30d, 4),
+                "shelf_category_diversity": shelf_category_diversity,
+                "avg_book_value_on_shelf": round(avg_book_value_on_shelf, 2),
+                "total_shelf_value": round(total_shelf_value, 2),
+                "shelf_access_score": shelf_access_score,
+                "book_loan_rate_30d_max": book_loan_rate_30d_max,
+                "days_since_last_assignment": days_since_last_assignment,
+            }
+        )
+
+    return pd.DataFrame(rows)

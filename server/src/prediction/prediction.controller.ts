@@ -1,7 +1,8 @@
-import { Controller, Post, Body, UseGuards, Logger, ServiceUnavailableException } from '@nestjs/common';
+import { Controller, Get, Post, UseGuards, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { PredictionClient } from './prediction-client.service';
 import { DemandListRequestDto } from './dto/demand-list.dto';
 import { AdminAuthGuard } from '../common/guards/admin-auth/admin-auth.guard';
+import { Body } from '@nestjs/common';
 
 @Controller('prediction')
 export class PredictionController {
@@ -45,6 +46,33 @@ export class PredictionController {
         const result = await this.predictionClient.trainWaitTimeFromDatabase();
         if (!result) {
             throw new ServiceUnavailableException('ML training failed');
+        }
+        return result;
+    }
+
+    // Shelf Anomaly Detection
+    @Get('anomalies')
+    @UseGuards(AdminAuthGuard)
+    async getShelfAnomalies() {
+        this.logger.log('Shelf anomaly detection request');
+
+        const result = await this.predictionClient.getShelfAnomalies();
+        if (!result) {
+            throw new ServiceUnavailableException(
+                'Shelf anomaly model not available. Train the model first via /train/anomaly/from-database.'
+            );
+        }
+
+        return result;
+    }
+
+    @Post('train-shelf-anomaly')
+    @UseGuards(AdminAuthGuard)
+    async trainShelfAnomalyModel() {
+        this.logger.log('Training shelf anomaly model from database');
+        const result = await this.predictionClient.trainShelfAnomalyFromDatabase();
+        if (!result) {
+            throw new ServiceUnavailableException('Shelf anomaly training failed');
         }
         return result;
     }

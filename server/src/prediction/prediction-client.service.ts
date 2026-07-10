@@ -26,6 +26,24 @@ export interface AnomalyPrediction {
     anomaly_score: number;
 }
 
+export interface ShelfAnomalyItem {
+    shelf_id: string;
+    shelf_code: string;
+    expected_load: number;
+    actual_load: number;
+    residual: number;
+    anomaly_type: string;
+    severity: number;
+    recommendation: string;
+}
+
+export interface ShelfAnomaliesResponse {
+    anomalies: ShelfAnomalyItem[];
+    total_shelves_evaluated: number;
+    total_anomalies: number;
+    model_metrics: Record<string, unknown> | null;
+}
+
 export interface DemandListItem {
     product_id: string;
     title: string;
@@ -65,6 +83,31 @@ export class PredictionClient {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
+                signal: controller.signal,
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                this.logger.warn(`ML service returned ${response.status} for ${endpoint}`);
+                return null;
+            }
+
+            return (await response.json()) as T;
+        } catch (error) {
+            this.logger.warn(`ML service request failed for ${endpoint}: ${error}`);
+            return null;
+        }
+    }
+
+    private async get<T>(endpoint: string): Promise<T | null> {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
+            const response = await fetch(`${this.baseUrl}${endpoint}`, {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' },
                 signal: controller.signal,
             });
 
@@ -213,5 +256,24 @@ export class PredictionClient {
         feature_importance: Record<string, number>;
     } | null> {
         return this.post('/train/overdue/from-database', {});
+    }
+
+    /**
+     * Detecta anomalías en la distribución de estantes.
+     * Retorna lista de anomalías clasificadas con severidad y recomendaciones.
+     */
+    async getShelfAnomalies(): Promise<ShelfAnomaliesResponse | null> {
+        return this.get<ShelfAnomaliesResponse>('/predict/anomalies');
+    }
+
+    /**
+     * Entrena el modelo de anomalías de estantes con datos de la base de datos.
+     */
+    async trainShelfAnomalyFromDatabase(): Promise<{
+        message: string;
+        metrics: Record<string, unknown>;
+        feature_importance: Record<string, number>;
+    } | null> {
+        return this.post('/train/anomaly/from-database', {});
     }
 }
