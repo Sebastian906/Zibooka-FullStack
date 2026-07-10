@@ -914,14 +914,16 @@ async def _build_shelf_anomaly_training_data_from_db() -> pd.DataFrame:
     # Construir mapa de préstamos por categoría (últimos 30d)
     category_loan_counts = {}
     # Necesitamos saber la categoría de cada libro prestado
-    for loan in recent_loans:
-        bid = loan.get("bookId")
-        if bid:
-            product = await products_coll.find_one(
-                {"_id": bid}, {"category": 1}
-            )
-            if product:
-                cat = product.get("category", "unknown")
+    loaned_book_ids = list({loan["bookId"] for loan in recent_loans if loan.get("bookId")})
+    if loaned_book_ids:
+        products = await products_coll.find(
+            {"_id": {"$in": loaned_book_ids}}, {"category": 1}
+        ).to_list(length=None)
+        cat_by_id = {p["_id"]: p.get("category", "unknown") for p in products}
+        for loan in recent_loans:
+            bid = loan.get("bookId")
+            if bid and bid in cat_by_id:
+                cat = cat_by_id[bid]
                 category_loan_counts[cat] = category_loan_counts.get(cat, 0) + 1
 
     rows = []
