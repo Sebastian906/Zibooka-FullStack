@@ -4,6 +4,7 @@ from app.models import (
     DemandPredictor,
     OverduePredictor,
     AnomalyDetector,
+    ShelfAnomalyDetector,
 )
 from app.schemas.wait_time import WaitTimeTrainRequest, WaitTimeTrainResponse
 from app.schemas.demand import DemandTrainRequest, DemandTrainResponse
@@ -518,7 +519,7 @@ async def train_overdue(request: OverdueTrainRequest):
 
 @router.post("/anomaly", response_model=AnomalyTrainResponse)
 async def train_anomaly(request: AnomalyTrainRequest):
-    """Entrena el modelo de anomalías con datos personalizados."""
+    """Entrena el modelo de anomalías de comportamiento de préstamo (legacy)."""
     try:
         df = DataFrame(request.data)
         model = AnomalyDetector()
@@ -535,6 +536,69 @@ async def train_anomaly(request: AnomalyTrainRequest):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Training error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/anomaly/from-database")
+async def train_shelf_anomaly_from_database():
+    """
+    Entrena el modelo de anomalías de estantes (ShelfAnomalyDetector)
+    usando datos directamente de MongoDB.
+
+    Construye features por estante:
+    - shelf_load_pct, shelf_capacity_remaining, shelf_book_count
+    - category_concentration_pct, category_loan_rate_30d
+    - shelf_category_diversity, avg_book_value_on_shelf, total_shelf_value
+    - shelf_access_score, book_loan_rate_30d_max, days_since_last_assignment
+    """
+    if not mongodb.is_connected:
+        raise HTTPException(status_code=503, detail="Database not connected")
+
+    try:
+        data = await _build_shelf_anomaly_training_data_from_db()
+
+        if data.empty or len(data) < 5:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Insufficient shelf data: {len(data)} records. "
+                    "Minimum 5 shelves with books required."
+                ),
+            )
+
+        predictor = ShelfAnomalyDetector()
+        metrics = predictor.train(data)
+
+        # Validar calidad mínima
+        if metrics.get("rmse", 999) > 50:
+            logger.warning(
+                f"High RMSE for shelf anomaly model: {metrics['rmse']:.2f}. "
+                "Model may not be reliable."
+            )
+
+        await _save_model_to_mongodb("shelf_anomaly", predictor)
+        await _save_model_to_disk("shelf_anomaly", predictor)
+
+        # Log de entrenamiento
+        if mongodb.is_connected:
+            logs_coll = mongodb.get_collection("training_logs")
+            await logs_coll.insert_one({
+                "model_name": "shelf_anomaly",
+                "metrics": metrics,
+                "feature_importance": predictor.get_feature_importance(),
+                "n_samples": metrics.get("training_samples", 0),
+                "trained_at": pd.Timestamp.now().isoformat(),
+            })
+
+        return {
+            "message": "Shelf anomaly model trained from database successfully",
+            "metrics": metrics,
+            "feature_importance": predictor.get_feature_importance(),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Shelf anomaly training error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/overdue/from-database")
@@ -771,3 +835,189 @@ def _build_book_features(df: pd.DataFrame) -> pd.DataFrame:
         })
 
     return pd.DataFrame(book_stats)
+
+# Shelf Anomaly Detection: Construcción de datos de entrenamiento
+# Mapping de ubicaciones a scores de accesibilidad (1=baja, 5=alta)
+LOCATION_ACCESS_MAP = {
+    "Fiction Section": 4,
+    "Non-Fiction Section": 3,
+    "Academic Section": 2,
+    "Children Section": 5,
+    "History Section": 2,
+    "Science Section": 3,
+    "Adventure Section": 4,
+    "Business Section": 3,
+    "Health Section": 3,
+    "Horror Section": 2,
+}
+
+async def _build_shelf_anomaly_training_data_from_db() -> pd.DataFrame:
+    """
+    Construye dataset de entrenamiento para ShelfAnomalyDetector.
+
+    Cada fila es un estante con sus features contextuales:
+    - shelf_load_pct (target): currentWeight / maxWeight * 100
+    - shelf_capacity_remaining: maxWeight - currentWeight
+    - shelf_book_count: número de libros
+    - category_concentration_pct: % de la categoría más representada
+    - category_loan_rate_30d: préstamos de la categoría / total en 30d
+    - shelf_category_diversity: categorías distintas
+    - avg_book_value_on_shelf: valor promedio de libros
+    - total_shelf_value: valor total del estante
+    - shelf_access_score: puntaje de accesibilidad (1-5)
+    - book_loan_rate_30d_max: máxima tasa de préstamo entre libros
+    - days_since_last_assignment: días desde última modificación del estante
+    """
+    shelves_coll = mongodb.get_collection("shelves")
+    products_coll = mongodb.get_collection("products")
+    loans_coll = mongodb.get_collection("loans")
+
+    # Obtener todos los estantes con sus libros poblados
+    pipeline = [
+        {
+            "$lookup": {
+                "from": "products",
+                "localField": "books",
+                "foreignField": "_id",
+                "as": "books_detail",
+            }
+        },
+    ]
+
+    cursor = shelves_coll.aggregate(pipeline)
+    shelves = await cursor.to_list(length=None)
+
+    if not shelves:
+        return pd.DataFrame()
+
+    now = pd.Timestamp.now(tz=None)
+    cutoff_30d = now - pd.Timedelta(days=30)
+
+    # Obtener conteo total de préstamos en últimos 30 días (para category_loan_rate)
+    total_loans_30d = await loans_coll.count_documents(
+        {"loanDate": {"$gte": cutoff_30d.to_pydatetime()}}
+    )
+
+    # Obtener todos los préstamos de los últimos 30 días
+    loans_cursor = loans_coll.find(
+        {"loanDate": {"$gte": cutoff_30d.to_pydatetime()}},
+        {"bookId": 1, "loanDate": 1},
+    )
+    recent_loans = await loans_cursor.to_list(length=None)
+
+    # Construir mapa de conteo de préstamos por libro (últimos 30d)
+    book_loan_counts_30d = {}
+    for loan in recent_loans:
+        bid = str(loan.get("bookId", ""))
+        book_loan_counts_30d[bid] = book_loan_counts_30d.get(bid, 0) + 1
+
+    # Construir mapa de préstamos por categoría (últimos 30d)
+    category_loan_counts = {}
+    # Necesitamos saber la categoría de cada libro prestado
+    for loan in recent_loans:
+        bid = loan.get("bookId")
+        if bid:
+            product = await products_coll.find_one(
+                {"_id": bid}, {"category": 1}
+            )
+            if product:
+                cat = product.get("category", "unknown")
+                category_loan_counts[cat] = category_loan_counts.get(cat, 0) + 1
+
+    rows = []
+    for shelf in shelves:
+        shelf_id = shelf["_id"]
+        code = shelf.get("code", "UNKNOWN")
+        max_weight = shelf.get("maxWeight", 8)
+        current_weight = shelf.get("currentWeight", 0)
+        books_detail = shelf.get("books_detail", [])
+        updated_at = shelf.get("updatedAt", shelf.get("createdAt", now))
+
+        if max_weight <= 0:
+            continue
+
+        # ── Feature: shelf_load_pct (target) ──
+        shelf_load_pct = (current_weight / max_weight) * 100
+
+        # ── Feature: shelf_capacity_remaining ──
+        shelf_capacity_remaining = max_weight - current_weight
+
+        # ── Feature: shelf_book_count ──
+        shelf_book_count = len(books_detail)
+
+        if shelf_book_count == 0:
+            # Estantes vacíos no son útiles para entrenamiento
+            continue
+
+        # ── Feature: category_concentration_pct ──
+        categories = [
+            b.get("category", "unknown") for b in books_detail if b.get("category")
+        ]
+        if categories:
+            most_common = max(set(categories), key=categories.count)
+            category_concentration_pct = (
+                categories.count(most_common) / len(categories) * 100
+            )
+        else:
+            category_concentration_pct = 0
+
+        # ── Feature: category_loan_rate_30d ──
+        if categories:
+            # Usar la categoría más representada
+            primary_category = most_common
+            cat_loans = category_loan_counts.get(primary_category, 0)
+            category_loan_rate_30d = (
+                cat_loans / total_loans_30d if total_loans_30d > 0 else 0
+            )
+        else:
+            category_loan_rate_30d = 0
+
+        # ── Feature: shelf_category_diversity ──
+        shelf_category_diversity = len(set(categories)) if categories else 0
+
+        # ── Features: avg_book_value_on_shelf, total_shelf_value ──
+        prices = [b.get("offerPrice", b.get("price", 0)) for b in books_detail]
+        prices = [p for p in prices if p and p > 0]
+        avg_book_value_on_shelf = float(np.mean(prices)) if prices else 0
+        total_shelf_value = float(sum(prices)) if prices else 0
+
+        # ── Feature: shelf_access_score ──
+        shelf_access_score = LOCATION_ACCESS_MAP.get(
+            shelf.get("location", ""), 3
+        )
+
+        # ── Feature: book_loan_rate_30d_max ──
+        book_loan_rates = []
+        for book in books_detail:
+            bid = str(book.get("_id", ""))
+            count = book_loan_counts_30d.get(bid, 0)
+            book_loan_rates.append(count)
+        book_loan_rate_30d_max = max(book_loan_rates) if book_loan_rates else 0
+
+        # ── Feature: days_since_last_assignment ──
+        if isinstance(updated_at, str):
+            try:
+                updated_at = pd.Timestamp(updated_at)
+            except Exception:
+                updated_at = now
+        days_since_last_assignment = max(0, (now - pd.Timestamp(updated_at)).days)
+
+        rows.append(
+            {
+                "shelf_id": str(shelf_id),
+                "shelf_code": code,
+                "shelf_load_pct": round(shelf_load_pct, 2),
+                "shelf_capacity_remaining": round(shelf_capacity_remaining, 4),
+                "shelf_book_count": shelf_book_count,
+                "category_concentration_pct": round(category_concentration_pct, 2),
+                "category_loan_rate_30d": round(category_loan_rate_30d, 4),
+                "shelf_category_diversity": shelf_category_diversity,
+                "avg_book_value_on_shelf": round(avg_book_value_on_shelf, 2),
+                "total_shelf_value": round(total_shelf_value, 2),
+                "shelf_access_score": shelf_access_score,
+                "book_loan_rate_30d_max": book_loan_rate_30d_max,
+                "days_since_last_assignment": days_since_last_assignment,
+            }
+        )
+
+    return pd.DataFrame(rows)

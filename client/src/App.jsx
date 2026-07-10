@@ -27,6 +27,7 @@ import MyLoans from './pages/MyLoans'
 import AdminLoans from './pages/admin/AdminLoans'
 import Reports from './pages/admin/Reports'
 import DemandPredictions from './pages/admin/DemandPredictions'
+import InventoryAnomalies from './pages/admin/InventoryAnomalies'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 
@@ -68,6 +69,7 @@ const App = () => {
           <Route path='loans' element={<AdminLoans />} />
           <Route path='reports' element={<Reports />} />
           <Route path='predictions' element={<DemandPredictions />} />
+          <Route path='anomalies' element={<InventoryAnomalies />} />
         </Route>
       </Routes>
       {!isAdminPath && !isForgotPasswordPath && !isResetPasswordPath && <Footer />}

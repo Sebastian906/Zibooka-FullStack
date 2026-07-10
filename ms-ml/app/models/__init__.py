@@ -2,7 +2,7 @@ from app.models.base import BasePredictor
 from app.models.wait_time_predictor import WaitTimePredictor
 from app.models.demand_predictor import DemandPredictor
 from app.models.overdue_predictor import OverduePredictor
-from app.models.anomaly_detector import AnomalyDetector
+from app.models.anomaly_detector import AnomalyDetector, ShelfAnomalyDetector
 
 __all__ = [
     "BasePredictor",
@@ -10,4 +10,5 @@ __all__ = [
     "DemandPredictor",
     "OverduePredictor",
     "AnomalyDetector",
+    "ShelfAnomalyDetector",
 ]
