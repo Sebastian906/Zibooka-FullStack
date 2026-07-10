@@ -37,4 +37,15 @@ export class PredictionController {
         }
         return result;
     }
+
+    @Post('train-wait-time')
+    @UseGuards(AdminAuthGuard)
+    async trainWaitTimeModel() {
+        this.logger.log('Training wait time model from database');
+        const result = await this.predictionClient.trainWaitTimeFromDatabase();
+        if (!result) {
+            throw new ServiceUnavailableException('ML training failed');
+        }
+        return result;
+    }
 }

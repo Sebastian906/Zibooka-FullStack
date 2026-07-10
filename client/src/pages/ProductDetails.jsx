@@ -20,6 +20,7 @@ const ProductDetails = () => {
     const [showWaitingList, setShowWaitingList] = useState(false)
     const [isReserving, setIsReserving] = useState(false)
     const [isCreatingLoan, setIsCreatingLoan] = useState(false)
+    const [lastReservation, setLastReservation] = useState(null)
 
     useEffect(() => {
         if (book) {
@@ -44,7 +45,11 @@ const ProductDetails = () => {
 
         setIsReserving(true)
         try {
-            await createReservation(id)
+            const result = await createReservation(id)
+            // Store the reservation data including estimatedWaitDays
+            if (result && result.reservation) {
+                setLastReservation(result.reservation)
+            }
             await loadWaitingList()
         } catch (error) {
             console.error('Error creating reservation:', error)
@@ -203,6 +208,26 @@ const ProductDetails = () => {
                                 <TbHeart className='text-xl' />
                             </button>
                         </div>
+
+                        {/* RESERVATION CONFIRMATION WITH ESTIMATED WAIT TIME */}
+                        {lastReservation && (
+                            <div className='bg-blue-50 border border-blue-200 rounded p-4 mt-4'>
+                                <h3 className='font-semibold text-blue-800'>Reserva Confirmada</h3>
+                                <p className='text-blue-600'>
+                                    Estás en la posición #{lastReservation.priority} de la cola de espera.
+                                </p>
+                                {lastReservation.estimatedWaitDays !== null && lastReservation.estimatedWaitDays !== undefined && (
+                                    <p className='text-blue-600 mt-2'>
+                                        ⏱️ Tiempo estimado de espera: <strong>~{lastReservation.estimatedWaitDays} días</strong>
+                                    </p>
+                                )}
+                                {lastReservation.estimatedWaitDays === null && (
+                                    <p className='text-blue-500 text-sm mt-2 italic'>
+                                        El tiempo estimado no está disponible en este momento.
+                                    </p>
+                                )}
+                            </div>
+                        )}
 
                         {/* WAITING LIST */}
                         {!book.inStock && waitingList.length > 0 && (
