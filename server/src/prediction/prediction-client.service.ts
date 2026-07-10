@@ -2,7 +2,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 export interface WaitTimePrediction {
-    predicted_wait_days: number;
+    estimated_days: number;
+    confidence_interval: {
+        lower: number;
+        upper: number;
+    };
     confidence: 'low' | 'medium' | 'high';
 }
 
@@ -97,14 +101,22 @@ export class PredictionClient {
         }
     }
 
-    async predictWaitTime(features: {
-        book_popularity_score: number;
-        active_loans_count: number;
-        avg_loan_duration: number;
-        day_of_week: number;
-        user_history_count: number;
-    }): Promise<WaitTimePrediction | null> {
-        return this.post<WaitTimePrediction>('/predict/wait-time', features);
+    /**
+     * Predice el tiempo de espera para una reserva.
+     * El microservicio ML computa las features restantes desde MongoDB.
+     *
+     * @param productId - ID del libro
+     * @param queuePosition - Posición en la cola de espera (priority)
+     * @returns WaitTimePrediction con estimated_days, confidence_interval y confidence
+     */
+    async estimateWaitTime(
+        productId: string,
+        queuePosition: number,
+    ): Promise<WaitTimePrediction | null> {
+        return this.post<WaitTimePrediction>('/predict/wait-time', {
+            product_id: productId,
+            queue_position: queuePosition,
+        });
     }
 
     async predictDemand(features: {
@@ -132,6 +144,17 @@ export class PredictionClient {
         feature_importance: Record<string, number>;
     } | null> {
         return this.post('/train/demand/from-database', {});
+    }
+
+    /**
+     * Entrena el modelo de tiempo de espera con datos reales de reservas.
+     */
+    async trainWaitTimeFromDatabase(): Promise<{
+        message: string;
+        metrics: Record<string, unknown>;
+        feature_importance: Record<string, number>;
+    } | null> {
+        return this.post('/train/wait-time/from-database', {});
     }
 
     /**

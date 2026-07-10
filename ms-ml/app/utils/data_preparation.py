@@ -2,6 +2,9 @@
 Preparación de datos para entrenamiento.
 Transforma datos crudos de MongoDB en DataFrames listos para ML.
 """
+from asyncio.log import logger
+
+from fastapi import logger
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
@@ -63,52 +66,63 @@ def prepare_training_data(
 def _prepare_wait_time_data(
     df_loans: pd.DataFrame, df_products: pd.DataFrame
 ) -> pd.DataFrame | None:
-    """Prepara datos para el modelo de tiempo de espera."""
-    if df_loans.empty:
-        return None
+    # """Prepara datos para el modelo de tiempo de espera."""
+    # if df_loans.empty:
+    #     return None
 
-    # Calcular features por libro
-    loan_counts = df_loans.groupby("bookId").size().reset_index(name="active_loans_count")
+    # # Calcular features por libro
+    # loan_counts = df_loans.groupby("bookId").size().reset_index(name="active_loans_count")
     
-    # Popularidad score (normalizado)
-    max_loans = loan_counts["active_loans_count"].max() if len(loan_counts) > 0 else 1
-    loan_counts["book_popularity_score"] = (
-        loan_counts["active_loans_count"] / max(max_loans, 1)
-    ) * 10
+    # # Popularidad score (normalizado)
+    # max_loans = loan_counts["active_loans_count"].max() if len(loan_counts) > 0 else 1
+    # loan_counts["book_popularity_score"] = (
+    #     loan_counts["active_loans_count"] / max(max_loans, 1)
+    # ) * 10
 
-    # Duración promedio de préstamos
-    if "loanDate" in df_loans.columns and "dueDate" in df_loans.columns:
-        df_loans["loanDate"] = pd.to_datetime(df_loans["loanDate"], errors="coerce")
-        df_loans["dueDate"] = pd.to_datetime(df_loans["dueDate"], errors="coerce")
-        df_loans["duration"] = (df_loans["dueDate"] - df_loans["loanDate"]).dt.days
-        avg_duration = df_loans.groupby("bookId")["duration"].mean().reset_index()
-        avg_duration.columns = ["bookId", "avg_loan_duration"]
-    else:
-        avg_duration = pd.DataFrame(
-            {"bookId": loan_counts["bookId"], "avg_loan_duration": 14}
-        )
+    # # Duración promedio de préstamos
+    # if "loanDate" in df_loans.columns and "dueDate" in df_loans.columns:
+    #     df_loans["loanDate"] = pd.to_datetime(df_loans["loanDate"], errors="coerce")
+    #     df_loans["dueDate"] = pd.to_datetime(df_loans["dueDate"], errors="coerce")
+    #     df_loans["duration"] = (df_loans["dueDate"] - df_loans["loanDate"]).dt.days
+    #     avg_duration = df_loans.groupby("bookId")["duration"].mean().reset_index()
+    #     avg_duration.columns = ["bookId", "avg_loan_duration"]
+    # else:
+    #     avg_duration = pd.DataFrame(
+    #         {"bookId": loan_counts["bookId"], "avg_loan_duration": 14}
+    #     )
 
-    # Merge
-    result = loan_counts.merge(avg_duration, on="bookId", how="left")
+    # # Merge
+    # result = loan_counts.merge(avg_duration, on="bookId", how="left")
 
-    # Agregar día de la semana y historial
-    result["day_of_week"] = datetime.now().weekday()
-    result["user_history_count"] = 1  # Default
+    # # Agregar día de la semana y historial
+    # result["day_of_week"] = datetime.now().weekday()
+    # result["user_history_count"] = 1  # Default
 
-    # Target: tiempo de espera simulado (en producción serían datos reales)
-    np.random.seed(42)
-    result["wait_days"] = np.random.exponential(scale=7, size=len(result))
+    # # Target: tiempo de espera simulado (en producción serían datos reales)
+    # np.random.seed(42)
+    # result["wait_days"] = np.random.exponential(scale=7, size=len(result))
 
-    return result[
-        [
-            "book_popularity_score",
-            "active_loans_count",
-            "avg_loan_duration",
-            "day_of_week",
-            "user_history_count",
-            "wait_days",
-        ]
-    ].dropna()
+    # return result[
+    #     [
+    #         "book_popularity_score",
+    #         "active_loans_count",
+    #         "avg_loan_duration",
+    #         "day_of_week",
+    #         "user_history_count",
+    #         "wait_days",
+    #     ]
+    # ].dropna()
+    """
+    DEPRECATED: Esta función generaba datos aleatorios para wait_days.
+    
+    Use el endpoint dedicado POST /train/wait-time/from-database
+    que construye features reales desde la colección de reservaciones.
+    """
+    logger.warning(
+        "_prepare_wait_time_data called with fake data generation disabled. "
+        "Use POST /train/wait-time/from-database instead."
+    )
+    return None
 
 def _prepare_demand_data(
     df_loans: pd.DataFrame, df_products: pd.DataFrame

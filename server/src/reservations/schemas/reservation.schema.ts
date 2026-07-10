@@ -1,3 +1,4 @@
+
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
 import { HydratedDocument, Types } from "mongoose";
 
@@ -19,6 +20,9 @@ export class Reservation {
 
     @Prop({ type: Number, required: true })
     priority: number;
+
+    @Prop({ type: Number, default: null })
+    estimatedWaitDays: number | null;
 
     @Prop({ type: Date, default: null })
     notifiedAt: Date | null;

@@ -172,6 +172,253 @@ async def train_wait_time(request: WaitTimeTrainRequest):
         logger.error(f"Training error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/wait-time/from-database")
+async def train_wait_time_from_database():
+    """
+    Entrena el modelo de tiempo de espera usando datos reales de reservas.
+    
+    Construye las 6 features del modelo desde MongoDB:
+    - Reservaciones cumplidas → wait_days, queue_position
+    - Productos → category
+    - Préstamos → book_return_rate_30d
+    """
+    if not mongodb.is_connected:
+        raise HTTPException(status_code=503, detail="Database not connected")
+
+    try:
+        data = await _build_wait_time_training_data_from_db()
+
+        if data.empty or len(data) < 5:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Insufficient reservation data: {len(data)} records. "
+                       "Minimum 5 fulfilled reservations required.",
+            )
+
+        predictor = WaitTimePredictor()
+        metrics = predictor.train(data)
+
+        # Validar calidad mínima
+        if metrics.get("rmse", 999) > 30:
+            logger.warning(
+                f"High RMSE: {metrics['rmse']:.2f}. Model may not be reliable."
+            )
+
+        await _save_model_to_mongodb("wait_time", predictor)
+        await _save_model_to_disk("wait_time", predictor)
+
+        # Log de entrenamiento
+        if mongodb.is_connected:
+            logs_coll = mongodb.get_collection("training_logs")
+            await logs_coll.insert_one({
+                "model_name": "wait_time",
+                "metrics": metrics,
+                "feature_importance": predictor.get_feature_importance(),
+                "n_samples": len(data),
+                "trained_at": pd.Timestamp.now().isoformat(),
+            })
+
+        return {
+            "message": "Wait time model trained from database successfully",
+            "metrics": metrics,
+            "feature_importance": predictor.get_feature_importance(),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Wait time training error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def _build_wait_time_training_data_from_db() -> pd.DataFrame:
+    """
+    Construye dataset de entrenamiento para WaitTimePredictor.
+    
+    Target: wait_days = días entre createdAt y fulfilledAt de reservas
+    cumplidas.
+    
+    Features por cada reserva fulfilled:
+    - queue_position: priority original de la reserva
+    - category_encoded: categoría del libro
+    - historical_avg_wait_days: promedio histórico de espera del libro
+    - book_return_rate_30d: tasa de devolución del libro últimos 30 días
+    - total_active_reservations: reservas pending al momento de la reserva
+    - stock_was_zero_days: días sin stock al momento de la reserva
+    """
+    reservations_coll = mongodb.get_collection("reservations")
+    products_coll = mongodb.get_collection("products")
+    loans_coll = mongodb.get_collection("loans")
+
+    # Obtener todas las reservas cumplidas con datos del producto
+    pipeline = [
+        {"$match": {"status": "fulfilled"}},
+        {
+            "$lookup": {
+                "from": "products",
+                "localField": "bookId",
+                "foreignField": "_id",
+                "as": "product",
+            }
+        },
+        {"$unwind": "$product"},
+        {
+            "$project": {
+                "bookId": 1,
+                "priority": 1,
+                "requestDate": 1,
+                "updatedAt": 1,
+                "category": "$product.category",
+                "inStock": "$product.inStock",
+            }
+        },
+    ]
+
+    cursor = reservations_coll.aggregate(pipeline)
+    reservations = await cursor.to_list(length=None)
+
+    if not reservations:
+        return pd.DataFrame()
+
+    df = pd.DataFrame(reservations)
+
+    # Convertir ObjectId a string
+    if "bookId" in df.columns:
+        df["bookId"] = df["bookId"].astype(str)
+
+    # Convertir fechas
+    df["requestDate"] = pd.to_datetime(df["requestDate"], errors="coerce")
+    df["updatedAt"] = pd.to_datetime(df["updatedAt"], errors="coerce")
+    df = df.dropna(subset=["requestDate", "updatedAt"])
+
+    # Target
+    df["wait_days"] = (df["updatedAt"] - df["requestDate"]).dt.days
+
+    # Filtrar outliers
+    df = df[df["wait_days"] <= 90]
+    df = df[df["wait_days"] >= 0]
+
+    if len(df) < 5:
+        return pd.DataFrame()
+
+    # Para cada reserva, calcular features contextuales
+    rows = []
+    now = pd.Timestamp.utcnow()
+    cutoff_30d = now - pd.Timedelta(days=30)
+
+    for _, row in df.iterrows():
+        book_id = row["bookId"]
+
+        # historical_avg_wait_days: promedio de reservas fulfilled ANTES de esta
+        hist_pipeline = [
+            {
+                "$match": {
+                    "bookId": row["bookId"]
+                    if isinstance(row["bookId"], str)
+                    else row["bookId"],
+                    "status": "fulfilled",
+                    "updatedAt": {"$lt": row["requestDate"]},
+                }
+            },
+            {
+                "$project": {
+                    "wait_days": {
+                        "$divide": [
+                            {"$subtract": ["$updatedAt", "$requestDate"]},
+                            86400000,
+                        ]
+                    }
+                }
+            },
+            {"$group": {"_id": None, "avg_wait": {"$avg": "$wait_days"}}},
+        ]
+        try:
+            hist_result = await reservations_coll.aggregate(
+                hist_pipeline
+            ).to_list(1)
+            hist_avg = (
+                float(hist_result[0]["avg_wait"]) if hist_result else 0.0
+            )
+        except Exception:
+            hist_avg = 0.0
+
+        # book_return_rate_30d
+        try:
+            book_oid = row["bookId"]
+            total_30d = await loans_coll.count_documents(
+                {
+                    "bookId": book_oid
+                    if not isinstance(book_oid, str)
+                    else {"$oid": book_oid}
+                    if len(book_oid) == 24
+                    else book_oid,
+                    "loanDate": {"$gte": cutoff_30d.to_pydatetime()},
+                }
+            )
+            returned_30d = await loans_coll.count_documents(
+                {
+                    "bookId": book_oid
+                    if not isinstance(book_oid, str)
+                    else {"$oid": book_oid}
+                    if len(book_oid) == 24
+                    else book_oid,
+                    "loanDate": {"$gte": cutoff_30d.to_pydatetime()},
+                    "status": "returned",
+                }
+            )
+            return_rate = returned_30d / total_30d if total_30d > 0 else 0.0
+        except Exception:
+            return_rate = 0.0
+
+        # total_active_reservations en el momento de la reserva
+        try:
+            active = await reservations_coll.count_documents(
+                {
+                    "bookId": row["bookId"]
+                    if isinstance(row["bookId"], str)
+                    else row["bookId"],
+                    "status": "pending",
+                    "requestDate": {"$lte": row["requestDate"]},
+                }
+            )
+        except Exception:
+            active = 0
+
+        # stock_was_zero_days: días sin stock hasta la reserva
+        stock_zero_days = 0
+        if not row.get("inStock", True):
+            try:
+                oldest_pending = await reservations_coll.find_one(
+                    {
+                        "bookId": row["bookId"]
+                        if isinstance(row["bookId"], str)
+                        else row["bookId"],
+                        "status": "pending",
+                        "requestDate": {"$lte": row["requestDate"]},
+                    },
+                    sort=[("requestDate", 1)],
+                )
+                if oldest_pending:
+                    stock_zero_days = max(
+                        0,
+                        (row["requestDate"] - oldest_pending["requestDate"]).days,
+                    )
+            except Exception:
+                stock_zero_days = 0
+
+        rows.append(
+            {
+                "queue_position": int(row["priority"]),
+                "category_encoded": row.get("category", "unknown"),
+                "historical_avg_wait_days": round(hist_avg, 2),
+                "book_return_rate_30d": round(return_rate, 4),
+                "total_active_reservations": active,
+                "stock_was_zero_days": stock_zero_days,
+                "wait_days": int(row["wait_days"]),
+            }
+        )
+
+    return pd.DataFrame(rows)
+
 @router.post("/demand", response_model=DemandTrainResponse)
 async def train_demand(request: DemandTrainRequest):
     """Entrena el modelo de demanda con datos personalizados."""

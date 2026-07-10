@@ -26,30 +26,45 @@ async def test_readiness_check(client):
 
 @pytest.mark.asyncio
 async def test_predict_wait_time_without_model(client):
+    """Predicción sin modelo entrenado retorna 503."""
     response = await client.post(
         "/predict/wait-time",
         json={
-            "book_popularity_score": 5.0,
-            "active_loans_count": 2,
-            "avg_loan_duration": 14.0,
-            "day_of_week": 2,
-            "user_history_count": 3,
+            "product_id": "507f1f77bcf86cd799439011",
+            "queue_position": 3,
         },
     )
-    # Debería fallar si el modelo no está entrenado
-    assert response.status_code in [200, 503]
+    # Sin modelo entrenado → 503, o 404 si el producto no existe
+    assert response.status_code in [404, 503]
+
+@pytest.mark.asyncio
+async def test_predict_wait_time_invalid_product(client):
+    """Predicción con product_id inválido."""
+    response = await client.post(
+        "/predict/wait-time",
+        json={
+            "product_id": "invalid_id",
+            "queue_position": 1,
+        },
+    )
+    assert response.status_code in [400, 404, 503]
+
+@pytest.mark.asyncio
+async def test_train_wait_time_without_data(client):
+    """Entrenamiento sin datos suficientes retorna error."""
+    response = await client.post("/train/wait-time/from-database")
+    # Puede fallar por: MongoDB no conectado, o datos insuficientes
+    assert response.status_code in [400, 500, 503]
 
 @pytest.mark.asyncio
 async def test_predict_demand_without_model(client):
     response = await client.post(
-        "/predict/demand",
+        "/predict/demand/list",
         json={
-            "total_loans": 10,
-            "unique_users": 5,
-            "avg_rating": 4.0,
-            "days_since_added": 100,
-            "category_encoded": 2,
-            "author_popularity": 6.0,
+            "days_ahead": 30,
+            "limit": 5,
+            "min_score": 0.3,
         },
     )
-    assert response.status_code in [200, 503]
+    # Sin DB: 500 (collection unavailable). Sin modelo: 503. Con ambos: 200
+    assert response.status_code in [200, 500, 503]

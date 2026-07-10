@@ -1,15 +1,19 @@
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Reservation, ReservationDocument } from './schemas/reservation.schema';
 import { ProductService } from 'src/products/product.service';
+import { PredictionClient } from 'src/prediction/prediction-client.service';
 
 @Injectable()
 export class ReservationService {
+    private readonly logger = new Logger(ReservationService.name);
+
     constructor(
         @InjectModel(Reservation.name)
         private reservationModel: Model<ReservationDocument>,
         private productService: ProductService,
+        private predictionClient: PredictionClient,
     ) { }
 
     /**
@@ -18,7 +22,7 @@ export class ReservationService {
      * 
      * @param userId - ID del usuario
      * @param bookId - ID del libro
-     * @returns Reservación creada
+     * @returns Reservación creada con estimatedWaitDays (si el modelo está disponible)
      */
     async addToWaitingList(userId: string, bookId: string): Promise<Reservation> {
         try {
@@ -47,21 +51,46 @@ export class ReservationService {
             const currentQueueSize = await this.reservationModel.countDocuments({
                 bookId: new Types.ObjectId(bookId),
                 status: 'pending'
-            });            
+            });
+
+            const priority = currentQueueSize + 1;
+
+            // Estimar tiempo de espera (best-effort: si falla, se crea sin estimación)
+            let estimatedWaitDays: number | null = null;
+            try {
+                const prediction = await this.predictionClient.estimateWaitTime(
+                    bookId,
+                    priority,
+                );
+                if (prediction) {
+                    estimatedWaitDays = prediction.estimated_days;
+                    this.logger.log(
+                        `Wait time estimated for book ${bookId}: ~${estimatedWaitDays} days (confidence: ${prediction.confidence})`,
+                    );
+                }
+            } catch (error: any) {
+                this.logger.warn(
+                    `Could not estimate wait time for book ${bookId}: ${error.message}`,
+                );
+            }
 
             // Crear reservación (agregar al final de la cola)
             const reservation = await this.reservationModel.create({
                 userId: new Types.ObjectId(userId),
                 bookId: new Types.ObjectId(bookId),
-                priority: currentQueueSize + 1,
+                priority,
                 status: 'pending',
                 requestDate: new Date(),
+                estimatedWaitDays,
             });
 
-            console.log(`[ReservationService] User enqueued at position ${reservation.priority} for book ${bookId}`);
+            this.logger.log(
+                `User enqueued at position ${priority} for book ${bookId}` +
+                (estimatedWaitDays !== null ? ` (est. wait: ~${estimatedWaitDays} days)` : ''),
+            );
 
             return reservation;
-        } catch (error) {
+        } catch (error: any) {
             if (error instanceof BadRequestException) {
                 throw error;
             }
@@ -71,9 +100,6 @@ export class ReservationService {
 
     /**
      * QUEUE (FIFO) - Obtiene el siguiente en la cola (Front/Peek)
-     * 
-     * @param bookId - ID del libro
-     * @returns Primera reservación pendiente o null
      */
     async getNextPendingReservation(bookId: string): Promise<Reservation | null> {
         try {
@@ -82,23 +108,19 @@ export class ReservationService {
                     bookId: new Types.ObjectId(bookId),
                     status: 'pending'
                 })
-                .sort({ priority: 1 }) // Menor prioridad primero (FIFO)
+                .sort({ priority: 1 })
                 .populate('userId')
                 .populate('bookId')
                 .exec();
 
             return reservation;
-        } catch (error) {
+        } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }
     }
 
     /**
      * QUEUE (FIFO) - Procesa la siguiente reservación (Dequeue)
-     * Marca como cumplida y asigna el libro al usuario
-     * 
-     * @param reservationId - ID de la reservación
-     * @returns Reservación actualizada
      */
     async fulfillReservation(reservationId: string): Promise<Reservation> {
         try {
@@ -115,20 +137,18 @@ export class ReservationService {
                 throw new BadRequestException('Reservation is not pending');
             }
 
-            // Marcar como cumplida
             reservation.status = 'fulfilled';
             reservation.fulfilledAt = new Date();
             reservation.notifiedAt = new Date();
 
             await reservation.save();
 
-            // Reajustar prioridades de las reservas restantes
             await this.reorderQueue(reservation.bookId.toString());
 
-            console.log(`[ReservationService] Reservation fulfilled (dequeued): ${reservationId}`);
+            this.logger.log(`Reservation fulfilled (dequeued): ${reservationId}`);
 
             return reservation;
-        } catch (error) {
+        } catch (error: any) {
             if (error instanceof BadRequestException) {
                 throw error;
             }
@@ -138,9 +158,6 @@ export class ReservationService {
 
     /**
      * Obtiene toda la cola de espera para un libro
-     * 
-     * @param bookId - ID del libro
-     * @returns Array de reservaciones ordenadas por prioridad (FIFO)
      */
     async getWaitingList(bookId: string): Promise<Reservation[]> {
         try {
@@ -149,23 +166,20 @@ export class ReservationService {
                     bookId: new Types.ObjectId(bookId),
                     status: 'pending'
                 })
-                .sort({ priority: 1 }) // Orden FIFO
+                .sort({ priority: 1 })
                 .populate('userId')
                 .exec();
 
-            console.log(`[ReservationService] Waiting list for book ${bookId}: ${waitingList.length} reservations`);
+            this.logger.log(`Waiting list for book ${bookId}: ${waitingList.length} reservations`);
 
             return waitingList;
-        } catch (error) {
+        } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }
     }
 
     /**
      * Cancela una reservación y reordena la cola
-     * 
-     * @param reservationId - ID de la reservación
-     * @returns Reservación cancelada
      */
     async cancelReservation(reservationId: string): Promise<Reservation> {
         try {
@@ -182,13 +196,12 @@ export class ReservationService {
             reservation.status = 'cancelled';
             await reservation.save();
 
-            // Reajustar prioridades
             await this.reorderQueue(reservation.bookId.toString());
 
-            console.log(`[ReservationService] Reservation cancelled: ${reservationId}`);
+            this.logger.log(`Reservation cancelled: ${reservationId}`);
 
             return reservation;
-        } catch (error) {
+        } catch (error: any) {
             if (error instanceof BadRequestException) {
                 throw error;
             }
@@ -198,7 +211,6 @@ export class ReservationService {
 
     /**
      * Reordena la cola después de cumplir o cancelar una reservación
-     * Mantiene el orden FIFO ajustando las prioridades
      */
     private async reorderQueue(bookId: string): Promise<void> {
         try {
@@ -210,21 +222,19 @@ export class ReservationService {
                 .sort({ priority: 1 })
                 .exec();
 
-            // Reajustar prioridades secuencialmente
             for (let i = 0; i < pendingReservations.length; i++) {
                 pendingReservations[i].priority = i + 1;
                 await pendingReservations[i].save();
             }
 
-            console.log(`[ReservationService] Queue reordered for book ${bookId}: ${pendingReservations.length} reservations`);
-        } catch (error) {
-            console.error('[ReservationService] Error reordering queue:', error);
+            this.logger.log(`Queue reordered for book ${bookId}: ${pendingReservations.length} reservations`);
+        } catch (error: any) {
+            this.logger.error(`Error reordering queue: ${error.message}`);
         }
     }
 
     /**
      * Marca reservaciones expiradas
-     * Ejecutar periódicamente (cron job)
      */
     async expireOldReservations(): Promise<number> {
         try {
@@ -240,10 +250,10 @@ export class ReservationService {
                 }
             );
 
-            console.log(`[ReservationService] Expired ${result.modifiedCount} old reservations`);
+            this.logger.log(`Expired ${result.modifiedCount} old reservations`);
 
             return result.modifiedCount;
-        } catch (error) {
+        } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }
     }
@@ -270,15 +280,13 @@ export class ReservationService {
                 cancelled: reservations.filter(r => r.status === 'cancelled').length,
                 expired: reservations.filter(r => r.status === 'expired').length,
             };
-        } catch (error) {
+        } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }
     }
 
     /**
      * Obtiene la lista completa de reservas de un usuario con detalles del libro
-     * @param userId - ID del usuario
-     * @returns Array de reservaciones con información completa
      */
     async getUserReservationList(userId: string): Promise<Reservation[]> {
         try {
@@ -288,9 +296,9 @@ export class ReservationService {
                 .sort({ requestDate: -1 })
                 .exec();
 
-            console.log(`[ReservationService] Retrieved ${reservations.length} reservations for user ${userId}`);
+            this.logger.log(`Retrieved ${reservations.length} reservations for user ${userId}`);
             return reservations;
-        } catch (error) {
+        } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }
     }

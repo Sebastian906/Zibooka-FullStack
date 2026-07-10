@@ -131,7 +131,7 @@ const MyReservations = () => {
                 </div>
             </div>
 
-            {/* RESERVATION LIST (Queue - FIFO) */}
+            {/* RESERVATION LIST */}
             {reservations.length === 0 ? (
                 <div className='bg-white p-12 rounded-xl text-center ring-1 ring-slate-900/5'>
                     <FaBookmark className='text-6xl text-gray-300 mx-auto mb-4' />
@@ -193,6 +193,16 @@ const MyReservations = () => {
                                                 <p className='font-medium'>{formatDate(reservation.expiresAt)}</p>
                                             </div>
                                         </div>
+
+                                        {/* ESTIMATED WAIT TIME */}
+                                        {reservation.status === 'pending' && reservation.estimatedWaitDays != null && (
+                                            <div className='bg-blue-50 border border-blue-200 p-2 rounded-lg mb-3'>
+                                                <p className='text-sm text-blue-700'>
+                                                    <span className='mr-1'>⏱️</span>
+                                                    <strong>Espera estimada:</strong> ~{reservation.estimatedWaitDays} días
+                                                </p>
+                                            </div>
+                                        )}
 
                                         {reservation.status === 'fulfilled' && reservation.fulfilledAt && (
                                             <div className='bg-green-50 border border-green-200 p-2 rounded-lg mb-3'>

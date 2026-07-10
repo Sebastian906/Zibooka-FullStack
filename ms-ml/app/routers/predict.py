@@ -12,6 +12,8 @@ from app.schemas.anomaly import AnomalyRequest, AnomalyResponse
 from app.config import settings
 from app.database import mongodb
 from pandas import DataFrame
+import pandas as pd
+import numpy as np
 import logging
 
 logger = logging.getLogger(__name__)
@@ -57,10 +59,111 @@ async def _get_model(model_class, model_name: str):
     except FileNotFoundError:
         return None
 
+async def _build_wait_time_features(product_id: str, queue_position: int) -> dict | None:
+    """
+    Construye las 6 features del modelo de wait_time desde MongoDB.
+
+    - queue_position: directo del request
+    - category_encoded: desde products.category
+    - historical_avg_wait_days: promedio de (fulfilledAt - requestDate) para reservas
+      cumplidas de este libro
+    - book_return_rate_30d: préstamos devueltos / total préstamos últimos 30 días
+    - total_active_reservations: reservas pending para este libro
+    - stock_was_zero_days: días desde la reserva más antigua pending hasta hoy
+    """
+    if not mongodb.is_connected:
+        return None
+
+    from bson import ObjectId
+    from datetime import datetime, timedelta
+
+    try:
+        product_oid = ObjectId(product_id)
+    except Exception:
+        return None
+
+    products_coll = mongodb.get_collection("products")
+    reservations_coll = mongodb.get_collection("reservations")
+    loans_coll = mongodb.get_collection("loans")
+
+    # 1. Obtener categoría del libro
+    product = await products_coll.find_one(
+        {"_id": product_oid}, {"category": 1, "inStock": 1}
+    )
+    if not product:
+        return None
+
+    category = product.get("category", "unknown")
+
+    # 2. historical_avg_wait_days: reservas fulfilled para este libro
+    pipeline_avg = [
+        {"$match": {"bookId": product_oid, "status": "fulfilled"}},
+        {
+            "$project": {
+                "wait_days": {
+                    "$divide": [
+                        {"$subtract": ["$updatedAt", "$requestDate"]},
+                        86400000,  # ms en un día
+                    ]
+                }
+            }
+        },
+        {"$group": {"_id": None, "avg_wait": {"$avg": "$wait_days"}}},
+    ]
+    avg_result = await reservations_coll.aggregate(pipeline_avg).to_list(1)
+    historical_avg_wait_days = (
+        float(avg_result[0]["avg_wait"]) if avg_result else 0.0
+    )
+
+    # 3. book_return_rate_30d: tasa de devolución últimos 30 días
+    now = datetime.utcnow()
+    cutoff_30d = now - timedelta(days=30)
+    total_loans_30d = await loans_coll.count_documents(
+        {"bookId": product_oid, "loanDate": {"$gte": cutoff_30d}}
+    )
+    returned_loans_30d = await loans_coll.count_documents(
+        {
+            "bookId": product_oid,
+            "loanDate": {"$gte": cutoff_30d},
+            "status": "returned",
+        }
+    )
+    book_return_rate_30d = (
+        returned_loans_30d / total_loans_30d if total_loans_30d > 0 else 0.0
+    )
+
+    # 4. total_active_reservations
+    total_active_reservations = await reservations_coll.count_documents(
+        {"bookId": product_oid, "status": "pending"}
+    )
+
+    # 5. stock_was_zero_days: si el libro no tiene stock, calcular desde la
+    #    reserva más antigua pendiente; si tiene stock, 0
+    stock_was_zero_days = 0
+    if not product.get("inStock", True):
+        oldest_pending = await reservations_coll.find_one(
+            {"bookId": product_oid, "status": "pending"},
+            sort=[("requestDate", 1)],
+        )
+        if oldest_pending:
+            stock_was_zero_days = max(
+                0,
+                (now - oldest_pending["requestDate"]).days,
+            )
+
+    return {
+        "queue_position": queue_position,
+        "category_encoded": category,  # será encodeado por el modelo si tiene label_encoder
+        "historical_avg_wait_days": round(historical_avg_wait_days, 2),
+        "book_return_rate_30d": round(book_return_rate_30d, 4),
+        "total_active_reservations": total_active_reservations,
+        "stock_was_zero_days": stock_was_zero_days,
+    }
+
 # WAIT TIME 
 @router.post("/wait-time", response_model=WaitTimeResponse)
 async def predict_wait_time(request: WaitTimeRequest):
-    """Predice el tiempo de espera para un préstamo."""
+    """Predice el tiempo de espera para una reserva de libro."""
     model = await _get_model(WaitTimePredictor, "wait_time")
     if model is None:
         raise HTTPException(
@@ -69,11 +172,43 @@ async def predict_wait_time(request: WaitTimeRequest):
         )
 
     try:
-        features_df = DataFrame([request.model_dump()])
-        prediction = model.predict(features_df)
-        wait_days = float(prediction[0])
+        # Construir features desde MongoDB
+        features = await _build_wait_time_features(
+            request.product_id, request.queue_position
+        )
+        if features is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Product not found or database unavailable",
+            )
 
-        # Calcular confianza basada en métricas del modelo
+        # Predecir
+        features_df = DataFrame([features])
+
+        # Si el modelo tiene label_encoder y la categoría es texto, usar predict_single
+        if hasattr(model, "predict_single") and isinstance(
+            features["category_encoded"], str
+        ):
+            predicted_days = model.predict_single(
+                queue_position=features["queue_position"],
+                category=features["category_encoded"],
+                historical_avg=features["historical_avg_wait_days"],
+                return_rate=features["book_return_rate_30d"],
+                active_reservations=features["total_active_reservations"],
+                stock_zero_days=features["stock_was_zero_days"],
+            )
+        else:
+            prediction = model.predict(features_df)
+            predicted_days = float(prediction[0])
+
+        predicted_days = max(0.0, round(predicted_days, 2))
+
+        # Intervalo de confianza basado en RMSE del modelo
+        rmse = model.training_metrics.get("rmse", 5.0)
+        confidence_lower = max(0.0, round(predicted_days - rmse, 2))
+        confidence_upper = round(predicted_days + rmse, 2)
+
+        # Nivel de confianza basado en R²
         r2 = model.training_metrics.get("r2", 0)
         if r2 > 0.7:
             confidence = "high"
@@ -83,11 +218,17 @@ async def predict_wait_time(request: WaitTimeRequest):
             confidence = "low"
 
         return WaitTimeResponse(
-            predicted_wait_days=round(wait_days, 2),
+            estimated_days=predicted_days,
+            confidence_interval={
+                "lower": confidence_lower,
+                "upper": confidence_upper,
+            },
             confidence=confidence,
         )
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Prediction error: {e}")
+        logger.error(f"Wait time prediction error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 # DEMAND
@@ -265,20 +406,22 @@ async def predict_overdue_extended(request: OverdueExtendedRequest):
         if feature_mode == 'extended':
             # Modelo entrenado con 13 features extendidas
             features_df = DataFrame([request.model_dump()])
-            if hasattr(model, 'predict_with_features'):
-                risk_scores, top_features = model.predict_with_features(features_df)
+            if hasattr(model, "predict_with_features"):
+                risk_scores, top_features = model.predict_with_features(
+                    features_df
+                )
             else:
                 risk_scores = model.predict_risk(features_df)
                 top_features = {}
         else:
             # Modelo entrenado con 6 features básicas - mapear desde extendidas
             basic_features = {
-                'loan_duration_days': 14,  # Default
-                'user_total_loans': request.user_previous_loans_count,
-                'user_overdue_rate': request.user_overdue_rate,
-                'book_overdue_rate': request.book_overdue_rate,
-                'days_until_due': 14,  # Default
-                'is_weekend': bool(request.is_weekend),
+                "loan_duration_days": 14,
+                "user_total_loans": request.user_previous_loans_count,
+                "user_overdue_rate": request.user_overdue_rate,
+                "book_overdue_rate": request.book_overdue_rate,
+                "days_until_due": 14,
+                "is_weekend": bool(request.is_weekend),
             }
             features_df = DataFrame([basic_features])
             risk_scores = model.predict_risk(features_df)
