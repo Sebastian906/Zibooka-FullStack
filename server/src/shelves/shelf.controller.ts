@@ -30,7 +30,7 @@ export class ShelfController {
                 message: 'Shelf created successfully',
                 shelf,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res.status(HttpStatus.BAD_REQUEST).json({
                 success: false,
                 message: error.message,
@@ -53,7 +53,7 @@ export class ShelfController {
                 count: shelves.length,
                 shelves,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
                 success: false,
                 message: error.message,
@@ -81,7 +81,7 @@ export class ShelfController {
                 message: result.message,
                 shelf: result.shelf,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res.status(HttpStatus.BAD_REQUEST).json({
                 success: false,
                 message: error.message,
@@ -138,7 +138,7 @@ export class ShelfController {
                     groupedByCategory: result.groupedByCategory
                 }),
             });
-        } catch (error) {
+        } catch (error: any) {
             return res.status(HttpStatus.BAD_REQUEST).json({
                 success: false,
                 message: error.message,
@@ -148,8 +148,8 @@ export class ShelfController {
 
     @Get('optimize/:shelfId')
     @ApiOperation({
-        summary: 'Optimize shelf value (Backtracking)',
-        description: 'Uses backtracking to find the best book combination maximizing value without exceeding weight limit'
+        summary: 'Optimize shelf value (Branch & Bound)',
+        description: 'Uses Branch & Bound with fractional upper bound to find the best book combination maximizing value without exceeding weight limit. Includes pruning statistics and heuristic sorting by value/weight ratio.'
     })
     @ApiParam({ name: 'shelfId', description: 'Shelf ID', example: '507f1f77bcf86cd799439011' })
     @ApiQuery({
@@ -160,7 +160,7 @@ export class ShelfController {
     })
     @ApiResponse({
         status: 200,
-        description: 'Optimal combination found',
+        description: 'Optimal combination found using Branch & Bound',
         schema: {
             type: 'object',
             properties: {
@@ -170,7 +170,7 @@ export class ShelfController {
                     properties: {
                         books: { type: 'array' },
                         totalWeight: { type: 'number', example: 7.8 },
-                        totalValue: { type: 'number', example: 450 }
+                        totalValue: { type: 'number', example: 185000 }
                     }
                 },
                 maxWeight: { type: 'number', example: 8 },
@@ -178,10 +178,22 @@ export class ShelfController {
                 currentVsOptimal: {
                     type: 'object',
                     description: 'Only present when analyzeAll=false'
+                },
+                algorithmStats: {
+                    type: 'object',
+                    description: 'Branch & Bound performance metrics',
+                    properties: {
+                        nodesExplored: { type: 'number', example: 847 },
+                        nodesPruned: { type: 'number', example: 712 },
+                        prunedPercentage: { type: 'number', example: 84 },
+                        elapsedMs: { type: 'number', example: 12 },
+                        upperBoundUsed: { type: 'boolean', example: true }
+                    }
                 }
             }
         }
     })
+    @ApiResponse({ status: 400, description: 'Bad request (empty shelf, invalid maxWeight)' })
     @ApiResponse({ status: 404, description: 'Shelf not found' })
     async optimizeShelf(
         @Param('shelfId') shelfId: string,
@@ -199,8 +211,11 @@ export class ShelfController {
                 success: true,
                 ...result,
             });
-        } catch (error) {
-            return res.status(HttpStatus.BAD_REQUEST).json({
+        } catch (error: any) {
+            const status = error?.status === HttpStatus.NOT_FOUND
+                ? HttpStatus.NOT_FOUND
+                : HttpStatus.BAD_REQUEST;
+            return res.status(status).json({
                 success: false,
                 message: error.message,
             });
@@ -226,7 +241,7 @@ export class ShelfController {
                 message: result.message,
                 shelf: result.shelf,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res.status(HttpStatus.BAD_REQUEST).json({
                 success: false,
                 message: error.message,
