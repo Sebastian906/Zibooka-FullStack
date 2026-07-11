@@ -71,6 +71,16 @@ export class ReservationService {
         this.GAMMA = parseFloat(process.env.RESERVATION_SCORE_GAMMA || '0.2');
         this.DELTA = parseFloat(process.env.RESERVATION_SCORE_DELTA || '0.1');
 
+        if ([this.ALPHA, this.BETA, this.GAMMA, this.DELTA].some(Number.isNaN)) {
+            this.logger.warn(
+                '[ReservationService] One or more scoring weights are NaN, falling back to defaults',
+            );
+            this.ALPHA = 0.4;
+            this.BETA = 0.3;
+            this.GAMMA = 0.2;
+            this.DELTA = 0.1;
+        }
+
         const total = this.ALPHA + this.BETA + this.GAMMA + this.DELTA;
         if (Math.abs(total - 1.0) > 0.01) {
             this.logger.warn(

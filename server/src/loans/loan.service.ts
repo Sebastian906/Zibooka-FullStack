@@ -436,7 +436,7 @@ export class LoanService {
 
                 assignedToReservation = true;
                 reservationInfo = {
-                    userId: fulfilledReservation.userId,
+                    userId: (fulfilledReservation.userId as any)._id,
                     reservationId: reservationDoc._id.toString(),
                     priority: fulfilledReservation.priority
                 };
