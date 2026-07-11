@@ -428,23 +428,20 @@ export class LoanService {
                 priority: number;
             } | undefined;
 
-            const nextReservation = await this.reservationService.getNextPendingReservation(bookId);
+            // Seleccionar automáticamente el mejor candidato usando scoring compuesto
+            const fulfilledReservation = await this.reservationService.fulfillReservation(bookId);
 
-            if (nextReservation) {
-                const reservationDoc = nextReservation as any;
-
-                await this.reservationService.fulfillReservation(
-                    reservationDoc._id.toString()
-                );
+            if (fulfilledReservation) {
+                const reservationDoc = fulfilledReservation as any;
 
                 assignedToReservation = true;
                 reservationInfo = {
-                    userId: nextReservation.userId,
+                    userId: fulfilledReservation.userId,
                     reservationId: reservationDoc._id.toString(),
-                    priority: nextReservation.priority
+                    priority: fulfilledReservation.priority
                 };
 
-                this.logger.log(`Book ${bookId} assigned to reservation: ${reservationDoc._id}`);
+                this.logger.log(`Book ${bookId} assigned to reservation: ${reservationDoc._id} (score-based selection)`);
             } else {
                 await this.productService.changeStock({
                     productId: bookId,

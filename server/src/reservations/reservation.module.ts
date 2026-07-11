@@ -5,6 +5,7 @@ import { ReservationController } from './reservation.controller';
 import { ReservationService } from './reservation.service';
 import { Product, ProductSchema } from 'src/products/schemas/product.schema';
 import { User, UserSchema } from 'src/users/schemas/user.schema';
+import { Loan, LoanSchema } from 'src/loans/schemas/loan.schema';
 import { setupReservationMiddleware } from './middlewares/reservation.middleware';
 import { ProductModule } from 'src/products/product.module';
 import { PredictionModule } from 'src/prediction/prediction.module';
@@ -21,7 +22,8 @@ import { PredictionModule } from 'src/prediction/prediction.module';
         },
       },
       { name: Product.name, useFactory: () => ProductSchema },
-      { name: User.name, useFactory: () => UserSchema }
+      { name: User.name, useFactory: () => UserSchema },
+      { name: Loan.name, useFactory: () => LoanSchema }
     ]),
     ProductModule,
     PredictionModule,
