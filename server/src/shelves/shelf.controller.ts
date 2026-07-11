@@ -212,7 +212,10 @@ export class ShelfController {
                 ...result,
             });
         } catch (error: any) {
-            return res.status(HttpStatus.BAD_REQUEST).json({
+            const status = error?.status === HttpStatus.NOT_FOUND
+                ? HttpStatus.NOT_FOUND
+                : HttpStatus.BAD_REQUEST;
+            return res.status(status).json({
                 success: false,
                 message: error.message,
             });

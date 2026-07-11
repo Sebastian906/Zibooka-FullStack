@@ -288,14 +288,17 @@ describe('ShelfService - Branch & Bound Algorithm', () => {
       expect(result.totalValue).toBe(300);
     });
 
-    it('libro con peso 0 → no se selecciona', () => {
+    it('libro con peso 0 y valor positivo → se selecciona (es gratis)', () => {
+      // Un libro con peso=0 y valor=100 es "gratis": agrega valor sin
+      // consumir capacidad. Matemáticamente, siempre debe seleccionarse.
       const items = [
         { id: 'b_zero', weight: 0, value: 100 },
         { id: 'b_normal', weight: 2, value: 200 },
       ];
       const result = service.solveKnapsackBranchAndBound(items, 5);
-      expect(result.selectedIds).not.toContain('b_zero');
+      expect(result.selectedIds).toContain('b_zero');
       expect(result.selectedIds).toContain('b_normal');
+      expect(result.totalValue).toBe(300); // 100 + 200
     });
 
     it('todos los libros idénticos → llena capacidad', () => {

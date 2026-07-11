@@ -328,8 +328,7 @@ export class ShelfService {
         }
 
         // Filtrar libros que superan el peso máximo individual
-        const feasibleItems = items.filter(item => item.weight <= maxWeight && item.weight > 0 && item.value >= 0);
-
+        const feasibleItems = items.filter(item => item.weight <= maxWeight && item.weight >= 0 && item.value >= 0);
         if (feasibleItems.length === 0) {
             return { selectedIds: [], totalValue: 0, totalWeight: 0, stats: { nodesExplored: 0, nodesPruned: 0, prunedPercentage: 0 } };
         }
@@ -505,113 +504,20 @@ export class ShelfService {
                 originalBook: book
             }));
 
-            // Ejecutar algoritmo puro
+            const startTime = Date.now();
             const algorithmResult = this.solveKnapsackBranchAndBound(
                 booksData.map(b => ({ id: b.id, weight: b.weight, value: b.value })),
                 maxWeight
-            );
-
-            // Reconstruir detalles para la respuesta
-            const idToBook = new Map(booksData.map(b => [b.id, b]));
-            const bestBooks = algorithmResult.selectedIds
-                .map(id => idToBook.get(id))
-                .filter(Boolean);
-
-            // Ordenar heurísticamente por ratio valor/peso descendente
-            // Esto encuentra buenas soluciones temprano y mejora la poda significativamente
-            const sortedBooks = [...booksData].sort((a, b) =>
-                (b.value / b.weight) - (a.value / a.weight)
-            );
-
-            // UPPER BOUND FRACCIONAL
-            // Calcula el mejor caso posible relajando la restricción de
-            // enteros (permite tomar fracciones de libros).
-            // Nunca subestima la solución óptima.
-            const fractionalUpperBound = (
-                books: typeof sortedBooks,
-                remainingCapacity: number
-            ): number => {
-                // Ya están ordenados por ratio valor/peso descendente
-                let remaining = remainingCapacity;
-                let bound = 0;
-
-                for (const book of books) {
-                    if (book.weight <= remaining) {
-                        bound += book.value;
-                        remaining -= book.weight;
-                    } else {
-                        // Tomar fracción del libro que cabe
-                        bound += book.value * (remaining / book.weight);
-                        break; // No caben más libros completos
-                    }
-                }
-
-                return bound;
-            };
-
-            let bestValue = 0;
-            let bestCombination: typeof sortedBooks = [];
-            let bestWeight = 0;
-            let nodesExplored = 0;
-            let nodesPruned = 0;
-
-            const startTime = Date.now();
-
-            // BACKTRACKING CON PODA (BRANCH & BOUND)
-            // Explora el árbol de combinaciones pero poda ramas donde
-            // el upper bound no puede superar la mejor solución actual.
-            const backtrack = (
-                idx: number,
-                currentWeight: number,
-                currentValue: number,
-                selected: typeof sortedBooks
-            ) => {
-                nodesExplored++;
-
-                // Calcular upper bound con libros restantes
-                const remaining = sortedBooks.slice(idx);
-                const remainingCapacity = maxWeight - currentWeight;
-                const bound = fractionalUpperBound(remaining, remainingCapacity);
-
-                // PODA: si incluso en el mejor caso posible no superamos
-                // la mejor solución encontrada, esta rama no vale la pena explorar
-                if (currentValue + bound <= bestValue) {
-                    nodesPruned++;
-                    return;
-                }
-
-                // Si es una solución válida y mejora la actual, actualizar
-                if (currentValue > bestValue) {
-                    bestValue = currentValue;
-                    bestCombination = [...selected];
-                    bestWeight = currentWeight;
-                }
-
-                // Caso base: procesamos todos los libros
-                if (idx >= sortedBooks.length) {
-                    return;
-                }
-
-                const book = sortedBooks[idx];
-
-                // Opción 1: Tomar el libro (si cabe en la capacidad restante)
-                if (currentWeight + book.weight <= maxWeight) {
-                    backtrack(
-                        idx + 1,
-                        currentWeight + book.weight,
-                        currentValue + book.value,
-                        [...selected, book]
-                    );
-                }
-
-                // Opción 2: No tomar el libro
-                backtrack(idx + 1, currentWeight, currentValue, selected);
-            };
-
-            // Iniciar Branch & Bound
-            backtrack(0, 0, 0, []);
-
+                );
             const elapsed = Date.now() - startTime;
+
+                const idToBook = new Map(booksData.map(b => [b.id, b]));
+            const bestCombination = algorithmResult.selectedIds
+                .map(id => idToBook.get(id)!)
+                .filter(Boolean);
+            const bestValue = algorithmResult.totalValue;
+            const bestWeight = algorithmResult.totalWeight;
+            const { nodesExplored, nodesPruned, prunedPercentage } = algorithmResult.stats;
 
             console.log(`[ShelfService] Branch & Bound completed in ${elapsed}ms: ` +
                 `Best value = ${bestValue} COP, Weight = ${bestWeight.toFixed(2)} Kg, ` +
@@ -628,7 +534,7 @@ export class ShelfService {
                 const currentValue = shelf.currentValue || 0;
                 const improvement = currentValue > 0
                     ? ((bestValue - currentValue) / currentValue * 100).toFixed(1)
-                    : '∞';
+                    : bestValue > 0 ? '∞' : '0';
 
                 currentVsOptimal = {
                     current: {
