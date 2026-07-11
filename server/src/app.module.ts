@@ -7,7 +7,6 @@ import { getMongoConfig } from './config/mongodb.config';
 import { UserModule } from './users/user.module';
 import { AdminModule } from './admin/admin.module';
 import { ProductModule } from './products/product.module';
-import { CartController } from './carts/cart.controller';
 import { AddressModule } from './addresses/address.module';
 import { OrderModule } from './orders/order.module';
 import { ShelfModule } from './shelves/shelf.module';
@@ -17,6 +16,7 @@ import { ReportModule } from './reports/report.module';
 import { EmailModule } from './email/email.module';
 import { MigrationModule } from './migration/migration.module';
 import { PredictionModule } from './prediction/prediction.module';
+import { CartModule } from './carts/cart.module';
 
 @Module({
   imports: [
@@ -45,8 +45,9 @@ import { PredictionModule } from './prediction/prediction.module';
     EmailModule,
     MigrationModule,
     PredictionModule,
+    CartModule,
   ],
-  controllers: [AppController, CartController],
+  controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule {}
