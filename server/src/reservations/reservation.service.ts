@@ -102,7 +102,7 @@ export class ReservationService {
      * @param bookId - ID del libro
      * @returns Reservación creada con estimatedWaitDays (si el modelo está disponible)
      */
-    async addToWaitingList(userId: string, bookId: string): Promise<Reservation> {
+    async addToWaitingList(userId: string, bookId: string): Promise<ReservationDocument> {
         try {
             // Verificar que el libro existe
             const product = await this.productService.getSingleProduct(bookId);

@@ -556,5 +556,20 @@
         "fieldRequired": "This field is required",
         "invalidNumber": "Please enter a valid number",
         "zipcodeInvalid": "Zip code must contain only numbers"
+    },
+    "cartOptimization": {
+        "title": "Save money with loans",
+        "subtitle": "Some books are available to borrow instead of buying",
+        "savings": "You could save",
+        "loanOption": "Available to borrow",
+        "buyOption": "Buy",
+        "loanFee": "Loan fee",
+        "totalIfAllBuy": "Total buying everything",
+        "optimizedTotal": "Total with loans",
+        "acceptButton": "Accept suggestion",
+        "perBook": "per book",
+        "note": "Loans are subject to availability",
+        "detailsHidden": "Show details",
+        "detailsShown": "Hide details"
     }
 }

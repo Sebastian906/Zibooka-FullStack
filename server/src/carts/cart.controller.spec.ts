@@ -2,6 +2,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CartController } from './cart.controller';
 import { Response } from 'express';
 import { UserService } from 'src/users/user.service';
+import { CartOptimizationService } from './services/cart-optimization.service';
+import { ConfigService } from '@nestjs/config';
+import { Reflector } from '@nestjs/core';
 
 describe('CartController', () => {
   let controller: CartController;
@@ -14,6 +17,11 @@ describe('CartController', () => {
       updateCart: jest.fn(),
     };
 
+    const mockCartOptimizationService = {
+      optimizeCart: jest.fn(),
+      acceptOptimization: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [CartController],
       providers: [
@@ -21,6 +29,15 @@ describe('CartController', () => {
           provide: UserService,
           useValue: mockUserService,
         },
+        {
+          provide: CartOptimizationService,
+          useValue: mockCartOptimizationService,
+        },
+        {
+          provide: ConfigService,
+          useValue: { get: jest.fn() },
+        },
+        Reflector,
       ],
     }).compile();
 

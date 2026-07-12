@@ -556,5 +556,20 @@
         "fieldRequired": "Este campo es requerido",
         "invalidNumber": "Por favor ingresa un número válido",
         "zipcodeInvalid": "El código postal solo debe contener números"
+    },
+    "cartOptimization": {
+        "title": "Ahorra dinero con préstamos",
+        "subtitle": "Algunos libros están disponibles para pedir prestado",
+        "savings": "Podrías ahorrar",
+        "loanOption": "Disponible para préstamo",
+        "buyOption": "Comprar",
+        "loanFee": "Costo de préstamo",
+        "totalIfAllBuy": "Total comprando todo",
+        "optimizedTotal": "Total con préstamos",
+        "acceptButton": "Aceptar sugerencia",
+        "perBook": "por libro",
+        "note": "Los préstamos están sujetos a disponibilidad",
+        "detailsHidden": "Ver detalles",
+        "detailsShown": "Ocultar detalles"
     }
 }

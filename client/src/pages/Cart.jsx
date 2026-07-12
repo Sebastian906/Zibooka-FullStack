@@ -4,6 +4,7 @@ import { ShopContext } from '../context/ShopContext'
 import Title from '../components/Title';
 import { FaMinus, FaPlus } from 'react-icons/fa6';
 import CartTotal from '../components/CartTotal';
+import CartPanel from '../components/CartPanel';
 
 const Cart = () => {
 
@@ -91,6 +92,7 @@ const Cart = () => {
                 </div>
                 { /* DERECHA */}
                 <div className='flex flex-1 flex-col'>
+                    <CartPanel />
                     <div className='max-w-94.75 w-full bg-primary p-5 py-10 max-md:mt-16 rounded-xl'>
                         <CartTotal />
                     </div>
