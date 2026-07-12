@@ -75,8 +75,8 @@ export class Product {
     @Prop({ type: Boolean, default: true })
     inStock: boolean;
 
-    @Prop({ type: Number, default: 0, min: 0 })
-    loanStock: number;  // 0 o 1 (binario)
+    @Prop({ type: Number, default: 0, min: 0, max: 1 })
+    loanStock: number;  // Cantidad de unidades disponibles para préstamo
 
     @Prop({ type: Number, default: 5.00, min: 0 })
     loanFee: number;  // Fee específico del libro para préstamo
