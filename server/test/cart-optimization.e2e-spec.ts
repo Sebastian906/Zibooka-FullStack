@@ -52,11 +52,13 @@ describe('Cart Optimization API (e2e)', () => {
 
         // Si no hay cookie, generar token directamente
         if (!authToken) {
-            const userRes = await request(app.getHttpServer())
-                .get('/api/user/is-auth')
-                .set('Authorization', `Bearer ${authToken}`);
+            if (!registerRes.body?.user?._id) {
+                throw new Error('Registration did not return user ID and no auth cookie was set');
+            }
 
-            testUserId = userRes.body?.user?._id;
+            testUserId = registerRes.body.user._id;
+            const jwtSecret = process.env.JWT_SECRET || 'test-secret';
+            authToken = jwt.sign({ id: testUserId }, jwtSecret, { expiresIn: '1h' });
         }
 
         // Obtener el token del header Authorization también
