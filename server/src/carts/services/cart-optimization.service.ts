@@ -55,14 +55,14 @@ export class CartOptimizationService {
                 .filter(id => productMap.has(id))
                 .map(id => {
                     const product = productMap.get(id)!;
-                    const effectivePrice = product.offerPrice || product.price;
-                    const loanFee = product.loanFee || 5.00;
+                    const effectivePrice = product.offerPrice ?? product.price;
+                    const loanFee = product.loanFee ?? 5.00;
 
                     return {
                         productId: id,
                         title: product.name,
                         price: effectivePrice,
-                        quantity: user.cartData[id] || 1,
+                        quantity: user.cartData[id] ?? 1,
                         loanStock: product.loanStock || 0,
                         loanFee: loanFee,
                         // Ahorro potencial por unidad = price - loanFee
