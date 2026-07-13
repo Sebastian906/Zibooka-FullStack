@@ -53,7 +53,12 @@ describe('ShelfService - Branch & Bound Algorithm', () => {
 
   beforeEach(() => {
     // Instancia sin modelos reales: el algoritmo no accede a DB
-    service = new ShelfService(null as any, null as any);
+    service = new ShelfService(
+      null as any,
+      null as any,
+      null as any,
+      { get: (_key: string, defaultValue: any) => defaultValue } as any,
+    );
   });
 
   // ═══════════════════════════════════════════════════════

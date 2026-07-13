@@ -62,7 +62,10 @@ export class ShelfController {
     }
 
     @Post('assign-book')
-    @ApiOperation({ summary: 'Assign a book to a shelf (Admin only)' })
+    @ApiOperation({
+        summary: 'Assign a book to a shelf (Admin only)',
+        description: 'If shelfId is provided, assigns directly to that shelf. If omitted, uses Branch & Bound to find the optimal shelf based on rotation, diversity, concentration, and weight metrics.'
+    })
     @ApiBody({ type: AssignBookDto })
     @ApiResponse({ status: 200, description: 'Book assigned successfully' })
     @ApiResponse({ status: 400, description: 'Shelf capacity exceeded or book already assigned' })
@@ -72,14 +75,20 @@ export class ShelfController {
     ) {
         try {
             const result = await this.shelfService.assignBook(
-                assignBookDto.shelfId,
-                assignBookDto.bookId
+                assignBookDto.bookId,
+                assignBookDto.shelfId
             );
 
             return res.status(HttpStatus.OK).json({
                 success: true,
                 message: result.message,
                 shelf: result.shelf,
+                ...(result.assignmentScore !== undefined && {
+                    assignmentScore: result.assignmentScore,
+                }),
+                ...(result.algorithmStats && {
+                    algorithmStats: result.algorithmStats,
+                }),
             });
         } catch (error: any) {
             return res.status(HttpStatus.BAD_REQUEST).json({

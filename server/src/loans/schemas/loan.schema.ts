@@ -34,3 +34,4 @@ export class Loan {
 }
 
 export const LoanSchema = SchemaFactory.createForClass(Loan);
+LoanSchema.index({ bookId: 1, loanDate: -1 });
