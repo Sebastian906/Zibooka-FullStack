@@ -93,6 +93,8 @@ const Shelves = () => {
     })
     const [selectedBookId, setSelectedBookId] = useState('')
 
+    const [autoAssign, setAutoAssign] = useState(false);
+
     useEffect(() => {
         const loadShelves = async () => {
             try {
@@ -134,14 +136,26 @@ const Shelves = () => {
             return
         }
 
+        if (!autoAssign && !selectedShelf) {
+            toast.error('Please select a shelf or enable auto-assign')
+            return
+        }
+
         setIsLoading(true)
-        const result = await assignBookToShelf(selectedShelf._id, selectedBookId)
+        // Si autoAssign está activo, pasamos null como shelfId
+        const shelfIdToSend = autoAssign ? null : selectedShelf._id
+        const result = await assignBookToShelf(shelfIdToSend, selectedBookId)
         setIsLoading(false)
 
         if (result.success) {
-            toast.success(result.message)
+            let message = result.message;
+            if (result.assignmentScore !== undefined) {
+                message += ` (Score: ${result.assignmentScore})`;
+            }
+            toast.success(message)
             setShowAssignModal(false)
             setSelectedBookId('')
+            setAutoAssign(false)
         } else {
             toast.error(result.message)
         }
@@ -394,7 +408,11 @@ const Shelves = () => {
                                     {isLoading ? 'Creating...' : 'Create'}
                                 </button>
                                 <button
-                                    onClick={() => setShowCreateModal(false)}
+                                    onClick={() => {
+                                        setShowAssignModal(false)
+                                        setSelectedBookId('')
+                                        setAutoAssign(false)
+                                    }}
                                     className='btn-white flex-1 rounded-md!'
                                 >
                                     Cancel
@@ -406,11 +424,57 @@ const Shelves = () => {
             )}
 
             {/* Assign Book Modal */}
-            {showAssignModal && selectedShelf && (
+            {showAssignModal && (
                 <div className='fixed top-0 bottom-0 left-0 right-0 z-40 flexCenter bg-black/50'>
                     <div className='bg-white p-6 rounded-xl max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto'>
-                        <h3 className='h3 mb-4'>Assign Book to {selectedShelf.code}</h3>
+                        <h3 className='h3 mb-4'>
+                            {autoAssign ? 'Auto-Assign Book' : `Assign Book to ${selectedShelf?.code || ''}`}
+                        </h3>
                         <div className='space-y-4'>
+                            {/* Checkbox de auto-assignación */}
+                            <div className='bg-blue-50 border border-blue-200 p-4 rounded-xl'>
+                                <label className='flex items-center gap-3 cursor-pointer'>
+                                    <input
+                                        type="checkbox"
+                                        checked={autoAssign}
+                                        onChange={(e) => {
+                                            setAutoAssign(e.target.checked);
+                                            if (e.target.checked) setSelectedShelf(null);
+                                        }}
+                                        className='w-4 h-4 cursor-pointer'
+                                    />
+                                    <div>
+                                        <p className='font-semibold text-sm'>Auto-assign to optimal shelf</p>
+                                        <p className='text-xs text-gray-600'>
+                                            Uses Branch & Bound to select the best shelf based on rotation, diversity, and weight metrics
+                                        </p>
+                                    </div>
+                                </label>
+                            </div>
+
+                            {/* Selector de estante (solo se muestra si NO es auto-assign) */}
+                            {!autoAssign && (
+                                <div>
+                                    <label className='block medium-14 mb-2'>Select Shelf</label>
+                                    <select
+                                        value={selectedShelf?._id || ''}
+                                        onChange={(e) => {
+                                            const shelf = shelves.find(s => s._id === e.target.value);
+                                            setSelectedShelf(shelf);
+                                        }}
+                                        className='w-full border border-gray-200 rounded p-2 outline-black/80'
+                                    >
+                                        <option value="">Choose a shelf...</option>
+                                        {shelves.map((shelf) => (
+                                            <option key={shelf._id} value={shelf._id}>
+                                                {shelf.code} ({shelf.location}) - {(shelf.currentWeight || 0).toFixed(2)}/{shelf.maxWeight} Kg
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {/* Selector de libro */}
                             <div>
                                 <label className='block medium-14 mb-2'>Select Book</label>
                                 <select
@@ -428,24 +492,6 @@ const Shelves = () => {
                                 <p className='text-xs text-gray-500 mt-1'>
                                     {availableBooks.length} books available (not assigned to any shelf)
                                 </p>
-                            </div>
-                            <div className='flex gap-2 mt-6'>
-                                <button
-                                    onClick={handleAssignBook}
-                                    disabled={isLoading}
-                                    className='btn-secondary flex-1 rounded-md!'
-                                >
-                                    {isLoading ? 'Assigning...' : 'Assign'}
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setShowAssignModal(false)
-                                        setSelectedBookId('')
-                                    }}
-                                    className='btn-white flex-1 rounded-md!'
-                                >
-                                    Cancel
-                                </button>
                             </div>
                         </div>
                     </div>

@@ -626,11 +626,23 @@ const ShopContextProvider = ({ children }) => {
 
     const assignBookToShelf = async (shelfId, bookId) => {
         try {
-            const { data } = await axios.post('/api/shelf/assign-book', { shelfId, bookId })
+            // Si shelfId es null/undefined, se envía solo bookId (asignación automática)
+            const payload = { bookId };
+            if (shelfId) {
+                payload.shelfId = shelfId;
+            }
+
+            const { data } = await axios.post('/api/shelf/assign-book', payload);
             if (data.success) {
                 await fetchShelves()
                 await fetchBooks()
-                return { success: true, message: data.message, shelf: data.shelf }
+                return {
+                    success: true,
+                    message: data.message,
+                    shelf: data.shelf,
+                    assignmentScore: data.assignmentScore,
+                    algorithmStats: data.algorithmStats,
+                }
             }
             return { success: false, message: data.message }
         } catch (error) {
