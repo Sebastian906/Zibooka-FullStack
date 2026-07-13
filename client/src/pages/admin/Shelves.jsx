@@ -409,9 +409,8 @@ const Shelves = () => {
                                 </button>
                                 <button
                                     onClick={() => {
-                                        setShowAssignModal(false)
-                                        setSelectedBookId('')
-                                        setAutoAssign(false)
+                                        setShowCreateModal(false)
+                                        setNewShelf({ code: '', location: '', maxWeight: 8, description: '' })
                                     }}
                                     className='btn-white flex-1 rounded-md!'
                                 >
@@ -492,6 +491,25 @@ const Shelves = () => {
                                 <p className='text-xs text-gray-500 mt-1'>
                                     {availableBooks.length} books available (not assigned to any shelf)
                                 </p>
+                            </div>
+                            <div className='flex gap-2 mt-6'>
+                                <button
+                                    onClick={handleAssignBook}
+                                    disabled={isLoading || (!autoAssign && !selectedShelf) || !selectedBookId}
+                                    className='btn-secondary flex-1 rounded-md!'
+                                >
+                                    {isLoading ? 'Assigning...' : (autoAssign ? 'Auto-Assign' : 'Assign')}
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setShowAssignModal(false)
+                                        setSelectedBookId('')
+                                        setAutoAssign(false)
+                                    }}
+                                    className='btn-white flex-1 rounded-md!'
+                                >
+                                    Cancel
+                                </button>
                             </div>
                         </div>
                     </div>
