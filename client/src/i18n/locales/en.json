@@ -571,5 +571,57 @@
         "note": "Loans are subject to availability",
         "detailsHidden": "Show details",
         "detailsShown": "Hide details"
+    },
+    "reports": {
+        "title1": "Reports",
+        "title2": "& Analytics",
+        "description": "Generate comprehensive reports with recursion analysis and export to PDF or Excel formats.",
+        "inventory": {
+            "title": "Inventory Reports",
+            "subtitle": "Generate complete inventory reports with recursive analysis of values and weights by category.",
+            "filterCategory": "Filter by category:",
+            "allCategories": "All categories",
+            "clear": "Clear",
+            "recursionIncluded": "Recursion analysis will be included",
+            "reportMode": "Report mode:",
+            "fullReport": "Full Report",
+            "optimizedReport": "Optimized (B&B)",
+            "maxRecords": "Max records (5-200):",
+            "generating": "Generating...",
+            "pdf": "PDF",
+            "excel": "Excel"
+        },
+        "loans": {
+            "title": "Loan Reports",
+            "subtitle": "Detailed loan reports with statistics and return analysis.",
+            "filterDate": "Filter by date range:",
+            "from": "From:",
+            "to": "To:",
+            "clearDates": "Clear dates"
+        },
+        "recursion": {
+            "title": "Recursive Analysis by Category",
+            "subtitle": "Total values and average weights calculated recursively",
+            "refresh": "Refresh",
+            "loading": "Loading...",
+            "stackRecursion": "Stack Recursion",
+            "tailRecursion": "Tail Recursion",
+            "books": "Books:",
+            "totalValue": "Total value:",
+            "average": "Average:",
+            "totalWeight": "Total weight:",
+            "noData": "No recursion data available"
+        },
+        "about": {
+            "title": "About Reports",
+            "pdfReports": "PDF Reports:",
+            "pdfReportsDesc": "Include detailed tables, statistics, and recursive analysis when filtered by category.",
+            "excelReports": "Excel Reports:",
+            "excelReportsDesc": "Contain active formulas for dynamic analysis, multiple sheets, and professional formatting.",
+            "stackRecursion": "Stack Recursion:",
+            "stackRecursionDesc": "Calculates total book value using traditional recursion (LIFO).",
+            "tailRecursion": "Tail Recursion:",
+            "tailRecursionDesc": "Calculates average weight using optimized tail recursion (1 page = 0.005 Kg)."
+        }
     }
 }

@@ -7,6 +7,7 @@ import { Loan, LoanSchema } from 'src/loans/schemas/loan.schema';
 import { Reservation, ReservationSchema } from 'src/reservations/schemas/reservation.schema';
 import { Shelf, ShelfSchema } from 'src/shelves/schemas/shelf.schema';
 import { ProductModule } from 'src/products/product.module';
+import { ReportCache, ReportCacheSchema } from './schemas/report-cache.schema';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ProductModule } from 'src/products/product.module';
       { name: Loan.name, schema: LoanSchema },
       { name: Reservation.name, schema: ReservationSchema },
       { name: Shelf.name, schema: ShelfSchema },
+      { name: ReportCache.name, schema: ReportCacheSchema},
     ]),
     ProductModule,
   ],

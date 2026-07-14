@@ -571,5 +571,57 @@
         "note": "Los préstamos están sujetos a disponibilidad",
         "detailsHidden": "Ver detalles",
         "detailsShown": "Ocultar detalles"
+    },
+    "reports": {
+        "title1": "Reportes",
+        "title2": "y Analíticas",
+        "description": "Genera reportes completos con análisis de recursión y exporta a formatos PDF o Excel.",
+        "inventory": {
+            "title": "Reportes de Inventario",
+            "subtitle": "Genera reportes completos de inventario con análisis recursivo de valores y pesos por categoría.",
+            "filterCategory": "Filtrar por categoría:",
+            "allCategories": "Todas las categorías",
+            "clear": "Limpiar",
+            "recursionIncluded": "Se incluirá análisis de recursión",
+            "reportMode": "Modo de reporte:",
+            "fullReport": "Reporte Completo",
+            "optimizedReport": "Optimizado (B&B)",
+            "maxRecords": "Máximo de registros (5-200):",
+            "generating": "Generando...",
+            "pdf": "PDF",
+            "excel": "Excel"
+        },
+        "loans": {
+            "title": "Reportes de Préstamos",
+            "subtitle": "Reportes detallados de préstamos con estadísticas y análisis de devoluciones.",
+            "filterDate": "Filtrar por rango de fechas:",
+            "from": "Desde:",
+            "to": "Hasta:",
+            "clearDates": "Limpiar fechas"
+        },
+        "recursion": {
+            "title": "Análisis Recursivo por Categoría",
+            "subtitle": "Valores totales y pesos promedio calculados recursivamente",
+            "refresh": "Actualizar",
+            "loading": "Cargando...",
+            "stackRecursion": "Recursión de Pila",
+            "tailRecursion": "Recursión de Cola",
+            "books": "Libros:",
+            "totalValue": "Valor total:",
+            "average": "Promedio:",
+            "totalWeight": "Peso total:",
+            "noData": "No hay datos de recursión disponibles"
+        },
+        "about": {
+            "title": "Sobre los Reportes",
+            "pdfReports": "Reportes PDF:",
+            "pdfReportsDesc": "Incluyen tablas detalladas, estadísticas y análisis recursivo al filtrar por categoría.",
+            "excelReports": "Reportes Excel:",
+            "excelReportsDesc": "Contienen fórmulas activas para análisis dinámico, múltiples hojas y formato profesional.",
+            "stackRecursion": "Recursión de Pila:",
+            "stackRecursionDesc": "Calcula el valor total del libro usando recursión tradicional (LIFO).",
+            "tailRecursion": "Recursión de Cola:",
+            "tailRecursionDesc": "Calcula el peso promedio usando recursión de cola optimizada (1 página = 0.005 Kg)."
+        }
     }
 }

@@ -50,7 +50,7 @@ export class ReportController {
             res.setHeader('Content-Length', pdfBuffer.length);
 
             return res.status(HttpStatus.OK).send(pdfBuffer);
-        } catch (error) {
+        } catch (error: any) {
             return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
                 success: false,
                 message: error.message,
@@ -103,7 +103,7 @@ export class ReportController {
             res.setHeader('Content-Length', xlsxBuffer.length);
 
             return res.status(HttpStatus.OK).send(xlsxBuffer);
-        } catch (error) {
+        } catch (error: any) {
             return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
                 success: false,
                 message: error.message,
@@ -168,7 +168,7 @@ export class ReportController {
             res.setHeader('Content-Length', pdfBuffer.length);
 
             return res.status(HttpStatus.OK).send(pdfBuffer);
-        } catch (error) {
+        } catch (error: any) {
             return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
                 success: false,
                 message: error.message,
@@ -236,7 +236,7 @@ export class ReportController {
             res.setHeader('Content-Length', xlsxBuffer.length);
 
             return res.status(HttpStatus.OK).send(xlsxBuffer);
-        } catch (error) {
+        } catch (error: any) {
             return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
                 success: false,
                 message: error.message,
@@ -282,7 +282,7 @@ export class ReportController {
                                 bookCount: weightData.bookCount,
                             },
                         };
-                    } catch (error) {
+                    } catch (error: any) {
                         return {
                             category,
                             error: error.message,
@@ -296,7 +296,117 @@ export class ReportController {
                 data: recursionData.filter(d => !d.error),
                 errors: recursionData.filter(d => d.error),
             });
-        } catch (error) {
+        } catch (error: any) {
+            return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+                success: false,
+                message: error.message,
+            });
+        }
+    }
+
+    @Get('inventory/optimized')
+    @ApiOperation({ summary: 'Get optimized inventory report (JSON preview)' })
+    @ApiQuery({ name: 'maxRecords', required: false, type: Number, example: 50 })
+    @ApiQuery({
+        name: 'category',
+        required: false,
+        description: 'Filter by book category',
+        enum: ['Academic', 'Children', 'Health', 'Horror', 'Business', 'History', 'Adventure'],
+    })
+    async getOptimizedInventoryReport(
+        @Query('maxRecords') maxRecords: string,
+        @Query('category') category: string,
+        @Res() res: Response,
+    ) {
+        try {
+            const max = Math.min(parseInt(maxRecords) || 50, 200);
+            const result = await this.reportsService.generateOptimizedInventoryReport({
+                maxRecords: max,
+                category,
+            });
+            return res.status(HttpStatus.OK).json({ success: true, data: result });
+        } catch (error: any) {
+            return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+                success: false,
+                message: error.message,
+            });
+        }
+    }
+
+    // Endpoint para descargar PDF del reporte optimizado
+    @Get('inventory/optimized/pdf')
+    @ApiOperation({ summary: 'Download optimized inventory report as PDF' })
+    @ApiQuery({ name: 'maxRecords', required: false, type: Number, example: 50 })
+    @ApiQuery({
+        name: 'category',
+        required: false,
+        description: 'Filter by book category',
+        enum: ['Academic', 'Children', 'Health', 'Horror', 'Business', 'History', 'Adventure'],
+    })
+    @ApiResponse({ status: 200, description: 'PDF file generated successfully' })
+    async downloadOptimizedInventoryPDF(
+        @Query('maxRecords') maxRecords: string,
+        @Query('category') category: string,
+        @Res() res: Response,
+    ) {
+        try {
+            const max = Math.min(parseInt(maxRecords) || 50, 200);
+            const reportData = await this.reportsService.generateOptimizedInventoryReport({
+                maxRecords: max,
+                category,
+            });
+            const pdfBuffer = await this.reportsService.generateOptimizedPDF(reportData);
+
+            const filename = `inventario-optimizado-${Date.now()}.pdf`;
+
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+            res.setHeader('Content-Length', pdfBuffer.length);
+
+            return res.status(HttpStatus.OK).send(pdfBuffer);
+        } catch (error: any) {
+            return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+                success: false,
+                message: error.message,
+            });
+        }
+    }
+
+    // Endpoint para descargar XLSX del reporte optimizado
+    @Get('inventory/optimized/xlsx')
+    @ApiOperation({ summary: 'Download optimized inventory report as Excel' })
+    @ApiQuery({ name: 'maxRecords', required: false, type: Number, example: 50 })
+    @ApiQuery({
+        name: 'category',
+        required: false,
+        description: 'Filter by book category',
+        enum: ['Academic', 'Children', 'Health', 'Horror', 'Business', 'History', 'Adventure'],
+    })
+    @ApiResponse({ status: 200, description: 'Excel file generated successfully' })
+    async downloadOptimizedInventoryXLSX(
+        @Query('maxRecords') maxRecords: string,
+        @Query('category') category: string,
+        @Res() res: Response,
+    ) {
+        try {
+            const max = Math.min(parseInt(maxRecords) || 50, 200);
+            const reportData = await this.reportsService.generateOptimizedInventoryReport({
+                maxRecords: max,
+                category,
+            });
+            const xlsxBuffer = await this.reportsService.generateOptimizedXLSX(reportData);
+
+            const filename = `inventario-optimizado-${Date.now()}.xlsx`;
+
+            res.setHeader(
+                'Content-Type',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            );
+            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+            res.setHeader('Content-Length', xlsxBuffer.length);
+
+            return res.status(HttpStatus.OK).send(xlsxBuffer);
+        } catch (error: any) {
             return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
                 success: false,
                 message: error.message,

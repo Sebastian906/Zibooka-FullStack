@@ -880,12 +880,20 @@ const ShopContextProvider = ({ children }) => {
     }
 
     // Descargar reporte de inventario en PDF
-    const downloadInventoryPDF = async (category = '') => {
+    const downloadInventoryPDF = async (category = '', mode = 'full', maxRecords = 50) => {
         try {
             setReportLoading(true);
-            const params = category ? { category } : {};
+            const params = {};
+            if (category) params.category = category;
+            if (mode === 'optimized') {
+                params.maxRecords = maxRecords;
+            }
 
-            const response = await axios.get('/api/reports/inventory/pdf', {
+            const endpoint = mode === 'optimized'
+                ? '/api/reports/inventory/optimized/pdf'
+                : '/api/reports/inventory/pdf';
+
+            const response = await axios.get(endpoint, {
                 params,
                 responseType: 'blob',
             });
@@ -912,12 +920,20 @@ const ShopContextProvider = ({ children }) => {
     };
 
     // Descargar reporte de inventario en XLSX
-    const downloadInventoryXLSX = async (category = '') => {
+    const downloadInventoryXLSX = async (category = '', mode = 'full', maxRecords = 50) => {
         try {
             setReportLoading(true);
-            const params = category ? { category } : {};
+            const params = {};
+            if (category) params.category = category;
+            if (mode === 'optimized') {
+                params.maxRecords = maxRecords;
+            }
 
-            const response = await axios.get('/api/reports/inventory/xlsx', {
+            const endpoint = mode === 'optimized'
+                ? '/api/reports/inventory/optimized/xlsx'
+                : '/api/reports/inventory/xlsx';
+
+            const response = await axios.get(endpoint, {
                 params,
                 responseType: 'blob',
             });
@@ -928,9 +944,11 @@ const ShopContextProvider = ({ children }) => {
             const downloadUrl = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = downloadUrl;
-            link.download = category
-                ? `inventario-${category}-${Date.now()}.xlsx`
-                : `inventario-completo-${Date.now()}.xlsx`;
+            link.download = mode === 'optimized'
+                ? `inventario-optimizado-${Date.now()}.xlsx`
+                : category
+                    ? `inventario-${category}-${Date.now()}.xlsx`
+                    : `inventario-completo-${Date.now()}.xlsx`;
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -1029,6 +1047,27 @@ const ShopContextProvider = ({ children }) => {
         }
     }
 
+    // Obtener preview del reporte optimizado
+    const getOptimizedReportPreview = async (maxRecords = 50, category = '') => {
+        try {
+            const params = { maxRecords };
+            if (category) params.category = category;
+
+            const { data } = await axios.get('/api/reports/inventory/optimized', { params });
+
+            if (data.success) {
+                return data.data || null;
+            }
+
+            toast.error(data.message || 'Error al cargar preview optimizado');
+            return null;
+        } catch (error) {
+            console.error('Error fetching optimized preview:', error);
+            toast.error(error.response?.data?.message || 'Error al cargar preview optimizado');
+            return null;
+        }
+    };
+
     useEffect(() => {
         fetchBooks()
         fetchUser()
@@ -1036,7 +1075,7 @@ const ShopContextProvider = ({ children }) => {
     }, [])
 
     const value = {
-        books, navigate, user, setUser, currency, searchQuery, setSearchQuery, cartItems, setCartItems, addToCart, getCartCount, getCartAmount, updateQuantity, method, setMethod, delivery_charges, showUserLogin, setShowUserLogin, isAdmin, setIsAdmin, axios, fetchBooks, fetchUser, fetchAdmin, logoutUser, availableCategories, searchProducts, searchByTitleOrAuthor, searchByISBN, sortProductsByPrice, applyFiltersAndSort, profileData, setProfileData, profileImage, setProfileImage, imagePreview, setImagePreview, profileLoading, setProfileLoading, countryCodes, selectedCountryCode, setSelectedCountryCode, phoneNumber, setPhoneNumber, getUserProfile, loadProfileData, handleProfileImageChange, handlePhoneChange, updateProfileField, submitProfileUpdate, cancelProfileUpdate, resetProfileForm, shelves, fetchShelves, createShelf, assignBookToShelf, removeBookFromShelf, findDangerousCombinations, optimizeShelf, getUserLoans, getUserLoanStats, createLoan, returnBook, getAllLoans, getUserReservationStats, getUserReservationList, getWaitingList, createReservation, cancelReservation, reportLoading, downloadInventoryPDF, downloadInventoryXLSX, downloadLoansPDF, downloadLoansXLSX, getRecursionPreview, currentLanguage
+        books, navigate, user, setUser, currency, searchQuery, setSearchQuery, cartItems, setCartItems, addToCart, getCartCount, getCartAmount, updateQuantity, method, setMethod, delivery_charges, showUserLogin, setShowUserLogin, isAdmin, setIsAdmin, axios, fetchBooks, fetchUser, fetchAdmin, logoutUser, availableCategories, searchProducts, searchByTitleOrAuthor, searchByISBN, sortProductsByPrice, applyFiltersAndSort, profileData, setProfileData, profileImage, setProfileImage, imagePreview, setImagePreview, profileLoading, setProfileLoading, countryCodes, selectedCountryCode, setSelectedCountryCode, phoneNumber, setPhoneNumber, getUserProfile, loadProfileData, handleProfileImageChange, handlePhoneChange, updateProfileField, submitProfileUpdate, cancelProfileUpdate, resetProfileForm, shelves, fetchShelves, createShelf, assignBookToShelf, removeBookFromShelf, findDangerousCombinations, optimizeShelf, getUserLoans, getUserLoanStats, createLoan, returnBook, getAllLoans, getUserReservationStats, getUserReservationList, getWaitingList, createReservation, cancelReservation, reportLoading, downloadInventoryPDF, downloadInventoryXLSX, downloadLoansPDF, downloadLoansXLSX, getRecursionPreview, getOptimizedReportPreview, currentLanguage
     }
 
     return (
