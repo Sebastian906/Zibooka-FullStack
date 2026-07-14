@@ -33,6 +33,15 @@ export class Order {
 
     @Prop({ required: true, default: false })
     isPaid: boolean;
+
+    @Prop({ type: Number, default: null })
+    priority: number | null;
+
+    @Prop({ type: Date, default: Date.now })
+    createdAt: Date;
+
+    @Prop({ type: Date, default: Date.now })
+    updatedAt: Date;
 }
 
 export const OrderSchema = SchemaFactory.createForClass(Order);

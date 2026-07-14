@@ -1,5 +1,5 @@
-import { Body, Controller, Headers, HttpStatus, Post, Res, UseGuards } from '@nestjs/common';
-import { ApiBody, ApiCookieAuth, ApiHeader, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Headers, HttpStatus, Post, Query, Res, UseGuards } from '@nestjs/common';
+import { ApiBody, ApiCookieAuth, ApiHeader, ApiOperation, ApiResponse, ApiTags, ApiQuery } from '@nestjs/swagger';
 import { OrderService } from './order.service';
 import { AuthGuard } from 'src/common/guards/auth/auth.guard';
 import { PlaceOrderCODDto } from './dto/place-order-cod.dto';
@@ -38,7 +38,7 @@ export class OrderController {
                 success: true,
                 message: result.message,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res
                 .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
                 .json({
@@ -86,7 +86,7 @@ export class OrderController {
             );
 
             return res.status(HttpStatus.OK).json(result);
-        } catch (error) {
+        } catch (error: any) {
             return res
                 .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
                 .json({
@@ -114,7 +114,7 @@ export class OrderController {
                 success: true,
                 orders,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res
                 .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
                 .json({
@@ -142,7 +142,7 @@ export class OrderController {
                 success: true,
                 orders,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res
                 .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
                 .json({
@@ -175,7 +175,87 @@ export class OrderController {
                 success: true,
                 message: result.message,
             });
-        } catch (error) {
+        } catch (error: any) {
+            return res
+                .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
+                .json({
+                    success: false,
+                    message: error.message,
+                });
+        }
+    }
+
+    @Get('queue/status')
+    @UseGuards(AdminAuthGuard)
+    @ApiCookieAuth('adminToken')
+    @ApiOperation({ summary: 'Get priority queue status (Admin only)' })
+    @ApiResponse({ status: 200, description: 'Queue status retrieved' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    async getQueueStatus(@Res() res: Response) {
+        try {
+            const queue = await this.orderService.getQueueStatus();
+            const size = await this.orderService.getQueueSize();
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                size,
+                queue,
+            });
+        } catch (error: any) {
+            return res
+                .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
+                .json({
+                    success: false,
+                    message: error.message,
+                });
+        }
+    }
+
+    @Post('queue/process')
+    @UseGuards(AdminAuthGuard)
+    @ApiCookieAuth('adminToken')
+    @ApiOperation({ summary: 'Process next batch of orders by priority (Admin only)' })
+    @ApiQuery({ name: 'batchSize', required: false, type: Number, description: 'Number of orders to process (default: 10)' })
+    @ApiResponse({ status: 200, description: 'Batch processed successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    async processNextBatch(
+        @Query('batchSize') batchSize: string,
+        @Res() res: Response,
+    ) {
+        try {
+            const size = batchSize ? parseInt(batchSize, 10) : 10;
+            const processed = await this.orderService.processNextBatch(size);
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                processed,
+                count: processed.length,
+            });
+        } catch (error: any) {
+            return res
+                .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
+                .json({
+                    success: false,
+                    message: error.message,
+                });
+        }
+    }
+
+    @Post('queue/rebalance')
+    @UseGuards(AdminAuthGuard)
+    @ApiCookieAuth('adminToken')
+    @ApiOperation({ summary: 'Rebalance priority queue (Admin only)' })
+    @ApiResponse({ status: 200, description: 'Queue rebalanced' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    async rebalanceQueue(@Res() res: Response) {
+        try {
+            await this.orderService.rebalanceQueue();
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                message: 'Queue rebalanced successfully',
+            });
+        } catch (error: any) {
             return res
                 .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
                 .json({

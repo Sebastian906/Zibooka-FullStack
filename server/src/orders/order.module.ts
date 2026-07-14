@@ -6,6 +6,7 @@ import { Order, OrderSchema } from './schemas/order.schema';
 import { Product, ProductSchema } from 'src/products/schemas/product.schema';
 import { User, UserSchema } from 'src/users/schemas/user.schema';
 import { StripeWebhookController } from './stripe-webhook.controller';
+import { OrderSchedulerService } from './services/order-scheduler.service';
 
 @Module({
   imports: [
@@ -15,8 +16,8 @@ import { StripeWebhookController } from './stripe-webhook.controller';
       { name: User.name, schema: UserSchema },
     ]),
   ],
-  providers: [OrderService],
+  providers: [OrderService, OrderSchedulerService],
   controllers: [OrderController, StripeWebhookController],
-  exports: [OrderService]
+  exports: [OrderService, OrderSchedulerService]
 })
 export class OrderModule {}

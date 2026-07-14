@@ -9,6 +9,7 @@ import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import Stripe from 'stripe';
 import { ConfigService } from '@nestjs/config';
 import { PlaceOrderStripeDto } from './dto/place-order-stripe.dto';
+import { OrderSchedulerService } from './services/order-scheduler.service';
 
 @Injectable()
 export class OrderService {
@@ -24,7 +25,8 @@ export class OrderService {
         @InjectModel(Product.name) private productModel: Model<ProductDocument>,
         @InjectModel(User.name) private userModel: Model<UserDocument>,
         private configService: ConfigService,
-    ) { 
+        private readonly orderScheduler: OrderSchedulerService,
+    ) {
         // Initialize Stripe
         const stripeSecretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
         if (!stripeSecretKey) {
@@ -63,7 +65,7 @@ export class OrderService {
             const totalAmount = subtotal + taxAmount + this.deliveryCharges;
 
             // Create order
-            await this.orderModel.create({
+            const newOrder = await this.orderModel.create({
                 userId,
                 items: items.map(item => ({
                     product: new Types.ObjectId(item.product),
@@ -74,11 +76,14 @@ export class OrderService {
                 paymentMethod: 'COD',
             });
 
+            // Enqueue order in priority queue
+            await this.orderScheduler.enqueueOrder(newOrder._id.toString());
+
             // Clear user cart
             await this.userModel.findByIdAndUpdate(userId, { cartData: {} });
 
             return { message: 'Order Placed' };
-        } catch (error) {
+        } catch (error: any) {
             if (error instanceof NotFoundException) {
                 throw error;
             }
@@ -137,6 +142,9 @@ export class OrderService {
                 paymentMethod: 'stripe',
             });
 
+            // Enqueue order in priority queue
+            await this.orderScheduler.enqueueOrder(order._id.toString());
+
             // Create line items for stripe
             const line_items: Stripe.Checkout.SessionCreateParams.LineItem[] = productData.map((item) => {
                 return {
@@ -188,7 +196,7 @@ export class OrderService {
             }
 
             return { success: true, url: session.url };
-        } catch (error) {
+        } catch (error: any) {
             if (error instanceof NotFoundException) {
                 throw error;
             }
@@ -211,7 +219,7 @@ export class OrderService {
                 .sort({ createdAt: -1 });
 
             return orders;
-        } catch (error) {
+        } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }
     }
@@ -227,7 +235,7 @@ export class OrderService {
                 .sort({ createdAt: -1 });
 
             return orders;
-        } catch (error) {
+        } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }
     }
@@ -248,8 +256,20 @@ export class OrderService {
                 throw new NotFoundException('Order not found');
             }
 
+            // Si la orden se marca como completada/entregada, incrementar contador del usuario
+            if (status === 'Delivered') {
+                await this.userModel.findByIdAndUpdate(order.userId, {
+                    $inc: { completedOrders: 1 },
+                });
+            }
+
+            // Si la orden se cancela o completa, remover de la cola de prioridad
+            if (status === 'Delivered' || status === 'Cancelled') {
+                this.orderScheduler.completeOrder(orderId);
+            }
+
             return { message: 'Order status updated' };
-        } catch (error) {
+        } catch (error: any) {
             if (error instanceof NotFoundException) {
                 throw error;
             }
@@ -276,7 +296,7 @@ export class OrderService {
                 signature,
                 webhookSecret,
             );
-        } catch (error) {
+        } catch (error: any) {
             throw new Error(`Webhook signature verification failed: ${error.message}`);
         }
 
@@ -299,6 +319,9 @@ export class OrderService {
                 // Mark order as paid
                 await this.orderModel.findByIdAndUpdate(orderId, { isPaid: true });
 
+                // Remove from priority queue (order is now paid, will be processed)
+                this.orderScheduler.completeOrder(orderId);
+
                 // Clear user cart
                 await this.userModel.findByIdAndUpdate(userId, { cartData: {} });
 
@@ -312,6 +335,9 @@ export class OrderService {
                 const { orderId } = session.metadata || {};
 
                 if (orderId) {
+                    // Remove from priority queue
+                    this.orderScheduler.completeOrder(orderId);
+
                     // Delete order if checkout session expired
                     await this.orderModel.findByIdAndDelete(orderId);
                     console.log(`Checkout expired, order ${orderId} deleted`);
@@ -331,6 +357,9 @@ export class OrderService {
                     const { orderId } = sessions.data[0].metadata || {};
 
                     if (orderId) {
+                        // Remove from priority queue
+                        this.orderScheduler.completeOrder(orderId);
+
                         // Delete order if payment failed
                         await this.orderModel.findByIdAndDelete(orderId);
                         console.log(`Payment failed, order ${orderId} deleted`);
@@ -343,5 +372,27 @@ export class OrderService {
                 console.log(`Unhandled event type: ${event.type}`);
                 break;
         }
+    }
+
+    async getQueueStatus(): Promise<Array<{
+        orderId: string;
+        priority: number;
+        createdAt: Date;
+    }>> {
+        return this.orderScheduler.getQueueStatus();
+    }
+
+    async getQueueSize(): Promise<number> {
+        return this.orderScheduler.getQueueSize();
+    }
+
+    async processNextBatch(
+        batchSize: number,
+    ): Promise<Array<{ orderId: string; priority: number }>> {
+        return this.orderScheduler.processNextBatch(batchSize);
+    }
+
+    async rebalanceQueue(): Promise<void> {
+        return this.orderScheduler.rebalanceQueue();
     }
 }
