@@ -5,7 +5,7 @@ export type ReportCacheDocument = HydratedDocument<ReportCache>;
 
 @Schema({ expires: '1h' })  // TTL automático de 1 hora
 export class ReportCache {
-    @Prop({ required: true, index: true })
+    @Prop({ required: true, unique: true })
     cacheKey: string;
 
     @Prop({ required: true })

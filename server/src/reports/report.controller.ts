@@ -318,12 +318,19 @@ export class ReportController {
         @Query('category') category: string,
         @Res() res: Response,
     ) {
-        const max = Math.min(parseInt(maxRecords) || 50, 200);
-        const result = await this.reportsService.generateOptimizedInventoryReport({
-            maxRecords: max,
-            category,
-        });
-        return res.status(HttpStatus.OK).json({ success: true, data: result });
+        try {
+            const max = Math.min(parseInt(maxRecords) || 50, 200);
+            const result = await this.reportsService.generateOptimizedInventoryReport({
+                maxRecords: max,
+                category,
+            });
+            return res.status(HttpStatus.OK).json({ success: true, data: result });
+        } catch (error: any) {
+            return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+                success: false,
+                message: error.message,
+            });
+        }
     }
 
     // Endpoint para descargar PDF del reporte optimizado

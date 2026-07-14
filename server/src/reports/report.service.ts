@@ -561,6 +561,7 @@ export class ReportService {
         maxRecords: number,
         totalCategories: number
     ) {
+
         // Pre-procesamiento
         const items = products.map(p => ({
             id: p._id.toString(),
@@ -573,6 +574,13 @@ export class ReportService {
         const allCategories = [...new Set(items.map(i => i.category))];
         const totalPossibleValue = items.reduce((s, i) => s + i.value, 0);
 
+        // suffixSum[i] = sum of sortedItems[i..end].value
+        const suffixSum = new Array(sortedItems.length + 1).fill(0);
+
+        for (let i = sortedItems.length - 1; i >= 0; i--) {
+            suffixSum[i] = suffixSum[i + 1] + sortedItems[i].value;
+
+        }
         let bestScore = -1;
         let bestSelection: any[] = [];
         let nodesExplored = 0;
@@ -621,10 +629,7 @@ export class ReportService {
             const remainingCategories = allCategories.filter(
                 c => !frame.coveredCategories.has(c)
             );
-            const maxAdditionalValue = sortedItems
-                .slice(frame.idx)
-                .reduce((sum, item) => sum + item.value, 0);
-
+            const maxAdditionalValue = suffixSum[frame.idx];
             const optimisticCoverage = Math.min(1,
                 (categoriesCovered + remainingCategories.length) / Math.max(totalCategories, 1)
             );
@@ -695,7 +700,7 @@ export class ReportService {
 
         // Obtener todos los productos
         const allProducts = await this.productModel.find(query).lean().exec();
-        const totalCategories = await this.productModel.distinct('category').then(r => r.length);
+        const totalCategories = await this.productModel.distinct('category', query).then(r => r.length);
 
         // Ejecutar B&B
         const result = this.selectOptimalSubset(allProducts, maxRecords, totalCategories);
