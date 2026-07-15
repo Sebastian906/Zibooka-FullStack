@@ -92,7 +92,7 @@ export class ReportService {
             }, {} as Record<string, any>);
 
         const data = `${reportType}_${JSON.stringify(sortedFilters)}`;
-        return crypto.createHash('md5').update(data).digest('hex');
+        return crypto.createHash('sha256').update(data).digest('hex');
     }
 
     /**
@@ -104,7 +104,7 @@ export class ReportService {
         if (cached && cached.expiresAt > new Date()) {
             return {
                 data: cached.data as T,
-                cachedAt: cached.expiresAt,
+                cachedAt: (cached as any).updatedAt ?? cached.expiresAt,
             };
         }
 
@@ -171,7 +171,7 @@ export class ReportService {
             category,
             products: products.map(p => ({
                 isbn: p.isbn || 'N/A',
-                name: p.name,
+                name: p.name || 'N/A',
                 author: p.author || 'N/A',
                 category: p.category || 'N/A',
                 price: p.offerPrice,
