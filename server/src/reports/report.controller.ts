@@ -1,7 +1,9 @@
-import { BadRequestException, Controller, Get, HttpStatus, Query, Res } from '@nestjs/common';
-import { ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { BadRequestException, Body, Controller, Get, HttpStatus, Post, Query, Res, UseGuards } from '@nestjs/common';
+import { ApiBody, ApiOperation, ApiQuery, ApiResponse, ApiTags, ApiCookieAuth } from '@nestjs/swagger';
 import { ReportService } from './report.service';
 import type { Response } from 'express';
+import { AdminAuthGuard } from 'src/common/guards/admin-auth/admin-auth.guard';
+import { AdminEmail } from 'src/common/decorators/admin/admin-email.decorator';
 
 @ApiTags('Reports')
 @Controller('reports')
@@ -406,6 +408,105 @@ export class ReportController {
             res.setHeader('Content-Length', xlsxBuffer.length);
 
             return res.status(HttpStatus.OK).send(xlsxBuffer);
+        } catch (error: any) {
+            return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+                success: false,
+                message: error.message,
+            });
+        }
+    }
+
+    // ENDPOINTS DE CACHE MANAGEMENT (Admin Only)
+    
+    /**
+     * Invalida el cache de reportes
+     */
+    @Post('cache/clear')
+    @UseGuards(AdminAuthGuard)
+    @ApiCookieAuth('adminToken')
+    @ApiOperation({
+        summary: 'Clear report cache (Admin only)',
+        description: 'Invalidates all cached reports or filters by report type. Requires admin authentication.',
+    })
+    @ApiBody({
+        schema: {
+            type: 'object',
+            properties: {
+                reportType: {
+                    type: 'string',
+                    enum: ['inventory', 'loans', 'inventory-optimized'],
+                    description: 'Optional: specific report type to clear. If omitted, clears all cache.',
+                },
+            },
+        },
+    })
+    @ApiResponse({ status: 200, description: 'Cache cleared successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized - Admin authentication required' })
+    async clearCache(
+        @Body('reportType') reportType: string,
+        @AdminEmail() adminEmail: string,
+        @Res() res: Response,
+    ) {
+        try {
+            // Validar reportType si se proporciona
+            const validTypes = ['inventory', 'loans', 'inventory-optimized'];
+            if (reportType && !validTypes.includes(reportType)) {
+                throw new BadRequestException(`Invalid reportType. Must be one of: ${validTypes.join(', ')}`);
+            }
+
+            const result = await this.reportsService.clearCache(reportType);
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                message: `Cache cleared successfully${reportType ? ` for type: ${reportType}` : ''}`,
+                data: {
+                    deletedCount: result.deletedCount,
+                    reportType: reportType || 'all',
+                    clearedBy: adminEmail,
+                    clearedAt: new Date().toISOString(),
+                },
+            });
+        } catch (error: any) {
+            if (error instanceof BadRequestException) {
+                return res.status(HttpStatus.BAD_REQUEST).json({
+                    success: false,
+                    message: error.message,
+                });
+            }
+            return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+                success: false,
+                message: error.message,
+            });
+        }
+    }
+
+    /**
+     * Obtiene estadísticas del cache
+     */
+    @Get('cache/stats')
+    @UseGuards(AdminAuthGuard)
+    @ApiCookieAuth('adminToken')
+    @ApiOperation({
+        summary: 'Get cache statistics (Admin only)',
+        description: 'Returns detailed statistics about the report cache including entry counts, types, and size estimates.',
+    })
+    @ApiResponse({ status: 200, description: 'Cache stats retrieved successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized - Admin authentication required' })
+    async getCacheStats(
+        @AdminEmail() adminEmail: string,
+        @Res() res: Response,
+    ) {
+        try {
+            const stats = await this.reportsService.getCacheStats();
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                data: {
+                    ...stats,
+                    queriedBy: adminEmail,
+                    queriedAt: new Date().toISOString(),
+                },
+            });
         } catch (error: any) {
             return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
                 success: false,

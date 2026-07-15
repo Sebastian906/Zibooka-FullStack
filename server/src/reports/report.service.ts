@@ -1,6 +1,7 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import * as crypto from 'crypto';
 import { Loan } from 'src/loans/schemas/loan.schema';
 import { ProductService } from 'src/products/product.service';
 import { Product } from 'src/products/schemas/product.schema';
@@ -9,6 +10,63 @@ import { Shelf } from 'src/shelves/schemas/shelf.schema';
 import PDFDocument from 'pdfkit';
 import ExcelJS from 'exceljs';
 import { ReportCache } from './schemas/report-cache.schema';
+
+// Interfaces para tipado fuerte
+export interface InventoryReportData {
+    category?: string;
+    products: Array<{
+        isbn: string;
+        name: string;
+        author: string;
+        category: string;
+        price: number;
+        inStock: boolean;
+        pageCount: number;
+    }>;
+    recursionData?: {
+        valueData: {
+            category: string;
+            totalValue: number;
+            bookCount: number;
+            executionLog: string[];
+        };
+        weightData: {
+            category: string;
+            averageWeight: number;
+            totalWeight: number;
+            bookCount: number;
+            executionLog: string[];
+        };
+    };
+    generatedAt: string;
+}
+
+export interface LoansReportData {
+    dateFrom?: string;
+    dateTo?: string;
+    loans: Array<{
+        userName: string;
+        userEmail: string;
+        bookName: string;
+        bookIsbn: string;
+        loanDate: string;
+        returnDate: string | null;
+        status: 'active' | 'returned';
+    }>;
+    statistics: {
+        total: number;
+        active: number;
+        returned: number;
+    };
+    generatedAt: string;
+}
+
+export interface ReportResponse<T> {
+    data: T;
+    _cached: boolean;
+    _cachedAt?: Date;
+    _generationTimeMs: number;
+}
 
 @Injectable()
 export class ReportService {
@@ -22,43 +80,198 @@ export class ReportService {
     ) { }
 
     /**
+    * Genera una cache key basada en MD5 hash de reportType + filters
+    */
+    private generateCacheKey(reportType: string, filters: Record<string, any>): string {
+        // Ordenar keys para consistencia
+        const sortedFilters = Object.keys(filters)
+            .sort()
+            .reduce((acc, key) => {
+                acc[key] = filters[key];
+                return acc;
+            }, {} as Record<string, any>);
+
+        const data = `${reportType}_${JSON.stringify(sortedFilters)}`;
+        return crypto.createHash('sha256').update(data).digest('hex');
+    }
+
+    /**
+     * Obtiene datos del cache o retorna null si no existe o expiró
+     */
+    private async getFromCache<T>(cacheKey: string): Promise<{ data: T; cachedAt: Date } | null> {
+        const cached = await this.reportCacheModel.findOne({ cacheKey }).exec();
+
+        if (cached && cached.expiresAt > new Date()) {
+            return {
+                data: cached.data as T,
+                cachedAt: (cached as any).updatedAt ?? cached.expiresAt,
+            };
+        }
+
+        return null;
+    }
+
+    /**
+     * Guarda datos en el cache con TTL de 24 horas
+     */
+    private async setCache(
+        cacheKey: string,
+        reportType: string,
+        filters: Record<string, any>,
+        data: any,
+        recordCount: number,
+        generationTimeMs: number
+    ): Promise<void> {
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 horas
+
+        await this.reportCacheModel.updateOne(
+            { cacheKey },
+            {
+                $set: {
+                    reportType,
+                    filters,
+                    data,
+                    recordCount,
+                    generationTimeMs,
+                    expiresAt,
+                }
+            },
+            { upsert: true }
+        ).exec();
+    }
+
+    /**
+     * Genera datos de inventario (sin renderizar)
+     */
+    async getInventoryData(category?: string): Promise<InventoryReportData> {
+        const cacheKey = this.generateCacheKey('inventory', { category: category || 'all' });
+
+        // Verificar cache
+        const cached = await this.getFromCache<InventoryReportData>(cacheKey);
+        if (cached) {
+            return cached.data;
+        }
+
+        const startTime = Date.now();
+        const query = category ? { category } : {};
+        const products = await this.productModel.find(query).exec();
+
+        // Obtener datos de recursión si hay categoría específica
+        let recursionData: InventoryReportData['recursionData'] = undefined;
+
+        if (category) {
+            const [valueData, weightData] = await Promise.all([
+                this.productsService.calculateTotalValueByCategory(category),
+                this.productsService.calculateAverageWeightByCategory(category),
+            ]);
+            recursionData = { valueData, weightData };
+        }
+
+        const reportData: InventoryReportData = {
+            category,
+            products: products.map(p => ({
+                isbn: p.isbn || 'N/A',
+                name: p.name || 'N/A',
+                author: p.author || 'N/A',
+                category: p.category || 'N/A',
+                price: p.offerPrice,
+                inStock: p.inStock,
+                pageCount: p.pageCount || 0,
+            })),
+            recursionData,
+            generatedAt: new Date().toISOString(),
+        };
+
+        const generationTimeMs = Date.now() - startTime;
+
+        // Guardar en cache
+        await this.setCache(cacheKey, 'inventory', { category: category || 'all' }, reportData, products.length, generationTimeMs);
+
+        return reportData;
+    }
+
+    /**
+     * Genera datos de préstamos (sin renderizar)
+     */
+    async getLoansData(dateFrom?: Date, dateTo?: Date): Promise<LoansReportData> {
+        const filters: Record<string, any> = {
+            dateFrom: dateFrom?.toISOString() || 'none',
+            dateTo: dateTo?.toISOString() || 'none',
+        };
+        const cacheKey = this.generateCacheKey('loans', filters);
+
+        // Verificar cache
+        const cached = await this.getFromCache<LoansReportData>(cacheKey);
+        if (cached) {
+            return cached.data;
+        }
+
+        const startTime = Date.now();
+        const query: any = {};
+        if (dateFrom || dateTo) {
+            query.loanDate = {};
+            if (dateFrom) query.loanDate.$gte = dateFrom;
+            if (dateTo) query.loanDate.$lte = dateTo;
+        }
+
+        const loans = await this.loanModel
+            .find(query)
+            .populate('userId', 'name email')
+            .populate('bookId', 'name isbn')
+            .exec();
+
+        const activeLoans = loans.filter(l => l.status === 'active').length;
+        const returnedLoans = loans.filter(l => l.status === 'returned').length;
+
+        const reportData: LoansReportData = {
+            dateFrom: dateFrom?.toISOString(),
+            dateTo: dateTo?.toISOString(),
+            loans: loans.map(loan => ({
+                userName: loan.userId && typeof loan.userId === 'object' && 'name' in loan.userId
+                    ? (loan.userId as any).name?.substring(0, 20) || 'N/A'
+                    : 'N/A',
+                userEmail: loan.userId && typeof loan.userId === 'object' && 'email' in loan.userId
+                    ? (loan.userId as any).email || 'N/A'
+                    : 'N/A',
+                bookName: loan.bookId && typeof loan.bookId === 'object' && 'name' in loan.bookId
+                    ? (loan.bookId as any).name?.substring(0, 30) || 'N/A'
+                    : 'N/A',
+                bookIsbn: loan.bookId && typeof loan.bookId === 'object' && 'isbn' in loan.bookId
+                    ? (loan.bookId as any).isbn || 'N/A'
+                    : 'N/A',
+                loanDate: new Date(loan.loanDate).toLocaleDateString('en-US'),
+                returnDate: loan.returnDate ? new Date(loan.returnDate).toLocaleDateString('en-US') : null,
+                status: loan.status === 'active' ? 'active' : 'returned',
+            })),
+            statistics: {
+                total: loans.length,
+                active: activeLoans,
+                returned: returnedLoans,
+            },
+            generatedAt: new Date().toISOString(),
+        };
+
+        const generationTimeMs = Date.now() - startTime;
+
+        // Guardar en cache
+        await this.setCache(cacheKey, 'loans', filters, reportData, loans.length, generationTimeMs);
+
+        return reportData;
+    }
+
+    /**
      * Genera reporte de inventario en formato PDF
      */
     async generateInventoryPDF(category?: string): Promise<Buffer> {
         try {
-            const query = category ? { category } : {};
-            const products = await this.productModel.find(query).exec();
-
-            // Obtener datos de recursión si hay categoría específica
-            let recursionData: {
-                valueData: {
-                    category: string;
-                    totalValue: number;
-                    bookCount: number;
-                    executionLog: string[];
-                };
-                weightData: {
-                    category: string;
-                    averageWeight: number;
-                    totalWeight: number;
-                    bookCount: number;
-                    executionLog: string[];
-                };
-            } | null = null;
-
-            if (category) {
-                const [valueData, weightData] = await Promise.all([
-                    this.productsService.calculateTotalValueByCategory(category),
-                    this.productsService.calculateAverageWeightByCategory(category),
-                ]);
-                recursionData = { valueData, weightData };
-            }
+            // Obtener datos cacheados
+            const reportData = await this.getInventoryData(category);
 
             return new Promise((resolve, reject) => {
                 const doc = new PDFDocument({
                     size: 'A4',
                     margin: 50,
-                    bufferPages: true  // Importante: permite agregar contenido a páginas previas
+                    bufferPages: true
                 });
                 const chunks: Buffer[] = [];
 
@@ -66,7 +279,6 @@ export class ReportService {
                 doc.on('end', () => resolve(Buffer.concat(chunks)));
                 doc.on('error', reject);
 
-                // Función helper para agregar footer
                 const addFooter = () => {
                     const pageNumber = doc.bufferedPageRange().count;
                     doc.fontSize(8).font('Helvetica').text(
@@ -80,19 +292,15 @@ export class ReportService {
                     );
                 };
 
-                // ============================================
                 // HEADER
-                // ============================================
                 doc.fontSize(20).text('Inventory Report', { align: 'center' });
-                doc.fontSize(10).text(`Generated: ${new Date().toLocaleDateString('en-US')}`, { align: 'center' });
-                if (category) {
-                    doc.text(`Category: ${category}`, { align: 'center' });
+                doc.fontSize(10).text(`Generated: ${new Date(reportData.generatedAt).toLocaleDateString('en-US')}`, { align: 'center' });
+                if (reportData.category) {
+                    doc.text(`Category: ${reportData.category}`, { align: 'center' });
                 }
                 doc.moveDown(2);
 
-                // ============================================
                 // PRODUCTS TABLE
-                // ============================================
                 doc.fontSize(14).text('Products', { underline: true });
                 doc.moveDown();
 
@@ -115,7 +323,7 @@ export class ReportService {
                 let yPos = tableTop + 20;
                 doc.font('Helvetica').fontSize(8);
 
-                products.forEach((product, index) => {
+                reportData.products.forEach((product, index) => {
                     // Check if we need a new page
                     if (yPos > 700) {
                         addFooter(); // Agregar footer a la página actual antes de cambiar
@@ -125,11 +333,11 @@ export class ReportService {
 
                     xPos = 50;
                     const rowData = [
-                        product.isbn || 'N/A',
+                        product.isbn,
                         product.name.substring(0, 30),
-                        product.author?.substring(0, 25) || 'N/A',
-                        product.category || 'N/A',
-                        `$${product.offerPrice}`,
+                        product.author.substring(0, 25),
+                        product.category,
+                        `$${product.price}`,
                         product.inStock ? 'Yes' : 'No',
                     ];
 
@@ -144,10 +352,8 @@ export class ReportService {
                 // Agregar footer a la última página de productos
                 addFooter();
 
-                // ============================================
                 // RECURSION ANALYSIS (if category filtered)
-                // ============================================
-                if (recursionData) {
+                if (reportData.recursionData) {
                     doc.addPage();
                     doc.fontSize(14).font('Helvetica-Bold').text('Recursive Analysis', { underline: true });
                     doc.moveDown();
@@ -155,17 +361,17 @@ export class ReportService {
                     // Stack Recursion
                     doc.fontSize(12).text('Stack Recursion - Total Value');
                     doc.fontSize(10).font('Helvetica');
-                    doc.text(`Total books: ${recursionData.valueData.bookCount}`);
-                    doc.text(`Total value: $${recursionData.valueData.totalValue.toLocaleString('en-US')} USD`);
-                    doc.text(`Average: $${(recursionData.valueData.totalValue / recursionData.valueData.bookCount).toFixed(2)} USD`);
+                    doc.text(`Total books: ${reportData.recursionData.valueData.bookCount}`);
+                    doc.text(`Total value: $${reportData.recursionData.valueData.totalValue.toLocaleString('en-US')} USD`);
+                    doc.text(`Average: $${(reportData.recursionData.valueData.totalValue / reportData.recursionData.valueData.bookCount).toFixed(2)} USD`);
                     doc.moveDown();
 
                     // Tail Recursion
                     doc.fontSize(12).font('Helvetica-Bold').text('Tail Recursion - Average Weight');
                     doc.fontSize(10).font('Helvetica');
-                    doc.text(`Total books: ${recursionData.weightData.bookCount}`);
-                    doc.text(`Total weight: ${recursionData.weightData.totalWeight.toFixed(3)} Kg`);
-                    doc.text(`Average weight: ${recursionData.weightData.averageWeight.toFixed(3)} Kg`);
+                    doc.text(`Total books: ${reportData.recursionData.weightData.bookCount}`);
+                    doc.text(`Total weight: ${reportData.recursionData.weightData.totalWeight.toFixed(3)} Kg`);
+                    doc.text(`Average weight: ${reportData.recursionData.weightData.averageWeight.toFixed(3)} Kg`);
 
                     // Footer para la página de recursión
                     addFooter();
@@ -185,6 +391,9 @@ export class ReportService {
      */
     async generateInventoryXLSX(category?: string): Promise<Buffer> {
         try {
+            // Obtener datos cacheados
+            const reportData = await this.getInventoryData(category);
+
             const workbook = new ExcelJS.Workbook();
             workbook.creator = 'Digital Library';
             workbook.created = new Date();
@@ -213,23 +422,23 @@ export class ReportService {
             };
             headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
 
-            // Get products
-            const query = category ? { category } : {};
-            const products = await this.productModel.find(query).exec();
+            // // Get products
+            // const query = category ? { category } : {};
+            // const products = await this.productModel.find(query).exec();
 
             // Add data
             let inStockCount = 0;
-            products.forEach((product, index) => {
+            reportData.products.forEach((product) => {
                 if (product.inStock) inStockCount++;
 
                 const row = inventorySheet.addRow({
-                    isbn: product.isbn || 'N/A',
+                    isbn: product.isbn,
                     title: product.name,
-                    author: product.author || 'N/A',
-                    category: product.category || 'N/A',
-                    price: product.offerPrice,
+                    author: product.author,
+                    category: product.category,
+                    price: product.price,
                     inStock: product.inStock ? 'Yes' : 'No',
-                    pages: product.pageCount || 0,
+                    pages: product.pageCount,
                 });
 
                 // Currency format for prices
@@ -258,7 +467,7 @@ export class ReportService {
             };
 
             // Sheet 2: Recursion (if category specified)
-            if (category) {
+            if (reportData.recursionData) {
                 const recursionSheet = workbook.addWorksheet('Recursion');
 
                 recursionSheet.columns = [
@@ -275,15 +484,10 @@ export class ReportService {
                     fgColor: { argb: 'FF4472C4' },
                 };
 
-                const [valueData, weightData] = await Promise.all([
-                    this.productsService.calculateTotalValueByCategory(category),
-                    this.productsService.calculateAverageWeightByCategory(category),
-                ]);
-
                 // Stack recursion data
-                recursionSheet.addRow({ metric: 'Stack Recursion - Category', value: category });
-                recursionSheet.addRow({ metric: 'Total books', value: valueData.bookCount });
-                recursionSheet.addRow({ metric: 'Total value (USD)', value: valueData.totalValue });
+                recursionSheet.addRow({ metric: 'Stack Recursion - Category', value: reportData.category });
+                recursionSheet.addRow({ metric: 'Total books', value: reportData.recursionData.valueData.bookCount });
+                recursionSheet.addRow({ metric: 'Total value (USD)', value: reportData.recursionData.valueData.totalValue });
                 recursionSheet.getCell('B4').numFmt = '$#,##0';
                 recursionSheet.addRow({ metric: 'Average per book', value: `=B4/B3` });
                 recursionSheet.getCell('B5').numFmt = '$#,##0';
@@ -291,9 +495,9 @@ export class ReportService {
                 recursionSheet.addRow({});
 
                 // Tail recursion data
-                recursionSheet.addRow({ metric: 'Tail Recursion - Category', value: category });
-                recursionSheet.addRow({ metric: 'Total books', value: weightData.bookCount });
-                recursionSheet.addRow({ metric: 'Total weight (Kg)', value: weightData.totalWeight });
+                recursionSheet.addRow({ metric: 'Tail Recursion - Category', value: reportData.category });
+                recursionSheet.addRow({ metric: 'Total books', value: reportData.recursionData.weightData.bookCount });
+                recursionSheet.addRow({ metric: 'Total weight (Kg)', value: reportData.recursionData.weightData.totalWeight });
                 recursionSheet.addRow({ metric: 'Average weight (Kg)', value: `=B9/B8` });
                 recursionSheet.getCell('B10').numFmt = '0.000';
             }
@@ -312,18 +516,8 @@ export class ReportService {
      */
     async generateLoansPDF(dateFrom?: Date, dateTo?: Date): Promise<Buffer> {
         try {
-            const query: any = {};
-            if (dateFrom || dateTo) {
-                query.loanDate = {};
-                if (dateFrom) query.loanDate.$gte = dateFrom;
-                if (dateTo) query.loanDate.$lte = dateTo;
-            }
-
-            const loans = await this.loanModel
-                .find(query)
-                .populate('userId', 'name email')
-                .populate('bookId', 'name isbn')
-                .exec();
+            // Obtener datos cacheados
+            const reportData = await this.getLoansData(dateFrom, dateTo);
 
             return new Promise((resolve, reject) => {
                 const doc = new PDFDocument({ size: 'A4', margin: 50 });
@@ -335,21 +529,18 @@ export class ReportService {
 
                 // Header
                 doc.fontSize(20).text('Loan Report', { align: 'center' });
-                doc.fontSize(10).text(`Generated: ${new Date().toLocaleDateString('en-US')}`, { align: 'center' });
-                if (dateFrom || dateTo) {
-                    doc.text(`Period: ${dateFrom?.toLocaleDateString('en-US') || 'Start'} - ${dateTo?.toLocaleDateString('en-US') || 'Today'}`, { align: 'center' });
+                doc.fontSize(10).text(`Generated: ${new Date(reportData.generatedAt).toLocaleDateString('en-US')}`, { align: 'center' });
+                if (reportData.dateFrom || reportData.dateTo) {
+                    doc.text(`Period: ${reportData.dateFrom || 'Start'} - ${reportData.dateTo || 'Today'}`, { align: 'center' });
                 }
                 doc.moveDown(2);
 
                 // Statistics
-                const activeLoans = loans.filter(l => l.status === 'active').length;
-                const returnedLoans = loans.filter(l => l.status === 'returned').length;
-
                 doc.fontSize(12).font('Helvetica-Bold').text('Summary');
                 doc.fontSize(10).font('Helvetica');
-                doc.text(`Total loans: ${loans.length}`);
-                doc.text(`Active loans: ${activeLoans}`);
-                doc.text(`Returned loans: ${returnedLoans}`);
+                doc.text(`Total loans: ${reportData.statistics.total}`);
+                doc.text(`Active loans: ${reportData.statistics.active}`);
+                doc.text(`Returned loans: ${reportData.statistics.returned}`);
                 doc.moveDown();
 
                 // Loans table
@@ -374,7 +565,7 @@ export class ReportService {
                 let yPos = tableTop + 20;
                 doc.font('Helvetica').fontSize(8);
 
-                loans.forEach((loan) => {
+                reportData.loans.forEach((loan) => {
                     if (yPos > 700) {
                         doc.addPage();
                         yPos = 50;
@@ -382,23 +573,11 @@ export class ReportService {
 
                     xPos = 50;
 
-                    const userName = loan.userId && typeof loan.userId === 'object' && 'name' in loan.userId
-                        ? (loan.userId as any).name?.substring(0, 20)
-                        : 'N/A';
-
-                    const bookName = loan.bookId && typeof loan.bookId === 'object' && 'name' in loan.bookId
-                        ? (loan.bookId as any).name?.substring(0, 30)
-                        : 'N/A';
-
-                    const bookIsbn = loan.bookId && typeof loan.bookId === 'object' && 'isbn' in loan.bookId
-                        ? (loan.bookId as any).isbn
-                        : 'N/A';
-
                     const rowData = [
-                        userName,
-                        bookName,
-                        bookIsbn,
-                        new Date(loan.loanDate).toLocaleDateString('en-US'),
+                        loan.userName,
+                        loan.bookName,
+                        loan.bookIsbn,
+                        loan.loanDate,
                         loan.status === 'active' ? 'Active' : 'Returned',
                     ];
 
@@ -410,7 +589,7 @@ export class ReportService {
                     yPos += 15;
                 });
 
-                // Footer - CORREGIDO
+                // Footer
                 const pageRange = doc.bufferedPageRange();
                 const totalPages = pageRange.count;
 
@@ -439,6 +618,9 @@ export class ReportService {
      */
     async generateLoansXLSX(dateFrom?: Date, dateTo?: Date): Promise<Buffer> {
         try {
+            // Obtener datos cacheados
+            const reportData = await this.getLoansData(dateFrom, dateTo);
+
             const workbook = new ExcelJS.Workbook();
             const loansSheet = workbook.addWorksheet('Loans');
 
@@ -464,56 +646,22 @@ export class ReportService {
             };
 
             // Get loans
-            const query: any = {};
-            if (dateFrom || dateTo) {
-                query.loanDate = {};
-                if (dateFrom) query.loanDate.$gte = dateFrom;
-                if (dateTo) query.loanDate.$lte = dateTo;
-            }
-
-            const loans = await this.loanModel
-                .find(query)
-                .populate('userId', 'name email')
-                .populate('bookId', 'name isbn')
-                .exec();
-
-            // Add data
-            loans.forEach((loan, index) => {
-                const loanDate = new Date(loan.loanDate);
-                const returnDate = loan.returnDate ? new Date(loan.returnDate) : null;
-
-                const userName = loan.userId && typeof loan.userId === 'object' && 'name' in loan.userId
-                    ? (loan.userId as any).name
-                    : 'N/A';
-
-                const userEmail = loan.userId && typeof loan.userId === 'object' && 'email' in loan.userId
-                    ? (loan.userId as any).email
-                    : 'N/A';
-
-                const bookName = loan.bookId && typeof loan.bookId === 'object' && 'name' in loan.bookId
-                    ? (loan.bookId as any).name
-                    : 'N/A';
-
-                const bookIsbn = loan.bookId && typeof loan.bookId === 'object' && 'isbn' in loan.bookId
-                    ? (loan.bookId as any).isbn
-                    : 'N/A';
-
+            reportData.loans.forEach((loan, index) => {
                 const row = loansSheet.addRow({
-                    user: userName,
-                    email: userEmail,
-                    book: bookName,
-                    isbn: bookIsbn,
-                    loanDate: loanDate,
-                    returnDate: returnDate || '-',
+                    user: loan.userName,
+                    email: loan.userEmail,
+                    book: loan.bookName,
+                    isbn: loan.bookIsbn,
+                    loanDate: new Date(loan.loanDate),
+                    returnDate: loan.returnDate ? new Date(loan.returnDate) : '-',
                     status: loan.status === 'active' ? 'Active' : 'Returned',
-                    days: returnDate
+                    days: loan.returnDate
                         ? `=(F${index + 2}-E${index + 2})`
                         : `=(TODAY()-E${index + 2})`,
                 });
 
-                // Date formats
                 row.getCell('loanDate').numFmt = 'mm/dd/yyyy';
-                if (returnDate) {
+                if (loan.returnDate) {
                     row.getCell('returnDate').numFmt = 'mm/dd/yyyy';
                 }
                 row.getCell('days').numFmt = '#,##0';
@@ -535,28 +683,25 @@ export class ReportService {
                 fgColor: { argb: 'FF4472C4' },
             };
 
-            const activeCount = loans.filter(l => l.status === 'active').length;
-            const returnedCount = loans.filter(l => l.status === 'returned').length;
-
-            statsSheet.addRow({ metric: 'Total loans', value: loans.length });
-            statsSheet.addRow({ metric: 'Active loans', value: activeCount });
-            statsSheet.addRow({ metric: 'Returned loans', value: returnedCount });
+            statsSheet.addRow({ metric: 'Total loans', value: reportData.statistics.total });
+            statsSheet.addRow({ metric: 'Active loans', value: reportData.statistics.active });
+            statsSheet.addRow({ metric: 'Returned loans', value: reportData.statistics.returned });
             statsSheet.addRow({ metric: 'Return rate (%)', value: `=B4/B2*100` });
             statsSheet.getCell('B5').numFmt = '0.00"%"';
-            statsSheet.addRow({ metric: 'Average days loaned', value: `=AVERAGE(Loans!H:H)` });
-            statsSheet.getCell('B6').numFmt = '#,##0';
-            statsSheet.getCell('B6').font = { color: { argb: 'FF008000' } };
 
             // Generate buffer
             const buffer = await workbook.xlsx.writeBuffer();
             return Buffer.from(buffer);
         } catch (error: any) {
             console.error('[ReportService] Error generating loans XLSX:', error);
-            throw new InternalServerErrorException(`Error generating loans XLSX: ${error.message}`);
+            throw new InternalServerErrorException(`Error generating XLSX: ${error.message}`);
         }
     }
 
-    private selectOptimalSubset(
+    /**
+     * Genera datos del reporte optimizado (Branch & Bound)
+     */
+    private async selectOptimalSubset(
         products: any[],
         maxRecords: number,
         totalCategories: number
@@ -579,8 +724,8 @@ export class ReportService {
 
         for (let i = sortedItems.length - 1; i >= 0; i--) {
             suffixSum[i] = suffixSum[i + 1] + sortedItems[i].value;
-
         }
+
         let bestScore = -1;
         let bestSelection: any[] = [];
         let nodesExplored = 0;
@@ -690,15 +835,19 @@ export class ReportService {
         const query = options.category ? { category: options.category } : {};
 
         // Cache key
-        const cacheKey = `inv_opt_${maxRecords}_${options.category || 'all'}`;
+        const cacheKey = this.generateCacheKey('inventory-optimized', {
+            maxRecords,
+            category: options.category || 'all'
+        });
 
         // Verificar cache
-        const cached = await this.reportCacheModel.findOne({ cacheKey }).exec();
+        const cached = await this.getFromCache<any>(cacheKey);
         if (cached) {
             return cached.data;
         }
 
         // Obtener todos los productos
+        const startTime = Date.now();
         const allProducts = await this.productModel.find(query).lean().exec();
         const totalCategories = await this.productModel.distinct('category', query).then(r => r.length);
 
@@ -709,29 +858,27 @@ export class ReportService {
             mode: 'optimized',
             generatedAt: new Date().toISOString(),
             totalRecords: allProducts.length,
-            selectedRecords: result.selectedProducts.length,
+            selectedRecords: (await result).selectedProducts.length,
             maxRecords,
-            categoriesCovered: result.categoriesCovered,
+            categoriesCovered: (await result).categoriesCovered,
             totalCategories,
-            coveragePct: Math.round((result.categoriesCovered / totalCategories) * 100),
-            totalValue: result.totalValue,
-            products: result.selectedProducts,
-            algorithmStats: result.stats,
+            coveragePct: Math.round(((await result).categoriesCovered / totalCategories) * 100),
+            totalValue: (await result).totalValue,
+            products: (await result).selectedProducts,
+            algorithmStats: (await result).stats,
         };
 
+        const generationTimeMs = Date.now() - startTime;
+
         // Guardar en cache (TTL 1h via Mongoose)
-        await this.reportCacheModel.updateOne(
-            { cacheKey },
-            { $set: { reportType: 'inventory', filters: query, data: reportData } },
-            { upsert: true }
-        ).exec();
+        await this.setCache(cacheKey, 'inventory-optimized', { maxRecords, category: options.category || 'all' }, reportData, allProducts.length, generationTimeMs);
 
         return reportData;
     }
 
     /**
- * Genera PDF a partir de datos del reporte optimizado
- */
+     * Genera PDF a partir de datos del reporte optimizado
+    */
     async generateOptimizedPDF(reportData: any): Promise<Buffer> {
         return new Promise((resolve, reject) => {
             const doc = new PDFDocument({ size: 'A4', margin: 50, bufferPages: true });
@@ -866,5 +1013,56 @@ export class ReportService {
 
         const buffer = await workbook.xlsx.writeBuffer();
         return Buffer.from(buffer);
+    }
+
+    /**
+     * Invalida todo el cache de reportes o por tipo específico
+     */
+    async clearCache(reportType?: string): Promise<{ deletedCount: number }> {
+        const filter: any = {};
+        if (reportType) {
+            filter.reportType = reportType;
+        }
+
+        const result = await this.reportCacheModel.deleteMany(filter).exec();
+        return { deletedCount: result.deletedCount };
+    }
+
+    /**
+     * Obtiene estadísticas del cache
+     */
+    async getCacheStats(): Promise<{
+        totalEntries: number;
+        byType: Record<string, number>;
+        oldestEntry: Date | null;
+        newestEntry: Date | null;
+        totalSizeEstimateKB: number;
+    }> {
+        const totalEntries = await this.reportCacheModel.countDocuments().exec();
+
+        // Contar por tipo
+        const typeAggregation = await this.reportCacheModel.aggregate([
+            { $group: { _id: '$reportType', count: { $sum: 1 } } }
+        ]).exec();
+
+        const byType: Record<string, number> = {};
+        typeAggregation.forEach(item => {
+            byType[item._id] = item.count;
+        });
+
+        // Obtener entradas más antigua y nueva
+        const oldest = await this.reportCacheModel.findOne().sort({ createdAt: 1 }).exec();
+        const newest = await this.reportCacheModel.findOne().sort({ createdAt: -1 }).exec();
+
+        // Estimación de tamaño (promedio 1KB por entrada como estimación conservadora)
+        const totalSizeEstimateKB = totalEntries * 1;
+
+        return {
+            totalEntries,
+            byType,
+            oldestEntry: oldest?.createdAt || null,
+            newestEntry: newest?.createdAt || null,
+            totalSizeEstimateKB,
+        };
     }
 }

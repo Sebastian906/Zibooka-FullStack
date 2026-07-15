@@ -3,13 +3,16 @@ import { HydratedDocument } from 'mongoose';
 
 export type ReportCacheDocument = HydratedDocument<ReportCache>;
 
-@Schema({ expires: '1h' })  // TTL automático de 1 hora
+@Schema({
+    timestamps: true,  // Agrega createdAt y updatedAt automáticamente
+    expires: 24 * 60 * 60  // TTL de 24 horas en segundos
+})
 export class ReportCache {
-    @Prop({ required: true, unique: true })
+    @Prop({ required: true, index: true })
     cacheKey: string;
 
-    @Prop({ required: true })
-    reportType: string;  // 'inventory' | 'loans'
+    @Prop({ required: true, enum: ['inventory', 'loans', 'inventory-optimized'] })
+    reportType: string;
 
     @Prop({ type: Object, default: {} })
     filters: Record<string, any>;
@@ -17,8 +20,23 @@ export class ReportCache {
     @Prop({ type: Object, required: true })
     data: any;
 
-    @Prop({ default: () => new Date(Date.now() + 60 * 60 * 1000) })
+    @Prop({ required: true })
+    recordCount: number;
+
+    @Prop({ required: true })
+    generationTimeMs: number;
+
+    @Prop({ type: Date, default: Date.now })
     expiresAt: Date;
+
+    @Prop({ type: Date, default: Date.now })
+    createdAt: Date;
+
+    @Prop({ type: Date, default: Date.now })
+    updatedAt: Date;
 }
 
 export const ReportCacheSchema = SchemaFactory.createForClass(ReportCache);
+
+// Índice compuesto para búsquedas eficientes por tipo y filtros
+ReportCacheSchema.index({ reportType: 1, cacheKey: 1 });
