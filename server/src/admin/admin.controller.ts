@@ -6,6 +6,7 @@ import { AdminLoginDto } from './dto/admin-login.dto';
 import type { Response } from 'express';
 import { AdminAuthGuard } from 'src/common/guards/admin-auth/admin-auth.guard';
 import { AdminEmail } from 'src/common/decorators/admin/admin-email.decorator';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('Admin')
 @Controller('admin')
@@ -29,6 +30,7 @@ export class AdminController {
     }
 
     @Post('login')
+    @Throttle({ default: { limit: 5, ttl: 60000 } })
     @ApiOperation({ summary: 'Admin login' })
     @ApiBody({ type: AdminLoginDto })
     @ApiResponse({
@@ -50,7 +52,7 @@ export class AdminController {
                 success: true,
                 message,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).json({
                 success: false,
                 message: error.message,
@@ -74,7 +76,7 @@ export class AdminController {
                 success: true,
                 message: result.message,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
                 success: false,
                 message: error.message,
@@ -102,7 +104,7 @@ export class AdminController {
                 success: true,
                 email: result.email,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).json({
                 success: false,
                 message: error.message,

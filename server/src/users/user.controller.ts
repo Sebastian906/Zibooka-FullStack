@@ -13,6 +13,7 @@ import { diskStorage } from 'multer';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { Throttle } from '@nestjs/throttler';
 
 @ApiTags('Users')
 @Controller('user')
@@ -35,6 +36,7 @@ export class UserController {
     }
 
     @Post('register')
+    @Throttle({ default: { limit: 3, ttl: 60000 } })
     @ApiOperation({ summary: 'Register a new user' })
     @ApiBody({ type: RegisterUserDto })
     @ApiResponse({
@@ -58,7 +60,7 @@ export class UserController {
                 user,
                 token,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).json({
                 success: false,
                 message: error.message,
@@ -67,6 +69,7 @@ export class UserController {
     }
 
     @Post('login')
+    @Throttle({ default: { limit: 5, ttl: 60000 } })
     @ApiOperation({ summary: 'Login user' })
     @ApiBody({ type: UserLoginDto })
     @ApiResponse({
@@ -95,7 +98,7 @@ export class UserController {
                 token,
                 isAdmin,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).json({
                 success: false,
                 message: error.message,
@@ -125,7 +128,7 @@ export class UserController {
                 success: true,
                 message: result.message,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
                 success: false,
                 message: error.message,
@@ -156,7 +159,7 @@ export class UserController {
                 user: result.user,
                 isAdmin: result.isAdmin,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).json({
                 success: false,
                 message: error.message,
@@ -184,7 +187,7 @@ export class UserController {
                 success: true,
                 user: result.user,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).json({
                 success: false,
                 message: error.message,
@@ -242,7 +245,7 @@ export class UserController {
                 message: result.message,
                 user: result.user,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).json({
                 success: false,
                 message: error.message,
@@ -251,6 +254,7 @@ export class UserController {
     }
 
     @Post('forgot-password')
+    @Throttle({ default: { limit: 3, ttl: 60000 } })
     @ApiOperation({
         summary: 'Request password reset',
         description: 'Sends a password reset link to the user\'s email. Link expires in 1 hour.'
@@ -282,7 +286,7 @@ export class UserController {
                 success: true,
                 message: result.message,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
                 success: false,
                 message: error.message,
@@ -291,6 +295,7 @@ export class UserController {
     }
 
     @Post('reset-password')
+    @Throttle({ default: { limit: 5, ttl: 60000 } })
     @ApiOperation({
         summary: 'Reset password',
         description: 'Resets user password using the token from email'
@@ -324,7 +329,7 @@ export class UserController {
                 success: true,
                 message: result.message,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).json({
                 success: false,
                 message: error.message,
