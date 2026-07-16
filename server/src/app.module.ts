@@ -17,6 +17,8 @@ import { EmailModule } from './email/email.module';
 import { MigrationModule } from './migration/migration.module';
 import { PredictionModule } from './prediction/prediction.module';
 import { CartModule } from './carts/cart.module';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 
 @Module({
   imports: [
@@ -33,6 +35,12 @@ import { CartModule } from './carts/cart.module';
       inject: [ConfigService],
     }),
 
+    // Rate limiting global: 100 requests por 60 segundos por IP
+    ThrottlerModule.forRoot([{
+      ttl: 60000,
+      limit: 100,
+    }]),
+
     UserModule,
     AdminModule,
     ProductModule,
@@ -48,6 +56,12 @@ import { CartModule } from './carts/cart.module';
     CartModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}
