@@ -36,10 +36,14 @@ import { APP_GUARD } from '@nestjs/core';
     }),
 
     // Rate limiting global: 100 requests por 60 segundos por IP
-    ThrottlerModule.forRoot([{
-      ttl: 60000,
-      limit: 100,
-    }]),
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => [{
+        ttl: configService.get<number>('THROTTLE_TTL', 60000),
+        limit: configService.get<number>('THROTTLE_LIMIT', 100),
+      }],
+    }),
 
     UserModule,
     AdminModule,
