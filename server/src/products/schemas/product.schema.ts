@@ -97,3 +97,6 @@ export class Product {
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);
+
+// Índice para filtrado por categoría (reportes, cálculos recursivos)
+ProductSchema.index({ category: 1 });
