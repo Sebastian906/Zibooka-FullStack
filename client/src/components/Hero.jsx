@@ -19,7 +19,7 @@ const Hero = () => {
     // Obtener libros más populares
     useEffect(() => {
         const data = books.filter((item) => item.popular)
-        setPopularBooks(data.slice(0, 6))
+        setPopularBooks(data)
     }, [books]);
 
     return (

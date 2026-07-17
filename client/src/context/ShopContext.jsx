@@ -69,7 +69,7 @@ const ShopContextProvider = ({ children }) => {
                 ? '/api/product/list'
                 : `/api/product/list/${language}`
 
-            const { data } = await axios.get(endpoint)
+            const { data } = await axios.get(endpoint, { params: { limit: 100 } })
             if (data.success) {
                 setBooks(data.products)
             } else {

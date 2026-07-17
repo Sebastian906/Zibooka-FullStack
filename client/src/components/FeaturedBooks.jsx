@@ -1,4 +1,4 @@
-import React, { useContext } from 'react'
+import React, { useContext, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ShopContext } from '../context/ShopContext'
 import Title from './Title'
@@ -9,7 +9,10 @@ const FeaturedBooks = () => {
 
     const { t } = useTranslation();
     const { books, currency, addToCart } = useContext(ShopContext)
-    const book = books[21]
+    const book = useMemo(() => {
+        const popularBooks = books.filter((item) => item.popular)
+        return popularBooks[0] || null
+    }, [books])
 
     return (
         <section className='max-padd-container max-sm:bg-primary'>
