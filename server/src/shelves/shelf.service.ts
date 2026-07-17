@@ -6,6 +6,7 @@ import { Model, Types } from 'mongoose';
 import { Product, ProductDocument } from 'src/products/schemas/product.schema';
 import { Loan, LoanDocument } from 'src/loans/schemas/loan.schema';
 import { CreateShelfDto } from './dtos/create-shelf.dto';
+import { PaginatedResult, PaginationDto } from 'src/common/dto/pagination.dto';
 
 @Injectable()
 export class ShelfService {
@@ -59,15 +60,27 @@ export class ShelfService {
     /**
      * Listar todas las estanterías
      */
-    async listShelves(): Promise<Shelf[]> {
+    async listShelves(pagination: PaginationDto = {}): Promise<PaginatedResult<Shelf>> {
         try {
-            const shelves = await this.shelfModel
-                .find()
-                .populate('books')
-                .sort({ code: 1 })
-                .exec();
+            const { page = 1, limit = 20 } = pagination;
+            const skip = (page - 1) * limit;
 
-            return shelves;
+            const [data, total] = await Promise.all([
+                this.shelfModel
+                    .find()
+                    .populate('books')
+                    .sort({ code: 1 })
+                    .skip(skip)
+                    .limit(limit)
+                    .lean()
+                    .exec(),
+                this.shelfModel.countDocuments(),
+            ]);
+
+            return {
+                data,
+                pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+            };
         } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }

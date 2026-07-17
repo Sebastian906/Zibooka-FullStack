@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpStatus, Param, Post, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpStatus, Param, Post, Query, Res, UseGuards } from '@nestjs/common';
 import { ApiBody, ApiCookieAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ReservationService } from './reservation.service';
 import { AuthGuard } from 'src/common/guards/auth/auth.guard';
@@ -6,6 +6,7 @@ import { UserId } from 'src/common/decorators/users/user-id.decorator';
 import type { Response } from 'express';
 import { CreateReservationDto } from './dto/create-reservation.dto';
 import { ReservationStatsResponseDto } from './dto/reservation-stats-response.dto';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 @ApiTags('Reservations')
 @Controller('reservation')
@@ -49,7 +50,7 @@ export class ReservationController {
                 message: `Added to waiting list at position ${reservation.priority}`,
                 reservation,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res.status(HttpStatus.BAD_REQUEST).json({
                 success: false,
                 message: error.message,
@@ -75,16 +76,16 @@ export class ReservationController {
             }
         }
     })
-    async getWaitingList(@Param('bookId') bookId: string, @Res() res: Response) {
+    async getWaitingList(@Param('bookId') bookId: string, @Query() pagination: PaginationDto, @Res() res: Response) {
         try {
-            const waitingList = await this.reservationService.getWaitingList(bookId);
+            const result = await this.reservationService.getWaitingList(bookId, pagination);
 
             return res.status(HttpStatus.OK).json({
                 success: true,
-                count: waitingList.length,
-                waitingList,
+                waitingList: result.data,
+                pagination: result.pagination,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
                 success: false,
                 message: error.message,
@@ -125,7 +126,7 @@ export class ReservationController {
                 message: 'Reservation cancelled successfully',
                 reservation,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res.status(HttpStatus.BAD_REQUEST).json({
                 success: false,
                 message: error.message,
@@ -148,7 +149,7 @@ export class ReservationController {
                 success: true,
                 stats,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
                 success: false,
                 message: error.message,
@@ -173,16 +174,16 @@ export class ReservationController {
             }
         }
     })
-    async getUserReservationList(@UserId() userId: string, @Res() res: Response) {
+    async getUserReservationList(@UserId() userId: string, @Query() pagination: PaginationDto, @Res() res: Response) {
         try {
-            const reservations = await this.reservationService.getUserReservationList(userId);
+            const result = await this.reservationService.getUserReservationList(userId, pagination);
 
             return res.status(HttpStatus.OK).json({
                 success: true,
-                count: reservations.length,
-                reservations,
+                reservations: result.data,
+                pagination: result.pagination,
             });
-        } catch (error) {
+        } catch (error: any) {
             return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
                 success: false,
                 message: error.message,

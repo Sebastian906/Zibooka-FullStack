@@ -9,6 +9,7 @@ import { AddProductDto } from './dto/add-product.dto';
 import { SingleProductDto } from './dto/single-product.dto';
 import { ChangeStockDto } from './dto/change-stock.dto';
 import { SearchProductDto } from './dto/search-product.dto';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 @ApiTags('Product')
 @Controller('product')
@@ -80,15 +81,16 @@ export class ProductController {
     }
 
     @Get('list')
-    @ApiOperation({ summary: 'Get all products' })
+    @ApiOperation({ summary: 'Get all products with pagination' })
     @ApiResponse({ status: 200, description: 'Products retrieved successfully' })
-    async listProducts(@Res() res: Response) {
+    async listProducts(@Query() pagination: PaginationDto, @Res() res: Response) {
         try {
-            const products = await this.productService.listProducts();
+            const result = await this.productService.listProducts(pagination);;
 
             return res.status(HttpStatus.OK).json({
                 success: true,
-                products,
+                products: result.data,  // Compatibilidad: frontend lee 'products'
+                pagination: result.pagination,  // Nuevo campo: metadata de paginación
             });
         } catch (error: any) {
             return res
@@ -316,23 +318,31 @@ export class ProductController {
     })
     async searchProducts(
         @Body() dto: SearchProductDto,
+        @Query() pagination: PaginationDto,
         @Res() res: Response
     ) {
         try {
-            const { query, limit } = dto;
+            const { query } = dto;
+
+            // Backward compatibility: si viene limit en el body, usarlo como pagination limit
+            if (dto.limit && !pagination.limit) {
+                pagination.limit = dto.limit;
+            }
+
             const cleanQuery = query.replace(/-/g, '');
             const searchType: 'isbn' | 'text' = /^\d{9}[\dX]$/.test(cleanQuery) || /^\d{13}$/.test(cleanQuery)
                 ? 'isbn'
                 : 'text';
 
-            const results = await this.productService.search(query, limit);
+            const result = await this.productService.search(query, pagination);
 
             return res.status(HttpStatus.OK).json({
                 success: true,
                 query,
                 searchType,
-                count: results.length,
-                products: results,
+                count: result.pagination.total,
+                products: result.data,
+                pagination: result.pagination,
             });
         } catch (error: any) {
             return res
@@ -638,15 +648,17 @@ export class ProductController {
     @ApiResponse({ status: 200, description: 'Products retrieved with translations' })
     async listProductsWithTranslation(
         @Param('lang') lang: string,
+        @Query() pagination: PaginationDto,
         @Res() res: Response,
     ) {
         try {
-            const products = await this.productService.listProductsWithTranslation(lang);
+            const result = await this.productService.listProductsWithTranslation(lang, pagination);
 
             return res.status(HttpStatus.OK).json({
                 success: true,
                 language: lang,
-                products,
+                products: result.data,
+                pagination: result.pagination,
             });
         } catch (error: any) {
             return res

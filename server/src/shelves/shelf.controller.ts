@@ -5,6 +5,7 @@ import { AdminAuthGuard } from 'src/common/guards/admin-auth/admin-auth.guard';
 import { CreateShelfDto } from './dtos/create-shelf.dto';
 import type { Response } from 'express';
 import { AssignBookDto } from './dtos/assign-book.dto';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 @ApiTags('Shelf')
 @Controller('shelf')
@@ -44,14 +45,14 @@ export class ShelfController {
         status: 200,
         description: 'Shelves retrieved successfully',
     })
-    async listShelves(@Res() res: Response) {
+    async listShelves(@Query() pagination: PaginationDto, @Res() res: Response) {
         try {
-            const shelves = await this.shelfService.listShelves();
+            const result = await this.shelfService.listShelves(pagination);
 
             return res.status(HttpStatus.OK).json({
                 success: true,
-                count: shelves.length,
-                shelves,
+                shelves: result.data,
+                pagination: result.pagination,
             });
         } catch (error: any) {
             return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
