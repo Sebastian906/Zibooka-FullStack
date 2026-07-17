@@ -38,3 +38,9 @@ export class Reservation {
 }
 
 export const ReservationSchema = SchemaFactory.createForClass(Reservation);
+
+// Índice compuesto para la cola de espera: find({bookId, status}).sort({priority})
+ReservationSchema.index({ bookId: 1, status: 1, priority: 1 });
+
+// Índice compuesto para getUserReservationList(): find({userId}).sort({requestDate: -1})
+ReservationSchema.index({ userId: 1, requestDate: -1 });

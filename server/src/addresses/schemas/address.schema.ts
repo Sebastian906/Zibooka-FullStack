@@ -37,3 +37,6 @@ export class Address {
 }
 
 export const AddressSchema = SchemaFactory.createForClass(Address);
+
+// Índice compuesto para getAddresses(): find({userId}).sort({createdAt: -1})
+AddressSchema.index({ userId: 1, createdAt: -1 });

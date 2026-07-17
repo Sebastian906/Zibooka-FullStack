@@ -45,3 +45,12 @@ export class Order {
 }
 
 export const OrderSchema = SchemaFactory.createForClass(Order);
+
+// Índice compuesto para userOrders(): filtra por userId + sort por createdAt
+OrderSchema.index({ userId: 1, createdAt: -1 });
+
+// Índice para rebuildQueue(): filtra por status
+OrderSchema.index({ status: 1 });
+
+// Índice para allOrders(): sort por createdAt sin filtro de usuario
+OrderSchema.index({ createdAt: -1 });
