@@ -185,10 +185,11 @@ export class ProductService {
 
         if (isIsbn) {
             const result = await this.searchByISBN(cleanQuery);
-            const data = result.product ? [result.product] : [];
+            const total = result.product ? 1 : 0;
+            const data = result.product && page === 1 ? [result.product] : [];
             return {
                 data,
-                pagination: { page, limit, total: data.length, totalPages: data.length > 0 ? 1 : 0 },
+                pagination: { page, limit, total, totalPages: total },
             };
         }
 
@@ -490,7 +491,7 @@ export class ProductService {
             const skip = (page - 1) * limit;
 
             const [rawProducts, total] = await Promise.all([
-                this.productModel.find().skip(skip).limit(limit).lean(),
+                this.productModel.find().skip(skip).limit(limit),
                 this.productModel.countDocuments(),
             ]);
 
