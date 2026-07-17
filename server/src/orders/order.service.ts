@@ -10,6 +10,7 @@ import Stripe from 'stripe';
 import { ConfigService } from '@nestjs/config';
 import { PlaceOrderStripeDto } from './dto/place-order-stripe.dto';
 import { OrderSchedulerService } from './services/order-scheduler.service';
+import { PaginatedResult, PaginationDto } from 'src/common/dto/pagination.dto';
 
 @Injectable()
 export class OrderService {
@@ -204,37 +205,61 @@ export class OrderService {
         }
     }
 
-    async userOrders(userId: string): Promise<Order[]> {
+    async userOrders(userId: string, pagination: PaginationDto = {}): Promise<PaginatedResult<Order>> {
         try {
-            const orders = await this.orderModel
-                .find({
-                    userId,
-                    $or: [{ paymentMethod: 'COD' }, { isPaid: true }],
-                })
-                .populate({
-                    path: 'items.product',
-                    model: 'Product',
-                })
-                .populate('address')
-                .sort({ createdAt: -1 });
+            const { page = 1, limit = 20 } = pagination;
+            const skip = (page - 1) * limit;
+            const filter = {
+                userId,
+                $or: [{ paymentMethod: 'COD' }, { isPaid: true }],
+            };
 
-            return orders;
+            const [data, total] = await Promise.all([
+                this.orderModel
+                    .find(filter)
+                    .populate({
+                        path: 'items.product',
+                        model: 'Product',
+                    })
+                    .populate('address')
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(limit)
+                    .lean(),
+                this.orderModel.countDocuments(filter),
+            ]);
+
+            return {
+                data,
+                pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+            };
         } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }
     }
 
-    async allOrders(): Promise<Order[]> {
+    async allOrders(pagination: PaginationDto = {}): Promise<PaginatedResult<Order>> {
         try {
-            const orders = await this.orderModel
-                .find({
-                    $or: [{ paymentMethod: 'COD' }, { isPaid: true }],
-                })
-                .populate('items.product')
-                .populate('address')
-                .sort({ createdAt: -1 });
+            const { page = 1, limit = 20 } = pagination;
+            const skip = (page - 1) * limit;
+            const filter = { $or: [{ paymentMethod: 'COD' }, { isPaid: true }] };
 
-            return orders;
+            const [data, total] = await Promise.all([
+                this.orderModel
+                    .find(filter)
+                    .populate('items.product')
+                    .populate('address')
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(limit)
+                    .lean(),
+                this.orderModel.countDocuments(filter),
+            ]);
+
+            return {
+                data,
+                pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+            };
         } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }

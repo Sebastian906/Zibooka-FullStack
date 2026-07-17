@@ -8,6 +8,7 @@ import type { Response } from 'express';
 import { AdminAuthGuard } from 'src/common/guards/admin-auth/admin-auth.guard';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 import { PlaceOrderStripeDto } from './dto/place-order-stripe.dto';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 @ApiTags('Orders')
 @Controller('order')
@@ -106,13 +107,14 @@ export class OrderController {
         description: 'Orders retrieved successfully',
     })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
-    async userOrders(@UserId() userId: string, @Res() res: Response) {
+    async userOrders(@UserId() userId: string, @Query() pagination: PaginationDto, @Res() res: Response) {
         try {
-            const orders = await this.orderService.userOrders(userId);
+            const result = await this.orderService.userOrders(userId, pagination);
 
             return res.status(HttpStatus.OK).json({
                 success: true,
-                orders,
+                orders: result.data,
+                pagination: result.pagination,
             });
         } catch (error: any) {
             return res
@@ -134,13 +136,14 @@ export class OrderController {
         description: 'Orders retrieved successfully',
     })
     @ApiResponse({ status: 401, description: 'Unauthorized' })
-    async allOrders(@Res() res: Response) {
+    async allOrders(@Query() pagination: PaginationDto, @Res() res: Response) {
         try {
-            const orders = await this.orderService.allOrders();
+            const result = await this.orderService.allOrders(pagination);
 
             return res.status(HttpStatus.OK).json({
                 success: true,
-                orders,
+                orders: result.data,
+                pagination: result.pagination,
             });
         } catch (error: any) {
             return res

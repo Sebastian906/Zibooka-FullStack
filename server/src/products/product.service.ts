@@ -7,6 +7,7 @@ import { v2 as cloudinary } from 'cloudinary';
 import { AddProductDto } from './dto/add-product.dto';
 import { ChangeStockDto } from './dto/change-stock.dto';
 import { generateISBN, estimatePageCount, assignDefaultAuthor, assignDefaultPublisher, generatePublicationYear } from './utils/migration.utils';
+import { PaginatedResult, PaginationDto } from 'src/common/dto/pagination.dto';
 
 @Injectable()
 export class ProductService {
@@ -78,9 +79,25 @@ export class ProductService {
      * Lista los productos que hay en el sistema (Inventario General)
      * @returns Lista de productos existentes
      */
-    async listProducts(): Promise<Product[]> {
+    async listProducts(pagination: PaginationDto = {}): Promise<PaginatedResult<Product>> {
         try {
-            return await this.productModel.find({});
+            const { page = 1, limit = 20 } = pagination;
+            const skip = (page - 1) * limit;
+
+            const [data, total] = await Promise.all([
+                this.productModel.find().skip(skip).limit(limit).lean(),
+                this.productModel.countDocuments(),
+            ]);
+
+            return {
+                data,
+                pagination: {
+                    page,
+                    limit,
+                    total,
+                    totalPages: Math.ceil(total / limit),
+                },
+            };
         } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }
@@ -160,28 +177,42 @@ export class ProductService {
      * Búsqueda unified: detecta ISBN vs texto y delega al método apropiado.
      * El cliente no necesita saber qué algoritmo se usa internamente.
      */
-    async search(query: string, limit: number = 20): Promise<Product[]> {
+    async search(query: string, pagination: PaginationDto = {}): Promise<PaginatedResult<Product>> {
+        const { page = 1, limit = 20 } = pagination;
+        const skip = (page - 1) * limit;
         const cleanQuery = query.replace(/-/g, '');
         const isIsbn = /^\d{9}[\dX]$/.test(cleanQuery) || /^\d{13}$/.test(cleanQuery);
 
         if (isIsbn) {
             const result = await this.searchByISBN(cleanQuery);
-            return result.product ? [result.product] : [];
+            const data = result.product ? [result.product] : [];
+            return {
+                data,
+                pagination: { page, limit, total: data.length, totalPages: data.length > 0 ? 1 : 0 },
+            };
         }
 
-        // Búsqueda de texto: busca en nombre Y autor simultáneamente
-        const results = await this.productModel
-            .find({
-                $or: [
-                    { name: { $regex: query, $options: 'i' } },
-                    { author: { $regex: query, $options: 'i' } }
-                ]
-            })
-            .limit(limit)
-            .lean()
-            .exec();
+        const filter = {
+            $or: [
+                { name: { $regex: query, $options: 'i' } },
+                { author: { $regex: query, $options: 'i' } }
+            ]
+        };
 
-        return results;
+        const [data, total] = await Promise.all([
+            this.productModel.find(filter).skip(skip).limit(limit).lean().exec(),
+            this.productModel.countDocuments(filter),
+        ]);
+
+        return {
+            data,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit),
+            },
+        };
     }
 
     /**
@@ -207,7 +238,7 @@ export class ProductService {
     // Genera Reporte Global ordenado por valor usando Merge Sort
     async generateValueReport(ascending: boolean = true): Promise<Product[]> {
         try {
-            const products = await this.listProducts();
+            const products = await this.productModel.find({}).lean();
             const sortedProducts = this.mergeSortByValue(products, ascending);
             console.log(`[ProductService] Value report: ${sortedProducts.length} products (${ascending ? 'ASC' : 'DESC'})`);
             return sortedProducts;
@@ -453,11 +484,29 @@ export class ProductService {
      * Obtiene productos con traducciones aplicadas según el idioma solicitado
      * @param lang - Código de idioma (es, en, etc.)
      */
-    async listProductsWithTranslation(lang: string = 'en'): Promise<Product[]> {
+    async listProductsWithTranslation(lang: string = 'en', pagination: PaginationDto = {}): Promise<PaginatedResult<Product>> {
         try {
-            const products = await this.productModel.find({});
-            if (lang === 'en') return products;
-            return products.map((product) => this.applyTranslation(product, lang));
+            const { page = 1, limit = 20 } = pagination;
+            const skip = (page - 1) * limit;
+
+            const [rawProducts, total] = await Promise.all([
+                this.productModel.find().skip(skip).limit(limit).lean(),
+                this.productModel.countDocuments(),
+            ]);
+
+            const data = lang === 'en'
+                ? rawProducts
+                : rawProducts.map((product) => this.applyTranslation(product, lang));
+
+            return {
+                data,
+                pagination: {
+                    page,
+                    limit,
+                    total,
+                    totalPages: Math.ceil(total / limit),
+                },
+            };
         } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }

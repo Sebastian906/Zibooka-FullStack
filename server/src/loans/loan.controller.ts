@@ -7,6 +7,7 @@ import type { Response } from 'express';
 import { LoanStatsResponseDto } from './dto/loan-stats-response.dto';
 import { CreateLoanDto } from './dto/create-loan.dto';
 import { AdminAuthGuard } from 'src/common/guards/admin-auth/admin-auth.guard';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 // Custom decorator to skip class-level guards
 export const SkipAuthGuard = () => SetMetadata('skipAuthGuard', true);
@@ -35,14 +36,14 @@ export class LoanController {
             }
         }
     })
-    async getUserHistory(@UserId() userId: string, @Res() res: Response) {
+    async getUserHistory(@UserId() userId: string, @Query() pagination: PaginationDto, @Res() res: Response) {
         try {
-            const history = await this.loanService.getUserLoanHistory(userId);
+            const result = await this.loanService.getUserLoanHistory(userId, pagination);
 
             return res.status(HttpStatus.OK).json({
                 success: true,
-                count: history.length,
-                loans: history,
+                loans: result.data,
+                pagination: result.pagination,
             });
         } catch (error: any) {
             return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
@@ -207,14 +208,14 @@ export class LoanController {
         }
     })
     @ApiResponse({ status: 401, description: 'Unauthorized - Admin access required' })
-    async getAllLoans(@Res() res: Response) {
+    async getAllLoans(@Query() pagination: PaginationDto, @Res() res: Response) {
         try {
-            const loans = await this.loanService.getAllLoans();
+            const result = await this.loanService.getAllLoans(pagination);
 
             return res.status(HttpStatus.OK).json({
                 success: true,
-                count: loans.length,
-                loans,
+                loans: result.data,
+                pagination: result.pagination,
             });
         } catch (error: any) {
             return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({

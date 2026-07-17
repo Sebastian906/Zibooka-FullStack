@@ -8,6 +8,7 @@ import { ReservationService } from 'src/reservations/reservation.service';
 import { Product } from 'src/products/schemas/product.schema';
 import { PredictionClient } from 'src/prediction/prediction-client.service';
 import { EmailService } from 'src/email/email.service';
+import { PaginatedResult, PaginationDto } from 'src/common/dto/pagination.dto';
 
 @Injectable()
 export class LoanService {
@@ -26,16 +27,29 @@ export class LoanService {
     /**
      * STACK (LIFO) - Obtiene historial de préstamos del usuario
      */
-    async getUserLoanHistory(userId: string): Promise<Loan[]> {
+    async getUserLoanHistory(userId: string, pagination: PaginationDto = {}): Promise<PaginatedResult<Loan>> {
         try {
-            const loans = await this.loanModel
-                .find({ userId: new Types.ObjectId(userId) })
-                .populate('bookId')
-                .sort({ loanDate: -1 })
-                .exec();
+            const { page = 1, limit = 20 } = pagination;
+            const skip = (page - 1) * limit;
+            const filter = { userId: new Types.ObjectId(userId) };
 
-            this.logger.log(`Retrieved ${loans.length} loans for user (LIFO order)`);
-            return loans;
+            const [data, total] = await Promise.all([
+                this.loanModel
+                    .find(filter)
+                    .populate('bookId')
+                    .sort({ loanDate: -1 })
+                    .skip(skip)
+                    .limit(limit)
+                    .lean()
+                    .exec(),
+                this.loanModel.countDocuments(filter),
+            ]);
+
+            this.logger.log(`Retrieved ${data.length} loans for user (page ${page}, total: ${total})`);
+            return {
+                data,
+                pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+            };
         } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }
@@ -488,17 +502,29 @@ export class LoanService {
     /**
      * Obtiene TODOS los préstamos del sistema (Admin only)
      */
-    async getAllLoans(): Promise<Loan[]> {
+    async getAllLoans(pagination: PaginationDto = {}): Promise<PaginatedResult<Loan>> {
         try {
-            const loans = await this.loanModel
-                .find()
-                .populate('bookId')
-                .populate('userId')
-                .sort({ loanDate: -1 })
-                .exec();
+            const { page = 1, limit = 20 } = pagination;
+            const skip = (page - 1) * limit;
 
-            this.logger.log(`Retrieved ${loans.length} total loans`);
-            return loans;
+            const [data, total] = await Promise.all([
+                this.loanModel
+                    .find()
+                    .populate('bookId')
+                    .populate('userId')
+                    .sort({ loanDate: -1 })
+                    .skip(skip)
+                    .limit(limit)
+                    .lean()
+                    .exec(),
+                this.loanModel.countDocuments(),
+            ]);
+
+            this.logger.log(`Retrieved ${data.length} loans (page ${page}, total: ${total})`);
+            return {
+                data,
+                pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+            };
         } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }

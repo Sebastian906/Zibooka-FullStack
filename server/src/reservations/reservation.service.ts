@@ -5,6 +5,7 @@ import { Reservation, ReservationDocument } from './schemas/reservation.schema';
 import { Loan, LoanDocument } from 'src/loans/schemas/loan.schema';
 import { ProductService } from 'src/products/product.service';
 import { PredictionClient } from 'src/prediction/prediction-client.service';
+import { PaginatedResult, PaginationDto } from 'src/common/dto/pagination.dto';
 
 /**
  * Interfaz para los datos de historial de préstamos del usuario.
@@ -196,20 +197,33 @@ export class ReservationService {
     /**
      * Obtiene toda la cola de espera para un libro
      */
-    async getWaitingList(bookId: string): Promise<Reservation[]> {
+    async getWaitingList(bookId: string, pagination: PaginationDto = {}): Promise<PaginatedResult<Reservation>> {
         try {
-            const waitingList = await this.reservationModel
-                .find({
-                    bookId: new Types.ObjectId(bookId),
-                    status: 'pending'
-                })
-                .sort({ priority: 1 })
-                .populate('userId')
-                .exec();
+            const { page = 1, limit = 20 } = pagination;
+            const skip = (page - 1) * limit;
+            const filter = {
+                bookId: new Types.ObjectId(bookId),
+                status: 'pending'
+            };
 
-            this.logger.log(`Waiting list for book ${bookId}: ${waitingList.length} reservations`);
+            const [data, total] = await Promise.all([
+                this.reservationModel
+                    .find(filter)
+                    .sort({ priority: 1 })
+                    .populate('userId')
+                    .skip(skip)
+                    .limit(limit)
+                    .lean()
+                    .exec(),
+                this.reservationModel.countDocuments(filter),
+            ]);
 
-            return waitingList;
+            this.logger.log(`Waiting list for book ${bookId}: ${data.length} reservations (page ${page}, total: ${total})`);
+
+            return {
+                data,
+                pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+            };
         } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }
@@ -300,16 +314,29 @@ export class ReservationService {
     /**
      * Obtiene la lista completa de reservas de un usuario con detalles del libro
      */
-    async getUserReservationList(userId: string): Promise<Reservation[]> {
+    async getUserReservationList(userId: string, pagination: PaginationDto = {}): Promise<PaginatedResult<Reservation>> {
         try {
-            const reservations = await this.reservationModel
-                .find({ userId: new Types.ObjectId(userId) })
-                .populate('bookId')
-                .sort({ requestDate: -1 })
-                .exec();
+            const { page = 1, limit = 20 } = pagination;
+            const skip = (page - 1) * limit;
+            const filter = { userId: new Types.ObjectId(userId) };
 
-            this.logger.log(`Retrieved ${reservations.length} reservations for user ${userId}`);
-            return reservations;
+            const [data, total] = await Promise.all([
+                this.reservationModel
+                    .find(filter)
+                    .populate('bookId')
+                    .sort({ requestDate: -1 })
+                    .skip(skip)
+                    .limit(limit)
+                    .lean()
+                    .exec(),
+                this.reservationModel.countDocuments(filter),
+            ]);
+
+            this.logger.log(`Retrieved ${data.length} reservations for user ${userId} (page ${page}, total: ${total})`);
+            return {
+                data,
+                pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+            };
         } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }
