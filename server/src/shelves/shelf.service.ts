@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { ConfigService } from '@nestjs/config';
 import { Shelf, ShelfDocument } from './schemas/shelf.schema';
@@ -7,6 +7,8 @@ import { Product, ProductDocument } from 'src/products/schemas/product.schema';
 import { Loan, LoanDocument } from 'src/loans/schemas/loan.schema';
 import { CreateShelfDto } from './dtos/create-shelf.dto';
 import { PaginatedResult, PaginationDto } from 'src/common/dto/pagination.dto';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 
 @Injectable()
 export class ShelfService {
@@ -21,6 +23,7 @@ export class ShelfService {
         @InjectModel(Product.name) private productModel: Model<ProductDocument>,
         @InjectModel(Loan.name) private loanModel: Model<LoanDocument>,
         private readonly configService: ConfigService,
+        @Inject(CACHE_MANAGER) private cacheManager: Cache,
     ) {
         this.W_ROTATION = this.configService.get<number>('SHELF_ASSIGN_W_ROTATION', 0.35);
         this.W_DIVERSITY = this.configService.get<number>('SHELF_ASSIGN_W_DIVERSITY', 0.30);
@@ -47,6 +50,9 @@ export class ShelfService {
                 maxWeight: createShelfDto.maxWeight || 8,
             });
 
+            // Invalidar caché de categorías totales y listados
+            await this.cacheManager.del('shelf:categories:total');
+
             console.log(`[ShelfService] Shelf created: ${shelf.code}`);
             return shelf;
         } catch (error: any) {
@@ -63,6 +69,14 @@ export class ShelfService {
     async listShelves(pagination: PaginationDto = {}): Promise<PaginatedResult<Shelf>> {
         try {
             const { page = 1, limit = 20 } = pagination;
+            const cacheKey = `shelves:list:${page}:${limit}`;
+
+            // Intentar obtener del caché
+            const cached = await this.cacheManager.get<PaginatedResult<Shelf>>(cacheKey);
+            if (cached) {
+                return cached;
+            }
+
             const skip = (page - 1) * limit;
 
             const [data, total] = await Promise.all([
@@ -77,10 +91,15 @@ export class ShelfService {
                 this.shelfModel.countDocuments(),
             ]);
 
-            return {
+            const result: PaginatedResult<Shelf> = {
                 data,
                 pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
             };
+
+            // Guardar en caché por 5 minutos
+            await this.cacheManager.set(cacheKey, result, 300);
+
+            return result;
         } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }
@@ -360,8 +379,21 @@ export class ShelfService {
      * Obtiene el total de categorías únicas en el sistema.
      */
     private async getTotalCategories(): Promise<number> {
+        const cacheKey = 'shelf:categories:total';
+
+        // Intentar obtener del caché
+        const cached = await this.cacheManager.get<number>(cacheKey);
+        if (cached !== undefined && cached !== null) {
+            return cached;
+        }
+
         const categories = await this.productModel.distinct('category');
-        return categories.length;
+        const count = categories.length;
+
+        // Guardar en caché por 15 minutos (cambian rara vez)
+        await this.cacheManager.set(cacheKey, count, 900);
+
+        return count;
     }
 
     /**
@@ -421,6 +453,9 @@ export class ShelfService {
         // Actualizar libro
         book.shelfLocation = new Types.ObjectId(shelfId);
         await book.save();
+
+        // Invalidar caché de estantes
+        await this.cacheManager.del('shelf:categories:total');
 
         console.log(`[ShelfService] Book ${book._id} assigned to shelf ${shelf.code}`);
 
@@ -935,6 +970,9 @@ export class ShelfService {
             // Actualizar libro
             book.shelfLocation = null as any;
             await book.save();
+
+            // Invalidar caché
+            await this.cacheManager.del('shelf:categories:total');
 
             console.log(`[ShelfService] Book ${bookId} removed from shelf ${shelf.code}`);
 

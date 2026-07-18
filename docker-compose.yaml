@@ -28,13 +28,19 @@ services:
   zibooka-backend:
     build: ./server
     container_name: zibooka-backend
+    image: 
+        redis:7-alpine
     ports:
       - "4000:4000"
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
     environment:
       MONGODB_URI: mongodb://mongodb:27017
       ML_SERVICE_URL: http://zibooka-ml:5000
     depends_on:
       - mongodb
+      - redis
 
 volumes:
   mongodb_data:

@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Order, OrderDocument } from './schemas/order.schema';
 import { Model, Types } from 'mongoose';
@@ -11,6 +11,8 @@ import { ConfigService } from '@nestjs/config';
 import { PlaceOrderStripeDto } from './dto/place-order-stripe.dto';
 import { OrderSchedulerService } from './services/order-scheduler.service';
 import { PaginatedResult, PaginationDto } from 'src/common/dto/pagination.dto';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 
 @Injectable()
 export class OrderService {
@@ -27,6 +29,7 @@ export class OrderService {
         @InjectModel(User.name) private userModel: Model<UserDocument>,
         private configService: ConfigService,
         private readonly orderScheduler: OrderSchedulerService,
+        @Inject(CACHE_MANAGER) private cacheManager: Cache,
     ) {
         // Initialize Stripe
         const stripeSecretKey = this.configService.get<string>('STRIPE_SECRET_KEY');
@@ -96,7 +99,7 @@ export class OrderService {
         userId: string,
         placeOrderDto: PlaceOrderStripeDto,
         origin: string,
-    ): Promise<{ success: boolean; url?: string; message?: string }> { 
+    ): Promise<{ success: boolean; url?: string; message?: string }> {
         try {
             const { items, address } = placeOrderDto;
 
@@ -208,6 +211,14 @@ export class OrderService {
     async userOrders(userId: string, pagination: PaginationDto = {}): Promise<PaginatedResult<Order>> {
         try {
             const { page = 1, limit = 20 } = pagination;
+            const cacheKey = `orders:user:${userId}:${page}:${limit}`;
+
+            // Intentar obtener del caché
+            const cached = await this.cacheManager.get<PaginatedResult<Order>>(cacheKey);
+            if (cached) {
+                return cached;
+            }
+
             const skip = (page - 1) * limit;
             const filter = {
                 userId,
@@ -229,10 +240,15 @@ export class OrderService {
                 this.orderModel.countDocuments(filter),
             ]);
 
-            return {
+            const result: PaginatedResult<Order> = {
                 data,
                 pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
             };
+
+            // Guardar en caché por 30 segundos (órdenes cambian frecuentemente)
+            await this.cacheManager.set(cacheKey, result, 30);
+
+            return result;
         } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }

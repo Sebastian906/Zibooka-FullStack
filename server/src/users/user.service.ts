@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, InternalServerErrorException, UnauthorizedException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, InternalServerErrorException, UnauthorizedException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User, UserDocument } from './schemas/user.schema';
@@ -15,6 +15,8 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { EmailService } from 'src/email/email.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 
 @Injectable()
 export class UserService {
@@ -22,6 +24,7 @@ export class UserService {
         @InjectModel(User.name) private userModel: Model<UserDocument>,
         private configService: ConfigService,
         private emailService: EmailService,
+        @Inject(CACHE_MANAGER) private cacheManager: Cache,
     ) {
         // Configure cloudinary
         cloudinary.config({
@@ -58,7 +61,7 @@ export class UserService {
                 token,
                 user: { email: user.email, name: user.name, profileImage: user.profileImage ?? '' },
             };
-        } catch (error) {
+        } catch (error: any) {
             if (error instanceof ConflictException) throw error;
             throw new InternalServerErrorException(error.message);
         }
@@ -120,7 +123,7 @@ export class UserService {
                 expiresIn,
                 isAdmin,
             };
-        } catch (error) {
+        } catch (error: any) {
             if (error instanceof UnauthorizedException) throw error;
             throw new InternalServerErrorException(error.message);
         }
@@ -139,7 +142,7 @@ export class UserService {
                 user: { email: user.email, name: user.name, profileImage: user.profileImage ?? '' },
                 isAdmin,
             };
-        } catch (error) {
+        } catch (error: any) {
             if (error instanceof NotFoundException) throw error;
             throw new InternalServerErrorException(error.message);
         }
@@ -156,19 +159,32 @@ export class UserService {
                 console.log(`[UserService] User ${user.email} logged out at ${new Date().toISOString()}`);
             }
             return { message: 'Successfully logged out' };
-        } catch (error) {
+        } catch (error: any) {
             throw new InternalServerErrorException('Error during logout');
         }
     }
 
     async getUserById(userId: string): Promise<UserResponseDto> {
         try {
+            const cacheKey = `user:${userId}`;
+
+            // Intentar obtener del caché
+            const cached = await this.cacheManager.get<UserResponseDto>(cacheKey);
+            if (cached) {
+                return cached;
+            }
+
             const user = await this.userModel.findById(userId).select('-password');
 
             if (!user) throw new NotFoundException('User not found');
 
-            return { email: user.email, name: user.name, profileImage: user.profileImage ?? '' };
-        } catch (error) {
+            const result: UserResponseDto = { email: user.email, name: user.name, profileImage: user.profileImage ?? '' };
+
+            // Guardar en caché por 60 segundos
+            await this.cacheManager.set(cacheKey, result, 60);
+
+            return result;
+        } catch (error: any) {
             if (error instanceof NotFoundException) throw error;
             throw new InternalServerErrorException(error.message);
         }
@@ -176,10 +192,18 @@ export class UserService {
 
     async getProfile(userId: string): Promise<{ user: any }> {
         try {
+            const cacheKey = `user:profile:${userId}`;
+
+            // Intentar obtener del caché
+            const cached = await this.cacheManager.get<{ user: any }>(cacheKey);
+            if (cached) {
+                return cached;
+            }
+
             const user = await this.userModel.findById(userId).select('-password');
             if (!user) throw new NotFoundException('User not found');
 
-            return {
+            const result = {
                 user: {
                     name: user.name,
                     email: user.email,
@@ -187,7 +211,12 @@ export class UserService {
                     profileImage: user.profileImage ?? '',
                 },
             };
-        } catch (error) {
+
+            // Guardar en caché por 60 segundos
+            await this.cacheManager.set(cacheKey, result, 60);
+
+            return result;
+        } catch (error: any) {
             if (error instanceof NotFoundException) throw error;
             throw new InternalServerErrorException(error.message);
         }
@@ -229,6 +258,10 @@ export class UserService {
 
             await user.save();
 
+            // Invalidar caché del usuario
+            await this.cacheManager.del(`user:${userId}`);
+            await this.cacheManager.del(`user:profile:${userId}`);
+
             return {
                 message: 'Profile updated successfully',
                 user: {
@@ -238,7 +271,7 @@ export class UserService {
                     profileImage: user.profileImage,
                 },
             };
-        } catch (error) {
+        } catch (error: any) {
             if (
                 error instanceof NotFoundException ||
                 error instanceof ConflictException ||
@@ -288,7 +321,7 @@ export class UserService {
             return {
                 message: 'If this email exists, a password reset link has been sent',
             };
-        } catch (error) {
+        } catch (error: any) {
             console.error('[UserService] Error in forgotPassword:', error);
             throw new InternalServerErrorException('Error processing password reset request');
         }
@@ -314,7 +347,7 @@ export class UserService {
                     token,
                     this.configService.getOrThrow<string>('JWT_SECRET'),
                 );
-            } catch (error) {
+            } catch (error: any) {
                 if (error.name === 'TokenExpiredError') {
                     throw new UnauthorizedException('Reset link has expired. Please request a new one');
                 }
@@ -351,7 +384,7 @@ export class UserService {
             return {
                 message: 'Password has been reset successfully. You can now log in with your new password',
             };
-        } catch (error) {
+        } catch (error: any) {
             if (
                 error instanceof BadRequestException ||
                 error instanceof UnauthorizedException ||
@@ -376,8 +409,13 @@ export class UserService {
             cartData[itemId] = (cartData[itemId] ?? 0) + 1;
 
             await this.userModel.findByIdAndUpdate(userId, { cartData });
+
+            // Invalidar caché del usuario
+            await this.cacheManager.del(`user:${userId}`);
+            await this.cacheManager.del(`user:profile:${userId}`);
+
             return { message: 'Added to Cart' };
-        } catch (error) {
+        } catch (error: any) {
             if (error instanceof NotFoundException) throw error;
             throw new InternalServerErrorException(error.message);
         }
@@ -401,8 +439,13 @@ export class UserService {
             }
 
             await this.userModel.findByIdAndUpdate(userId, { cartData });
+
+            // Invalidar caché del usuario
+            await this.cacheManager.del(`user:${userId}`);
+            await this.cacheManager.del(`user:profile:${userId}`);
+
             return { message: 'Cart Updated' };
-        } catch (error) {
+        } catch (error: any) {
             if (error instanceof NotFoundException) throw error;
             throw new InternalServerErrorException(error.message);
         }

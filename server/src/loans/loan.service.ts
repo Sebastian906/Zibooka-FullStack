@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException, Logger } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, InternalServerErrorException, NotFoundException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Loan, LoanDocument } from './schemas/loan.schema';
 import { HighRiskLoan, HighRiskLoanDocument } from './schemas/high-risk-loan.schema';
@@ -9,6 +9,8 @@ import { Product } from 'src/products/schemas/product.schema';
 import { PredictionClient } from 'src/prediction/prediction-client.service';
 import { EmailService } from 'src/email/email.service';
 import { PaginatedResult, PaginationDto } from 'src/common/dto/pagination.dto';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 
 @Injectable()
 export class LoanService {
@@ -22,6 +24,7 @@ export class LoanService {
         private reservationService: ReservationService,
         private predictionClient: PredictionClient,
         private emailService: EmailService,
+        @Inject(CACHE_MANAGER) private cacheManager: Cache,
     ) { }
 
     /**
@@ -113,6 +116,9 @@ export class LoanService {
             // Actualizar el stock del libro (producto)
             book.inStock = false;
             await book.save();
+
+            // Invalidar caché de estadísticas del usuario
+            await this.cacheManager.del(`loan:stats:${userId}`);
 
             this.logger.log(`Loan created: ${newLoan._id} | riskScore: ${riskScore.toFixed(4)}`);
             return newLoan;
@@ -434,6 +440,10 @@ export class LoanService {
 
             await loan.save();
 
+            // Invalidar caché de estadísticas del usuario
+            const userIdStr = (loan.userId as any)._id?.toString() || loan.userId.toString();
+            await this.cacheManager.del(`loan:stats:${userIdStr}`);
+
             const bookId = (loan.bookId as any)._id.toString();
             let assignedToReservation = false;
             let reservationInfo: {
@@ -483,6 +493,19 @@ export class LoanService {
      */
     async getUserLoanStats(userId: string) {
         try {
+            const cacheKey = `loan:stats:${userId}`;
+
+            // Intentar obtener del caché
+            const cached = await this.cacheManager.get<{
+                total: number;
+                active: number;
+                completed: number;
+                overdue: number;
+            }>(cacheKey);
+            if (cached) {
+                return cached;
+            }
+
             const loans = await this.loanModel.find({ userId: new Types.ObjectId(userId) });
 
             const stats = {
@@ -491,6 +514,9 @@ export class LoanService {
                 completed: loans.filter(l => l.status === 'completed').length,
                 overdue: loans.filter(l => l.status === 'overdue').length,
             };
+
+            // Guardar en caché por 5 minutos
+            await this.cacheManager.set(cacheKey, stats, 300);
 
             this.logger.log(`Loan stats for user ${userId}:`, stats);
             return stats;
