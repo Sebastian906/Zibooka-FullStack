@@ -19,6 +19,8 @@ import { PredictionModule } from './prediction/prediction.module';
 import { CartModule } from './carts/cart.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import { CacheModule } from '@nestjs/cache-manager';
+import { redisStore } from 'cache-manager-ioredis-yet';
 
 @Module({
   imports: [
@@ -33,6 +35,31 @@ import { APP_GUARD } from '@nestjs/core';
       imports: [ConfigModule],
       useFactory: getMongoConfig,
       inject: [ConfigService],
+    }),
+
+    // Cache distribuido: Redis con fallback a memoria
+    CacheModule.registerAsync({
+      isGlobal: true,
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => {
+        const redisHost = configService.get<string>('REDIS_HOST');
+        const redisPort = configService.get<number>('REDIS_PORT');
+
+        if (redisHost) {
+          return {
+            store: await redisStore({
+              host: redisHost,
+              port: redisPort || 6379,
+              ttl: 60, // 60 segundos por defecto
+            }),
+          };
+        }
+
+        // Fallback a caché en memoria si Redis no está configurado
+        console.log('[CacheModule] Redis not configured, using in-memory cache');
+        return { ttl: 60 };
+      },
     }),
 
     // Rate limiting global: 100 requests por 60 segundos por IP

@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Product, ProductDocument } from './schemas/product.schema';
 import { Model } from 'mongoose';
@@ -8,12 +8,15 @@ import { AddProductDto } from './dto/add-product.dto';
 import { ChangeStockDto } from './dto/change-stock.dto';
 import { generateISBN, estimatePageCount, assignDefaultAuthor, assignDefaultPublisher, generatePublicationYear } from './utils/migration.utils';
 import { PaginatedResult, PaginationDto } from 'src/common/dto/pagination.dto';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 
 @Injectable()
 export class ProductService {
     constructor(
         @InjectModel(Product.name) private productModel: Model<ProductDocument>,
         private configService: ConfigService,
+        @Inject(CACHE_MANAGER) private cacheManager: Cache,
     ) {
         // Configure cloudinary
         cloudinary.config({
@@ -82,6 +85,14 @@ export class ProductService {
     async listProducts(pagination: PaginationDto = {}): Promise<PaginatedResult<Product>> {
         try {
             const { page = 1, limit = 20 } = pagination;
+            const cacheKey = `products:list:${page}:${limit}`;
+
+            // Intentar obtener del caché
+            const cached = await this.cacheManager.get<PaginatedResult<Product>>(cacheKey);
+            if (cached) {
+                return cached;
+            }
+
             const skip = (page - 1) * limit;
 
             const [data, total] = await Promise.all([
@@ -89,7 +100,7 @@ export class ProductService {
                 this.productModel.countDocuments(),
             ]);
 
-            return {
+            const result: PaginatedResult<Product> = {
                 data,
                 pagination: {
                     page,
@@ -98,6 +109,11 @@ export class ProductService {
                     totalPages: Math.ceil(total / limit),
                 },
             };
+
+            // Guardar en caché por 2 minutos
+            await this.cacheManager.set(cacheKey, result, 120);
+
+            return result;
         } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }
@@ -109,8 +125,20 @@ export class ProductService {
      */
     async getSingleProduct(productId: string): Promise<Product> {
         try {
+            const cacheKey = `product:${productId}`;
+
+            // Intentar obtener del caché
+            const cached = await this.cacheManager.get<Product>(cacheKey);
+            if (cached) {
+                return cached;
+            }
+
             const product = await this.productModel.findById(productId);
             if (!product) throw new NotFoundException('Product not found');
+
+            // Guardar en caché por 5 minutos (producto individual)
+            await this.cacheManager.set(cacheKey, product.toObject(), 300);
+
             return product;
         } catch (error: any) {
             if (error instanceof NotFoundException) throw error;
@@ -164,10 +192,23 @@ export class ProductService {
      */
     async searchByISBN(isbn: string): Promise<{ found: boolean; product?: Product }> {
         try {
+            const cacheKey = `product:isbn:${isbn}`;
+
+            // Intentar obtener del caché
+            const cached = await this.cacheManager.get<{ found: boolean; product?: Product }>(cacheKey);
+            if (cached) {
+                return cached;
+            }
+
             const product = await this.productModel.findOne({ isbn }).lean().exec();
             const found = product !== null;
+            const result = { found, product: product ?? undefined };
+
+            // Guardar en caché por 10 minutos (ISBN es estable)
+            await this.cacheManager.set(cacheKey, result, 600);
+
             console.log(`[ProductService] ISBN search ${isbn}: ${found ? 'FOUND' : 'NOT FOUND'}`);
-            return { found, product: product ?? undefined };
+            return result;
         } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }
@@ -179,7 +220,6 @@ export class ProductService {
      */
     async search(query: string, pagination: PaginationDto = {}): Promise<PaginatedResult<Product>> {
         const { page = 1, limit = 20 } = pagination;
-        const skip = (page - 1) * limit;
         const cleanQuery = query.replace(/-/g, '');
         const isIsbn = /^\d{9}[\dX]$/.test(cleanQuery) || /^\d{13}$/.test(cleanQuery);
 
@@ -193,6 +233,16 @@ export class ProductService {
             };
         }
 
+        const cacheKey = `products:search:${query}:${page}:${limit}`;
+
+        // Intentar obtener del caché
+        const cached = await this.cacheManager.get<PaginatedResult<Product>>(cacheKey);
+        if (cached) {
+            return cached;
+        }
+
+        const skip = (page - 1) * limit;
+
         const filter = {
             $or: [
                 { name: { $regex: query, $options: 'i' } },
@@ -205,7 +255,7 @@ export class ProductService {
             this.productModel.countDocuments(filter),
         ]);
 
-        return {
+        const result: PaginatedResult<Product> = {
             data,
             pagination: {
                 page,
@@ -214,6 +264,11 @@ export class ProductService {
                 totalPages: Math.ceil(total / limit),
             },
         };
+
+        // Guardar en caché por 2 minutos
+        await this.cacheManager.set(cacheKey, result, 120);
+
+        return result;
     }
 
     /**
@@ -229,6 +284,10 @@ export class ProductService {
                 { new: true },
             );
             if (!product) throw new NotFoundException('Product not found');
+
+            // Invalidar caché del producto específico
+            await this.cacheManager.del(`product:${productId}`);
+
             return { message: 'Stock Updated' };
         } catch (error: any) {
             if (error instanceof NotFoundException) throw error;
@@ -559,6 +618,9 @@ export class ProductService {
 
             if (!updatedProduct) throw new NotFoundException('Product not found after update');
 
+            // Invalidar caché del producto
+            await this.cacheManager.del(`product:${productId}`);
+
             return {
                 message: `Translation for ${lang} updated successfully`,
                 product: updatedProduct,
@@ -598,6 +660,10 @@ export class ProductService {
                     await this.productModel.findByIdAndUpdate(translation.productId, {
                         translations: productTranslations,
                     });
+
+                    // Invalidar caché de cada producto actualizado
+                    await this.cacheManager.del(`product:${translation.productId}`);
+
                     updatedCount++;
                 }
             }

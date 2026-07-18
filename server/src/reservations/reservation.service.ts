@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Reservation, ReservationDocument } from './schemas/reservation.schema';
@@ -6,6 +6,8 @@ import { Loan, LoanDocument } from 'src/loans/schemas/loan.schema';
 import { ProductService } from 'src/products/product.service';
 import { PredictionClient } from 'src/prediction/prediction-client.service';
 import { PaginatedResult, PaginationDto } from 'src/common/dto/pagination.dto';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 
 /**
  * Interfaz para los datos de historial de préstamos del usuario.
@@ -14,15 +16,6 @@ interface UserLoanHistory {
     userId: string;
     puntualidadPromedio: number; // 0 a 1 (1 = siempre a tiempo)
     tasaDevTardias: number;      // 0 a 1 (1 = todas las devoluciones fueron tardías)
-}
-
-/**
- * Interfaz para una entrada del caché de scoring de usuario.
- */
-interface ScoreCacheEntry {
-    puntualidadPromedio: number;
-    tasaDevTardias: number;
-    expiresAt: Date;
 }
 
 /**
@@ -49,15 +42,11 @@ interface ScoredReservation {
 export class ReservationService {
     private readonly logger = new Logger(ReservationService.name);
 
-    // Cache de historial de usuarios: userId -> ScoreCacheEntry (con TTL de 5 min)
-    private scoreCache = new Map<string, ScoreCacheEntry>();
-
     // Pesos configurables (default: 0.4, 0.3, 0.2, 0.1)
     private readonly ALPHA: number;
     private readonly BETA: number;
     private readonly GAMMA: number;
     private readonly DELTA: number;
-    private readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
 
     constructor(
         @InjectModel(Reservation.name)
@@ -66,6 +55,7 @@ export class ReservationService {
         private loanModel: Model<LoanDocument>,
         private productService: ProductService,
         private predictionClient: PredictionClient,
+        @Inject(CACHE_MANAGER) private cacheManager: Cache,
     ) {
         this.ALPHA = parseFloat(process.env.RESERVATION_SCORE_ALPHA || '0.4');
         this.BETA = parseFloat(process.env.RESERVATION_SCORE_BETA || '0.3');
@@ -420,9 +410,6 @@ export class ReservationService {
             // 8. Reordenar la cola restante
             await this.reorderQueue(productId);
 
-            // 9. Limpiar caché expirada
-            this.cleanExpiredCache();
-
             this.logger.log(
                 `Reservation fulfilled: ${winner.reservation._id} | ` +
                 `userId: ${(winner.reservation.userId as any)._id} | ` +
@@ -448,12 +435,14 @@ export class ReservationService {
     ): Promise<Map<string, UserLoanHistory>> {
         const resultMap = new Map<string, UserLoanHistory>();
         const uncachedUserIds: string[] = [];
-        const now = new Date();
 
         // 1. Separar cache hits de cache misses
         for (const userId of userIds) {
-            const cached = this.scoreCache.get(userId);
-            if (cached && cached.expiresAt > now) {
+
+            // 2. Verificar si el usuario está en caché
+            const cacheKey = `reservation:score:${userId}`;
+            const cached = await this.cacheManager.get<{ puntualidadPromedio: number; tasaDevTardias: number }>(cacheKey);
+            if (cached) {
                 // Cache hit: usar valor cacheado
                 resultMap.set(userId, {
                     userId,
@@ -477,11 +466,11 @@ export class ReservationService {
 
             // 3. Almacenar en caché y agregar al mapa de resultados
             for (const [userId, history] of freshHistory) {
-                this.scoreCache.set(userId, {
+                const cacheKey = `reservation:score:${userId}`;
+                await this.cacheManager.set(cacheKey, {
                     puntualidadPromedio: history.puntualidadPromedio,
                     tasaDevTardias: history.tasaDevTardias,
-                    expiresAt: new Date(now.getTime() + this.CACHE_TTL_MS),
-                });
+                }, 300); // TTL 5 minutos
 
                 resultMap.set(userId, history);
             }
@@ -498,11 +487,11 @@ export class ReservationService {
                 resultMap.set(userId, neutro);
 
                 // También cachear el neutro para evitar repetir la query
-                this.scoreCache.set(userId, {
+                const cacheKey = `reservation:score:${userId}`;
+                await this.cacheManager.set(cacheKey, {
                     puntualidadPromedio: 0,
                     tasaDevTardias: 0,
-                    expiresAt: new Date(now.getTime() + this.CACHE_TTL_MS),
-                });
+                }, 300);
             }
         }
 
@@ -820,23 +809,6 @@ export class ReservationService {
                 }
             }
             return resultMap;
-        }
-    }
-
-    /**
-     * Limpia entradas expiradas del caché en memoria.
-     */
-    private cleanExpiredCache(): void {
-        const now = new Date();
-        let cleaned = 0;
-        for (const [key, entry] of this.scoreCache.entries()) {
-            if (entry.expiresAt <= now) {
-                this.scoreCache.delete(key);
-                cleaned++;
-            }
-        }
-        if (cleaned > 0) {
-            this.logger.debug(`Cache cleaned: ${cleaned} expired entries removed`);
         }
     }
 }
