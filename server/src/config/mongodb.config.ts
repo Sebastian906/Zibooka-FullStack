@@ -13,6 +13,15 @@ export const getMongoConfig = (
         uri: `${uri}/Zibooka`,
         retryWrites: true,
         w: 'majority',
+
+        // Pool de conexiones
+        maxPoolSize: 10,
+        minPoolSize: 2,
+        maxIdleTimeMS: 30000,
+        serverSelectionTimeoutMS: 5000,
+        socketTimeoutMS: 45000,
+        connectTimeoutMS: 10000,
+
         onConnectionCreate: (connection) => {
             connection.on('connected', () => {
                 console.log('MongoDB connected successfully');
