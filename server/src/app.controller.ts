@@ -46,12 +46,9 @@ export class AppController {
     const mlServiceUrl = process.env.ML_SERVICE_URL;
     if (mlServiceUrl) {
       try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 3000);
         const response = await fetch(`${mlServiceUrl}/health`, {
-          signal: controller.signal,
+          signal: AbortSignal.timeout(3000),
         });
-        clearTimeout(timeout);
         checks.mlService = {
           status: response.ok ? 'up' : 'down',
           statusCode: response.status,
