@@ -35,6 +35,11 @@ export class User {
     @Prop({ type: String, default: null })
     sessionToken: string | null;
 
+    @Prop({ type: Object, default: { emailReminders: true } })
+    notificationPreferences: {
+        emailReminders: boolean
+    };
+
     @Prop({ type: Number, default: 0, min: 0 })
     completedOrders: number;
 }

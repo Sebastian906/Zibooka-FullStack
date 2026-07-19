@@ -225,7 +225,7 @@ const MyReservations = () => {
                                             <button
                                                 onClick={() => handleCancelReservation(reservation._id)}
                                                 disabled={cancellingId === reservation._id}
-                                                className='btn-white py-1! px-4! text-sm rounded-md disabled:opacity-50'
+                                                className='btn bg-red-500 text-white py-1! px-4! text-sm rounded-md disabled:opacity-50'
                                             >
                                                 {cancellingId === reservation._id ? t('reservations.cancelling') : t('reservations.cancel')}
                                             </button>

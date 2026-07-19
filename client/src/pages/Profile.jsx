@@ -7,9 +7,11 @@ import uploadIcon from '../assets/upload_icon.png'
 const Profile = () => {
 
     const { t } = useTranslation()
-    const { user, profileData, imagePreview, profileLoading, countryCodes, selectedCountryCode, setSelectedCountryCode, phoneNumber, loadProfileData, handleProfileImageChange, handlePhoneChange, updateProfileField, submitProfileUpdate, cancelProfileUpdate } = useContext(ShopContext);
+    const { user, profileData, imagePreview, profileLoading, countryCodes, selectedCountryCode, setSelectedCountryCode, phoneNumber, loadProfileData, handleProfileImageChange, handlePhoneChange, updateProfileField, submitProfileUpdate, cancelProfileUpdate, axios } = useContext(ShopContext);
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
+    const [notifPrefs, setNotifPrefs] = useState({ emailReminders: true })
+    const [notifPrefsLoading, setNotifPrefsLoading] = useState(false);
 
     // Validation errors state
     const [errors, setErrors] = useState({
@@ -48,6 +50,20 @@ const Profile = () => {
     useEffect(() => {
         loadProfileData();
     }, [user]);
+
+    useEffect(() => {
+        const loadNotifPrefs = async () => {
+            try {
+                const { data } = await axios.get('/api/notifications/preferences')
+                if (data.success) {
+                    setNotifPrefs(data.preferences)
+                }
+            } catch (error) {
+                console.error('Error loading notification preferences:', error)
+            }
+        }
+        if (user) loadNotifPrefs()
+    }, [user])
 
     return (
         <div className='max-padd-container py-16 pt-28'>
@@ -138,6 +154,43 @@ const Profile = () => {
                                 className='flex-1 px-4 py-2.5 rounded-lg ring-1 ring-slate-900/10 bg-white outline-none focus:ring-secondary transition-all'
                                 required
                             />
+                        </div>
+                    </div>
+
+                    {/* NOTIFICATION PREFERENCES */}
+                    <div className='space-y-3'>
+                        <h5 className='h5'>{t('notifications.preferences')}</h5>
+                        <div className='flex items-center justify-between p-3 bg-white rounded-lg ring-1 ring-slate-900/10'>
+                            <div>
+                                <p className='medium-14'>{t('notifications.emailEnabled')}</p>
+                                <p className='text-xs text-gray-500'>{t('notifications.emailDescription')}</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={async () => {
+                                    setNotifPrefsLoading(true)
+                                    try {
+                                        const newValue = !notifPrefs.emailReminders
+                                        const { data } = await axios.put('/api/notifications/preferences', {
+                                            emailReminders: newValue
+                                        })
+                                        if (data.success) {
+                                            setNotifPrefs({ emailReminders: newValue })
+                                            toast.success(newValue ? t('notifications.enabled') : t('notifications.disabled'))
+                                        }
+                                    } catch (error) {
+                                        toast.error(error.response?.data?.message || 'Error updating preferences')
+                                    } finally {
+                                        setNotifPrefsLoading(false)
+                                    }
+                                }}
+                                disabled={notifPrefsLoading}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notifPrefs.emailReminders ? 'bg-secondary' : 'bg-gray-300'
+                                    }`}
+                            >
+                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notifPrefs.emailReminders ? 'translate-x-6' : 'translate-x-1'
+                                    }`} />
+                            </button>
                         </div>
                     </div>
 
