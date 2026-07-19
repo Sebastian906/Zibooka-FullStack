@@ -158,9 +158,9 @@ export class NotificationService {
         });
 
         if (!emailSent) {
-            this.logger.warn(`Manual notification to ${user.email} failed to send`);
+            this.logger.warn(`Manual notification to ${user._id} failed to send`);
         } else {
-            this.logger.log(`Manual notification sent to ${user.email} by admin ${adminEmail}`);
+            this.logger.log(`Manual notification sent to user ${user._id} by admin ${adminEmail}`);
         }
     }
 
@@ -310,7 +310,7 @@ export class NotificationService {
                 { notifiedAt: null },
                 { notifiedAt: { $lt: new Date(now.getTime() - 24 * 60 * 60 * 1000) } },
             ],
-        }).populate('userId');
+        }).populate('userId').populate('bookId');
     }
 
     /**
@@ -340,8 +340,7 @@ export class NotificationService {
         }
 
         // Verificar preferencias del usuario
-        const preferences = await this.getNotificationPreferences(user._id.toString());
-        if (!preferences.emailReminders) {
+        if (user.notificationPreferences?.emailReminders === false) {
             this.logger.log(`Loan ${loan._id}: user ${user._id} has notifications disabled, skipping`);
             return;
         }
@@ -412,8 +411,7 @@ export class NotificationService {
         }
 
         // Verificar preferencias del usuario
-        const preferences = await this.getNotificationPreferences(user._id.toString());
-        if (!preferences.emailReminders) {
+        if (user.notificationPreferences?.emailReminders === false) {
             this.logger.log(`Reservation ${reservation._id}: user ${user._id} has notifications disabled, skipping`);
             return;
         }
