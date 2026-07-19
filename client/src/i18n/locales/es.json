@@ -623,5 +623,24 @@
             "tailRecursion": "Recursión de Cola:",
             "tailRecursionDesc": "Calcula el peso promedio usando recursión de cola optimizada (1 página = 0.005 Kg)."
         }
+    },
+    "productTranslations": {
+        "title": "Traducciones de Productos",
+        "translate": "Traducir",
+        "translateAll": "Traducir Todos",
+        "translated": "Traducido",
+        "pending": "Pendiente de Traducción",
+        "autoTranslate": "Traducir automáticamente",
+        "autoTranslateOnSave": "Traducir automáticamente al guardar",
+        "translationProgress": "Progreso de Traducción",
+        "productsTranslated": "{{count}} de {{total}} productos traducidos",
+        "selectLanguage": "Seleccionar idioma",
+        "originalLanguage": "Idioma Original",
+        "lastUpdated": "Última Actualización",
+        "translatedBy": "Traducido por",
+        "bookName": "Nombre del Libro",
+        "category": "Categoría",
+        "description": "Descripción",
+        "saving": "Guardando..."
     }
 }

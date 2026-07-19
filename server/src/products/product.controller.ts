@@ -10,6 +10,7 @@ import { SingleProductDto } from './dto/single-product.dto';
 import { ChangeStockDto } from './dto/change-stock.dto';
 import { SearchProductDto } from './dto/search-product.dto';
 import { PaginationDto } from 'src/common/dto/pagination.dto';
+import { TranslateBatchDto } from './dto/translate-batch.dto';
 
 @ApiTags('Product')
 @Controller('product')
@@ -814,6 +815,141 @@ export class ProductController {
                 success: true,
                 productId,
                 translations: result.translations,
+            });
+        } catch (error: any) {
+            return res
+                .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
+                .json({
+                    success: false,
+                    message: error.message,
+                });
+        }
+    }
+
+    @Post('translate/:productId/:toLanguage')
+    @UseGuards(AdminAuthGuard)
+    @ApiCookieAuth('adminToken')
+    @ApiOperation({ summary: 'Auto-translate a product to the target language (Admin only)' })
+    @ApiParam({ name: 'productId', description: 'Product ID' })
+    @ApiParam({ name: 'toLanguage', description: 'Target language code', example: 'es', enum: ['es', 'en'] })
+    @ApiResponse({ status: 200, description: 'Product translated successfully' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    @ApiResponse({ status: 404, description: 'Product not found' })
+    async translateProduct(
+        @Param('productId') productId: string,
+        @Param('toLanguage') toLanguage: string,
+        @Res() res: Response,
+    ) {
+        try {
+            if (!['es', 'en'].includes(toLanguage)) {
+                return res.status(HttpStatus.BAD_REQUEST).json({
+                    success: false,
+                    message: 'Invalid language. Supported: es, en',
+                });
+            }
+
+            const result = await this.productService.translateProductAuto(productId, toLanguage);
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                ...result,
+            });
+        } catch (error: any) {
+            return res
+                .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
+                .json({
+                    success: false,
+                    message: error.message,
+                });
+        }
+    }
+
+    @Post('translate-batch')
+    @UseGuards(AdminAuthGuard)
+    @ApiCookieAuth('adminToken')
+    @ApiOperation({ summary: 'Auto-translate multiple products in batch (Admin only)' })
+    @ApiBody({ type: TranslateBatchDto })
+    @ApiResponse({ status: 200, description: 'Batch translation completed' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    async translateBatch(
+        @Body() translateBatchDto: TranslateBatchDto,
+        @Res() res: Response,
+    ) {
+        try {
+            if (!['es', 'en'].includes(translateBatchDto.toLanguage)) {
+                return res.status(HttpStatus.BAD_REQUEST).json({
+                    success: false,
+                    message: 'Invalid language. Supported: es, en',
+                });
+            }
+
+            const result = await this.productService.batchTranslateAuto(
+                translateBatchDto.productIds,
+                translateBatchDto.toLanguage,
+            );
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                ...result,
+            });
+        } catch (error: any) {
+            return res
+                .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
+                .json({
+                    success: false,
+                    message: error.message,
+                });
+        }
+    }
+
+    @Get('translation-stats')
+    @UseGuards(AdminAuthGuard)
+    @ApiCookieAuth('adminToken')
+    @ApiOperation({ summary: 'Get translation coverage stats (Admin only)' })
+    @ApiResponse({ status: 200, description: 'Translation stats retrieved' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    async getTranslationStats(@Res() res: Response) {
+        try {
+            const stats = await this.productService.getTranslationStats();
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                stats,
+            });
+        } catch (error: any) {
+            return res
+                .status(error.status || HttpStatus.INTERNAL_SERVER_ERROR)
+                .json({
+                    success: false,
+                    message: error.message,
+                });
+        }
+    }
+
+    @Post('translate-all/:toLanguage')
+    @UseGuards(AdminAuthGuard)
+    @ApiCookieAuth('adminToken')
+    @ApiOperation({ summary: 'Auto-translate ALL products to the target language (Admin only)' })
+    @ApiParam({ name: 'toLanguage', description: 'Target language code', example: 'es', enum: ['es', 'en'] })
+    @ApiResponse({ status: 200, description: 'All products translated' })
+    @ApiResponse({ status: 401, description: 'Unauthorized' })
+    async translateAll(
+        @Param('toLanguage') toLanguage: string,
+        @Res() res: Response,
+    ) {
+        try {
+            if (!['es', 'en'].includes(toLanguage)) {
+                return res.status(HttpStatus.BAD_REQUEST).json({
+                    success: false,
+                    message: 'Invalid language. Supported: es, en',
+                });
+            }
+
+            const result = await this.productService.translateAllProducts(toLanguage);
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                ...result,
             });
         } catch (error: any) {
             return res

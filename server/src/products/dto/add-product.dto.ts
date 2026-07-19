@@ -113,4 +113,19 @@ export class AddProductDto {
     })
     @IsBoolean()
     inStock?: boolean = true;
+
+    @ApiProperty({
+        example: true,
+        description: 'Auto-translate product to the other language on creation',
+        required: false,
+        default: true,
+    })
+    @IsOptional()
+    @Transform(({ value }) => {
+        if (value === 'true' || value === true) return true;
+        if (value === 'false' || value === false) return false;
+        return true;
+    })
+    @IsBoolean()
+    autoTranslate?: boolean = true;
 }

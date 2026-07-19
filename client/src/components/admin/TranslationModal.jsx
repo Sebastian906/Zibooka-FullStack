@@ -2,23 +2,22 @@ import { useState, useContext, useEffect } from 'react';
 import { ShopContext } from '../../context/ShopContext';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
-import { MdClose, MdTranslate, MdSave } from 'react-icons/md';
+import { MdClose, MdTranslate, MdSave, MdAutoFixHigh } from 'react-icons/md';
 
 const TranslationModal = ({ product, isOpen, onClose, onSave }) => {
     const { axios } = useContext(ShopContext);
     const { t } = useTranslation();
-    
+
     const [translations, setTranslations] = useState({
-        es: {
-            name: '',
-            description: '',
-            category: ''
-        }
+        es: { name: '', description: '', category: '' },
+        en: { name: '', description: '', category: '' },
     });
+    const [activeTab, setActiveTab] = useState('es');
     const [loading, setLoading] = useState(false);
+    const [loadingAuto, setLoadingAuto] = useState(false);
     const [loadingTranslations, setLoadingTranslations] = useState(false);
 
-    // Cargar traducciones existentes cuando se abre el modal
+    // Load existing translations when modal opens
     useEffect(() => {
         if (isOpen && product?._id) {
             loadExistingTranslations();
@@ -29,14 +28,23 @@ const TranslationModal = ({ product, isOpen, onClose, onSave }) => {
         try {
             setLoadingTranslations(true);
             const { data } = await axios.get(`/api/product/translations/${product._id}`);
-            
+
             if (data.success && data.translations) {
                 setTranslations({
                     es: {
                         name: data.translations.es?.name || '',
                         description: data.translations.es?.description || '',
-                        category: data.translations.es?.category || ''
-                    }
+                        category: data.translations.es?.category || '',
+                        translatedAt: data.translations.es?.translatedAt,
+                        translatedBy: data.translations.es?.translatedBy,
+                    },
+                    en: {
+                        name: data.translations.en?.name || '',
+                        description: data.translations.en?.description || '',
+                        category: data.translations.en?.category || '',
+                        translatedAt: data.translations.en?.translatedAt,
+                        translatedBy: data.translations.en?.translatedBy,
+                    },
                 });
             }
         } catch (error) {
@@ -51,35 +59,70 @@ const TranslationModal = ({ product, isOpen, onClose, onSave }) => {
             ...prev,
             [lang]: {
                 ...prev[lang],
-                [field]: value
-            }
+                [field]: value,
+            },
         }));
     };
 
     const handleSave = async () => {
         try {
             setLoading(true);
-            
+
             const { data } = await axios.post(
-                `/api/product/translation/${product._id}/es`,
-                translations.es
+                `/api/product/translation/${product._id}/${activeTab}`,
+                {
+                    name: translations[activeTab].name,
+                    description: translations[activeTab].description,
+                    category: translations[activeTab].category,
+                }
             );
 
             if (data.success) {
-                toast.success('Traducción guardada exitosamente');
+                toast.success('Translation saved successfully');
                 onSave && onSave();
                 onClose();
             } else {
-                toast.error(data.message || 'Error al guardar traducción');
+                toast.error(data.message || 'Error saving translation');
             }
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Error al guardar traducción');
+            toast.error(error.response?.data?.message || 'Error saving translation');
         } finally {
             setLoading(false);
         }
     };
 
+    const handleAutoTranslate = async () => {
+        try {
+            setLoadingAuto(true);
+
+            const { data } = await axios.post(
+                `/api/product/translate/${product._id}/${activeTab}`
+            );
+
+            if (data.success) {
+                toast.success(`Product translated to ${activeTab === 'es' ? 'Spanish' : 'English'}`);
+                // Reload translations to show the new ones
+                await loadExistingTranslations();
+                onSave && onSave();
+            } else {
+                toast.error(data.message || 'Auto-translation failed');
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Auto-translation failed');
+        } finally {
+            setLoadingAuto(false);
+        }
+    };
+
     if (!isOpen) return null;
+
+    const otherLang = activeTab === 'es' ? 'en' : 'es';
+    const originalLang = 'en'; // Products are originally in English
+    const originalData = {
+        name: product?.name,
+        category: product?.category,
+        description: product?.description,
+    };
 
     return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -89,7 +132,7 @@ const TranslationModal = ({ product, isOpen, onClose, onSave }) => {
                     <div className="flex items-center gap-2">
                         <MdTranslate className="text-2xl text-secondary" />
                         <h2 className="text-lg font-semibold">
-                            {t('common.edit')} - Traducciones
+                            {t('common.edit')} - {t('productTranslations.title')}
                         </h2>
                     </div>
                     <button
@@ -97,6 +140,28 @@ const TranslationModal = ({ product, isOpen, onClose, onSave }) => {
                         className="p-2 hover:bg-white/50 rounded-full transition-colors"
                     >
                         <MdClose className="text-xl" />
+                    </button>
+                </div>
+
+                {/* Language Tabs */}
+                <div className="flex border-b">
+                    <button
+                        onClick={() => setActiveTab('es')}
+                        className={`flex-1 py-3 text-center font-medium transition-colors ${activeTab === 'es'
+                                ? 'text-secondary border-b-2 border-secondary bg-secondary/5'
+                                : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                    >
+                        🇪🇸 Español
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('en')}
+                        className={`flex-1 py-3 text-center font-medium transition-colors ${activeTab === 'en'
+                                ? 'text-secondary border-b-2 border-secondary bg-secondary/5'
+                                : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                    >
+                        🇺🇸 English
                     </button>
                 </div>
 
@@ -112,56 +177,89 @@ const TranslationModal = ({ product, isOpen, onClose, onSave }) => {
                             {/* Original (English) */}
                             <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                                 <h3 className="font-medium mb-3 flex items-center gap-2">
-                                    <span className="text-lg">🇺🇸</span> Original (English)
+                                    <span className="text-lg">🇺🇸</span> Original ({originalLang})
                                 </h3>
                                 <div className="space-y-2 text-sm text-gray-600">
-                                    <p><strong>Name:</strong> {product?.name}</p>
-                                    <p><strong>Category:</strong> {product?.category}</p>
-                                    <p><strong>Description:</strong> {product?.description?.substring(0, 150)}...</p>
+                                    <p><strong>Name:</strong> {originalData.name}</p>
+                                    <p><strong>Category:</strong> {originalData.category}</p>
+                                    <p><strong>Description:</strong> {originalData.description?.substring(0, 150)}...</p>
                                 </div>
                             </div>
 
-                            {/* Spanish Translation */}
+                            {/* Translation metadata */}
+                            {translations[activeTab]?.translatedAt && (
+                                <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm">
+                                    <span className="text-green-700">
+                                        ✅ {t('productTranslations.translated')} •
+                                        {t('productTranslations.translatedBy')}: {translations[activeTab].translatedBy} •
+                                        {new Date(translations[activeTab].translatedAt).toLocaleDateString()}
+                                    </span>
+                                </div>
+                            )}
+
+                            {/* Auto-translate button */}
+                            <div className="mb-4">
+                                <button
+                                    onClick={handleAutoTranslate}
+                                    disabled={loadingAuto}
+                                    className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
+                                >
+                                    {loadingAuto ? (
+                                        <>
+                                            <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                                            Translating...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <MdAutoFixHigh />
+                                            {t('productTranslations.autoTranslate')}
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+
+                            {/* Translation fields */}
                             <div className="p-4 border-2 border-secondary/20 rounded-lg">
                                 <h3 className="font-medium mb-4 flex items-center gap-2">
-                                    <span className="text-lg">🇪🇸</span> Español
+                                    <span className="text-lg">{activeTab === 'es' ? '🇪🇸' : '🇺🇸'}</span>
+                                    {activeTab === 'es' ? 'Español' : 'English'}
                                 </h3>
-                                
+
                                 <div className="space-y-4">
                                     <div>
                                         <label className="block text-sm font-medium mb-1">
-                                            Nombre del Libro
+                                            {t('productTranslations.bookName')}
                                         </label>
                                         <input
                                             type="text"
-                                            value={translations.es.name}
-                                            onChange={(e) => handleChange('es', 'name', e.target.value)}
-                                            placeholder={product?.name}
+                                            value={translations[activeTab].name}
+                                            onChange={(e) => handleChange(activeTab, 'name', e.target.value)}
+                                            placeholder={originalData.name}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary focus:border-transparent"
                                         />
                                     </div>
 
                                     <div>
                                         <label className="block text-sm font-medium mb-1">
-                                            Categoría
+                                            {t('productTranslations.category')}
                                         </label>
                                         <input
                                             type="text"
-                                            value={translations.es.category}
-                                            onChange={(e) => handleChange('es', 'category', e.target.value)}
-                                            placeholder={product?.category}
+                                            value={translations[activeTab].category}
+                                            onChange={(e) => handleChange(activeTab, 'category', e.target.value)}
+                                            placeholder={originalData.category}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary focus:border-transparent"
                                         />
                                     </div>
 
                                     <div>
                                         <label className="block text-sm font-medium mb-1">
-                                            Descripción
+                                            {t('productTranslations.description')}
                                         </label>
                                         <textarea
-                                            value={translations.es.description}
-                                            onChange={(e) => handleChange('es', 'description', e.target.value)}
-                                            placeholder={product?.description}
+                                            value={translations[activeTab].description}
+                                            onChange={(e) => handleChange(activeTab, 'description', e.target.value)}
+                                            placeholder={originalData.description}
                                             rows={5}
                                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary focus:border-transparent resize-none"
                                         />
@@ -188,7 +286,7 @@ const TranslationModal = ({ product, isOpen, onClose, onSave }) => {
                         {loading ? (
                             <>
                                 <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                                Guardando...
+                                {t('productTranslations.saving')}
                             </>
                         ) : (
                             <>

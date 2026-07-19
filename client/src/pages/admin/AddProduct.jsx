@@ -12,18 +12,20 @@ const AddProduct = () => {
     const [offerPrice, setOfferPrice] = useState("10")
     const [category, setCategory] = useState("Academic")
     const [popular, setPopular] = useState(false)
+    const [autoTranslate, setAutoTranslate] = useState(true)
 
     const onSubmitHandler = (event) => {
         event.preventDefault();
         try {
             const formData = new FormData();
-            
+
             formData.append('name', name);
             formData.append('description', description);
             formData.append('category', category);
             formData.append('price', price);
             formData.append('offerPrice', offerPrice);
             formData.append('popular', popular.toString());
+            formData.append('autoTranslate', autoTranslate.toString());
 
             for (let i = 0; i < files.length; i++) {
                 formData.append("images", files[i]);
@@ -161,6 +163,20 @@ const AddProduct = () => {
                         className='cursor-pointer'
                     >
                         Add to Popular
+                    </label>
+                </div>
+                <div className='flexStart gap-2 my-2'>
+                    <input
+                        onChange={() => setAutoTranslate(prev => !prev)}
+                        checked={autoTranslate}
+                        type="checkbox"
+                        id='autoTranslate'
+                    />
+                    <label
+                        htmlFor="autoTranslate"
+                        className='cursor-pointer'
+                    >
+                        Traducir automáticamente al guardar
                     </label>
                 </div>
                 <button
