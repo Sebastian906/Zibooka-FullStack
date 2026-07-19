@@ -10,6 +10,7 @@ import { generateISBN, estimatePageCount, assignDefaultAuthor, assignDefaultPubl
 import { PaginatedResult, PaginationDto } from 'src/common/dto/pagination.dto';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
+import { TranslationService } from 'src/common/services/translation.service';
 
 @Injectable()
 export class ProductService {
@@ -17,6 +18,7 @@ export class ProductService {
         @InjectModel(Product.name) private productModel: Model<ProductDocument>,
         private configService: ConfigService,
         @Inject(CACHE_MANAGER) private cacheManager: Cache,
+        private translationService: TranslationService,
     ) {
         // Configure cloudinary
         cloudinary.config({
@@ -71,6 +73,14 @@ export class ProductService {
                 publisher: productData.publisher || assignDefaultPublisher(productData.category),
                 publicationYear: productData.publicationYear || generatePublicationYear(),
             });
+
+            // Auto-translate if requested (fire-and-forget, don't block response)
+            if (productData.autoTranslate !== false) {
+                const targetLang = 'es'; // Default: translate to Spanish
+                this.translateProductAuto(newProduct._id.toString(), targetLang).catch((err) => {
+                    console.error(`[ProductService] Auto-translate failed for ${newProduct._id}:`, err.message);
+                });
+            }
 
             return { message: 'Product added' };
         } catch (error: any) {
@@ -547,6 +557,14 @@ export class ProductService {
     async listProductsWithTranslation(lang: string = 'en', pagination: PaginationDto = {}): Promise<PaginatedResult<Product>> {
         try {
             const { page = 1, limit = 20 } = pagination;
+            const cacheKey = `products:list:${lang}:${page}:${limit}`;
+
+            // Attempt cache hit
+            const cached = await this.cacheManager.get<PaginatedResult<Product>>(cacheKey);
+            if (cached) {
+                return cached;
+            }
+
             const skip = (page - 1) * limit;
 
             const [rawProducts, total] = await Promise.all([
@@ -558,7 +576,7 @@ export class ProductService {
                 ? rawProducts
                 : rawProducts.map((product) => this.applyTranslation(product, lang));
 
-            return {
+            const result: PaginatedResult<Product> = {
                 data,
                 pagination: {
                     page,
@@ -567,6 +585,11 @@ export class ProductService {
                     totalPages: Math.ceil(total / limit),
                 },
             };
+
+            // Cache for 2 minutes
+            await this.cacheManager.set(cacheKey, result, 120);
+
+            return result;
         } catch (error: any) {
             throw new InternalServerErrorException(error.message);
         }
@@ -618,8 +641,10 @@ export class ProductService {
 
             if (!updatedProduct) throw new NotFoundException('Product not found after update');
 
-            // Invalidar caché del producto
+            // Invalidar caché del producto y de listados
             await this.cacheManager.del(`product:${productId}`);
+            // Invalidate all product list caches (pattern-based)
+            await this.invalidateProductListCache();
 
             return {
                 message: `Translation for ${lang} updated successfully`,
@@ -807,5 +832,159 @@ export class ProductService {
         }
 
         return result.concat(left.slice(l)).concat(right.slice(r));
+    }
+
+    /**
+     * Traduce un producto automáticamente al idioma destino usando el TranslationService
+     */
+    async translateProductAuto(
+        productId: string,
+        toLanguage: string,
+    ): Promise<{ message: string; translation: { name: string; description: string; category: string } }> {
+        try {
+            const product = await this.productModel.findById(productId);
+            if (!product) throw new NotFoundException('Product not found');
+
+            // Base product fields are stored in English; only translating away from the base is meaningful.
+            const fromLanguage = 'en';
+            if (toLanguage === fromLanguage) {
+                throw new InternalServerErrorException(
+                    `Cannot translate to base language "${toLanguage}"`,
+                );
+            }
+
+            const translatedFields = await this.translationService.translateProduct(
+                { name: product.name, description: product.description, category: product.category },
+                fromLanguage,
+                toLanguage,
+            );
+
+            const safeTranslatedFields = {
+                name: translatedFields.name ?? product.name,
+                description: translatedFields.description ?? product.description,
+                category: translatedFields.category ?? product.category,
+            };
+
+            // Merge with existing translations
+            const translations = product.translations || {};
+            translations[toLanguage] = {
+                name: safeTranslatedFields.name,
+                description: safeTranslatedFields.description,
+                category: safeTranslatedFields.category,
+                translatedAt: new Date(),
+                translatedBy: 'automatic',
+            };
+
+            await this.productModel.findByIdAndUpdate(
+                productId,
+                { translations },
+                { new: true },
+            );
+
+            // Invalidate cache
+            await this.cacheManager.del(`product:${productId}`);
+            await this.invalidateProductListCache();
+
+            return {
+                message: `Product translated to ${toLanguage} successfully`,
+                translation: safeTranslatedFields,
+            };
+        } catch (error: any) {
+            if (error instanceof NotFoundException) throw error;
+            throw new InternalServerErrorException(`Translation failed: ${error.message}`);
+        }
+    }
+
+    /**
+     * Traduce múltiples productos en lote al idioma destino
+     */
+    async batchTranslateAuto(
+        productIds: string[],
+        toLanguage: string,
+    ): Promise<{ message: string; translated: number; failed: number; errors: string[] }> {
+        let translated = 0;
+        let failed = 0;
+        const errors: string[] = [];
+
+        for (const productId of productIds) {
+            try {
+                await this.translateProductAuto(productId, toLanguage);
+                translated++;
+            } catch (error: any) {
+                failed++;
+                errors.push(`${productId}: ${error.message}`);
+            }
+        }
+
+        return {
+            message: `Batch translation completed: ${translated} translated, ${failed} failed`,
+            translated,
+            failed,
+            errors,
+        };
+    }
+
+    /**
+     * Obtiene estadísticas de cobertura de traducciones
+     */
+    async getTranslationStats(): Promise<{
+        total: number;
+        translatedEs: number;
+        translatedEn: number;
+        pendingEs: number;
+        pendingEn: number;
+    }> {
+        try {
+            const total = await this.productModel.countDocuments();
+
+            const translatedEs = await this.productModel.countDocuments({
+                'translations.es': { $exists: true, $ne: null },
+            });
+
+            const translatedEn = await this.productModel.countDocuments({
+                'translations.en': { $exists: true, $ne: null },
+            });
+
+            return {
+                total,
+                translatedEs,
+                translatedEn,
+                pendingEs: total - translatedEs,
+                pendingEn: total - translatedEn,
+            };
+        } catch (error: any) {
+            throw new InternalServerErrorException(error.message);
+        }
+    }
+
+    /**
+     * Invalida todas las cachés de listado de productos
+     */
+    private async invalidateProductListCache(): Promise<void> {
+        // Since cache-manager doesn't support pattern deletion out of the box,
+        // we delete known keys. For a production system, consider using Redis keys().
+        const langs = ['en', 'es'];
+        for (const lang of langs) {
+            for (let page = 1; page <= 10; page++) {
+                for (const limit of [20, 50, 100]) {
+                    await this.cacheManager.del(`products:list:${lang}:${page}:${limit}`);
+                }
+            }
+        }
+        // Also invalidate the default (no lang) list cache
+        for (let page = 1; page <= 10; page++) {
+            for (const limit of [20, 50, 100]) {
+                await this.cacheManager.del(`products:list:${page}:${limit}`);
+            }
+        }
+    }
+
+    /**
+     * Traduce TODOS los productos al idioma destino
+     */
+    async translateAllProducts(toLanguage: string): Promise<{ message: string; translated: number; failed: number; errors: string[] }> {
+        const allProducts = await this.productModel.find().lean();
+        const productIds = allProducts.map(p => p._id.toString());
+        return this.batchTranslateAuto(productIds, toLanguage);
     }
 }

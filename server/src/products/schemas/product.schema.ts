@@ -13,6 +13,12 @@ export class ProductTranslation {
 
     @Prop({ type: String })
     category?: string;
+
+    @Prop({ type: Date })
+    translatedAt?: Date;
+
+    @Prop({ type: String })
+    translatedBy?: string; // 'automatic' | 'manual' | email del admin
 }
 
 @Schema({ timestamps: true })

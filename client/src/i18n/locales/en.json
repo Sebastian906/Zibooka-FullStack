@@ -623,5 +623,24 @@
             "tailRecursion": "Tail Recursion:",
             "tailRecursionDesc": "Calculates average weight using optimized tail recursion (1 page = 0.005 Kg)."
         }
+    },
+    "productTranslations": {
+        "title": "Product Translations",
+        "translate": "Translate",
+        "translateAll": "Translate All",
+        "translated": "Translated",
+        "pending": "Pending Translation",
+        "autoTranslate": "Auto-translate",
+        "autoTranslateOnSave": "Auto-translate on save",
+        "translationProgress": "Translation Progress",
+        "productsTranslated": "{{count}} of {{total}} products translated",
+        "selectLanguage": "Select language",
+        "originalLanguage": "Original Language",
+        "lastUpdated": "Last Updated",
+        "translatedBy": "Translated by",
+        "bookName": "Book Name",
+        "category": "Category",
+        "description": "Description",
+        "saving": "Saving..."
     }
 }
