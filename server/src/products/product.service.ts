@@ -845,8 +845,13 @@ export class ProductService {
             const product = await this.productModel.findById(productId);
             if (!product) throw new NotFoundException('Product not found');
 
-            // Determine source language: if translations[toLanguage] exists, the original might be the other one
-            const fromLanguage = toLanguage === 'es' ? 'en' : 'es';
+            // Base product fields are stored in English; only translating away from the base is meaningful.
+            const fromLanguage = 'en';
+            if (toLanguage === fromLanguage) {
+                throw new InternalServerErrorException(
+                    `Cannot translate to base language "${toLanguage}"`,
+                );
+            }
 
             const translatedFields = await this.translationService.translateProduct(
                 { name: product.name, description: product.description, category: product.category },

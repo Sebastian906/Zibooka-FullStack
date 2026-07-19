@@ -2,6 +2,7 @@ import { useContext, useState } from 'react'
 import upload_icon from '../../assets/upload_icon.png'
 import { ShopContext } from '../../context/ShopContext'
 import toast from 'react-hot-toast'
+import { useTranslation } from 'react-i18next'
 
 const AddProduct = () => {
     const { axios } = useContext(ShopContext)
@@ -13,6 +14,7 @@ const AddProduct = () => {
     const [category, setCategory] = useState("Academic")
     const [popular, setPopular] = useState(false)
     const [autoTranslate, setAutoTranslate] = useState(true)
+    const { t } = useTranslation()
 
     const onSubmitHandler = (event) => {
         event.preventDefault();
@@ -176,7 +178,7 @@ const AddProduct = () => {
                         htmlFor="autoTranslate"
                         className='cursor-pointer'
                     >
-                        Traducir automáticamente al guardar
+                        {t('productTranslations.autoTranslateOnSave')}
                     </label>
                 </div>
                 <button
