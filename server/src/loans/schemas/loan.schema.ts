@@ -31,6 +31,9 @@ export class Loan {
 
     @Prop({ type: Number, min: 0, max: 1, default: 0.5 })
     riskScore: number;  // Probabilidad de overdue (0-1)
+
+    @Prop({ type: Date, default: null })
+    notifiedAt: Date | null;
 }
 
 export const LoanSchema = SchemaFactory.createForClass(Loan);

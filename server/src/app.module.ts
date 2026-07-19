@@ -21,6 +21,8 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-ioredis-yet';
+import { ScheduleModule } from '@nestjs/schedule';
+import { NotificationModule } from './notifications/notification.module';
 
 @Module({
   imports: [
@@ -72,6 +74,8 @@ import { redisStore } from 'cache-manager-ioredis-yet';
       }],
     }),
 
+    ScheduleModule.forRoot(),
+
     UserModule,
     AdminModule,
     ProductModule,
@@ -85,6 +89,7 @@ import { redisStore } from 'cache-manager-ioredis-yet';
     MigrationModule,
     PredictionModule,
     CartModule,
+    NotificationModule,
   ],
   controllers: [AppController],
   providers: [

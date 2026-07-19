@@ -1,7 +1,7 @@
 import React, { useContext } from 'react'
 import { ShopContext } from '../../context/ShopContext'
 import { FaSquarePlus } from 'react-icons/fa6';
-import { FaBook, FaListAlt, FaWarehouse, FaBrain, FaExclamationTriangle } from 'react-icons/fa';
+import { FaBook, FaListAlt, FaWarehouse, FaBrain, FaExclamationTriangle, FaBell } from 'react-icons/fa';
 import { MdFactCheck } from 'react-icons/md';
 import { Link, NavLink, Outlet } from 'react-router-dom';
 import { BiLogOut } from 'react-icons/bi';
@@ -23,7 +23,8 @@ const Sidebar = () => {
         { path: "/admin/loans", label: t('admin.loans'), icon: <FaBook /> },
         { path: "/admin/reports", label: t('admin.reports'), icon: <IoBarChart /> },
         { path: "/admin/predictions", label: t('admin.predictions'), icon: <FaBrain /> },
-        { path: "/admin/anomalies", label: t('admin.anomalies') || 'Anomalies', icon: <FaExclamationTriangle /> }
+        { path: "/admin/anomalies", label: t('admin.anomalies') || 'Anomalies', icon: <FaExclamationTriangle /> },
+        { path: "/admin/notifications", label: t('admin.notifications'), icon: <FaBell /> }
     ]
 
     const logout = async () => {

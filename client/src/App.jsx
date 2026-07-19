@@ -30,6 +30,7 @@ import DemandPredictions from './pages/admin/DemandPredictions'
 import InventoryAnomalies from './pages/admin/InventoryAnomalies'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
+import Notifications from './pages/admin/Notifications'
 
 const App = () => {
 
@@ -70,6 +71,7 @@ const App = () => {
           <Route path='reports' element={<Reports />} />
           <Route path='predictions' element={<DemandPredictions />} />
           <Route path='anomalies' element={<InventoryAnomalies />} />
+          <Route path='notifications' element={<Notifications />} />
         </Route>
       </Routes>
       {!isAdminPath && !isForgotPasswordPath && !isResetPasswordPath && <Footer />}
