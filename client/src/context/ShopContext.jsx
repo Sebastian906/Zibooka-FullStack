@@ -12,7 +12,7 @@ export const ShopContext = createContext()
 const ShopContextProvider = ({ children }) => {
 
     const navigate = useNavigate()
-    const { i18n } = useTranslation()
+    const { t, i18n } = useTranslation()
     const [books, setBooks] = useState([])
     const [user, setUser] = useState('')
     const [searchQuery, setSearchQuery] = useState('')
@@ -132,7 +132,7 @@ const ShopContextProvider = ({ children }) => {
                         localStorage.removeItem('loginTime');
                         setUser(null);
                         setCartItems({});
-                        toast.error('Session expired. Please login again');
+                        toast.error(t('messages.sessionExpired'));
                     }
                     // Si no es sesión expirada, solo rechazar el error sin limpiar
                 }
@@ -209,7 +209,7 @@ const ShopContextProvider = ({ children }) => {
 
                 if (elapsed > sevenDays) {
                     logoutUser();
-                    toast.error('Session expired. Please login again');
+                    toast.error(t('messages.sessionExpired'));
                 }
             }
         };
@@ -519,17 +519,17 @@ const ShopContextProvider = ({ children }) => {
             // Validate passwords if trying to change
             if (profileData.newPassword || profileData.confirmPassword) {
                 if (!profileData.currentPassword) {
-                    toast.error('Please enter your current password');
+                    toast.error(t('profile.currentPasswordRequired'));
                     setProfileLoading(false);
                     return;
                 }
                 if (profileData.newPassword !== profileData.confirmPassword) {
-                    toast.error('New passwords do not match');
+                    toast.error(t('validation.passwordMatch'));
                     setProfileLoading(false);
                     return;
                 }
                 if (profileData.newPassword.length < 8) {
-                    toast.error('New password must be at least 8 characters');
+                    toast.error(t('validation.passwordMinLength'));
                     setProfileLoading(false);
                     return;
                 }
@@ -556,7 +556,7 @@ const ShopContextProvider = ({ children }) => {
             });
 
             if (data.success) {
-                toast.success('Profile updated successfully');
+                toast.success(t('messages.profileUpdated'));
                 await fetchUser();
 
                 // Clear password fields
@@ -714,7 +714,7 @@ const ShopContextProvider = ({ children }) => {
             }
             return []
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Error loading loans')
+            toast.error(error.response?.data?.message || t('loans.loadError'));
             return []
         }
     }
@@ -733,7 +733,7 @@ const ShopContextProvider = ({ children }) => {
                 overdue: 0,
             }
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Error loading loan stats')
+            toast.error(error.response?.data?.message || t('loans.statsError'));
             return {
                 total: 0,
                 active: 0,
@@ -751,13 +751,13 @@ const ShopContextProvider = ({ children }) => {
             })
 
             if (data.success) {
-                toast.success(data.message || 'Loan created successfully')
+                toast.success(data.message || t('messages.loanCreated'));
                 // Recargar la lista de libros para actualizar stock
                 await fetchBooks()
                 return data
             }
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Error creating loan')
+            toast.error(error.response?.data?.message || t('loans.createError'));
             throw error
         }
     }
@@ -768,13 +768,13 @@ const ShopContextProvider = ({ children }) => {
             const { data } = await axios.post(`/api/loan/return/${loanId}`)
 
             if (data.success) {
-                toast.success(data.message || 'Book returned successfully')
+                toast.success(data.message || t('messages.bookReturned'));
                 // Recargar la lista de libros para actualizar stock
                 await fetchBooks()
                 return data
             }
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Error returning book')
+            toast.error(error.response?.data?.message || t('loans.returnError'));
             throw error
         }
     }
@@ -788,7 +788,7 @@ const ShopContextProvider = ({ children }) => {
             }
             return []
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Error loading all loans')
+            toast.error(error.response?.data?.message || t('admin.loadAllLoansError'));
             return []
         }
     }
@@ -808,7 +808,7 @@ const ShopContextProvider = ({ children }) => {
                 expired: 0,
             }
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Error loading reservation stats')
+            toast.error(error.response?.data?.message || t('reservations.statsError'));
             return {
                 total: 0,
                 pending: 0,
@@ -828,7 +828,7 @@ const ShopContextProvider = ({ children }) => {
             }
             return []
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Error loading reservations')
+            toast.error(error.response?.data?.message || t('reservations.loadError'));
             return []
         }
     }
@@ -855,11 +855,11 @@ const ShopContextProvider = ({ children }) => {
             })
 
             if (data.success) {
-                toast.success(data.message || 'Reservation created successfully')
+                toast.success(data.message || t('messages.reservationCreated'));
                 return data
             }
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Error creating reservation')
+            toast.error(error.response?.data?.message || t('reservations.createError'));
             throw error
         }
     }
@@ -870,11 +870,11 @@ const ShopContextProvider = ({ children }) => {
             const { data } = await axios.delete(`/api/reservation/cancel/${reservationId}`)
 
             if (data.success) {
-                toast.success(data.message || 'Reservation cancelled successfully')
+                toast.success(data.message || t('messages.reservationCancelled'));
                 return data
             }
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Error cancelling reservation')
+            toast.error(error.response?.data?.message || t('reservations.cancelError'));
             throw error
         }
     }
@@ -910,10 +910,10 @@ const ShopContextProvider = ({ children }) => {
             link.remove();
             window.URL.revokeObjectURL(downloadUrl);
 
-            toast.success('Reporte PDF descargado exitosamente');
+            toast.success(t('reports.pdfDownloadSuccess'));
         } catch (error) {
             console.error('Error downloading PDF:', error);
-            toast.error(error.response?.data?.message || 'Error al descargar reporte PDF');
+            toast.error(error.response?.data?.message || t('reports.pdfDownloadError'));
         } finally {
             setReportLoading(false);
         }
@@ -954,10 +954,10 @@ const ShopContextProvider = ({ children }) => {
             link.remove();
             window.URL.revokeObjectURL(downloadUrl);
 
-            toast.success('Reporte Excel descargado exitosamente');
+            toast.success(t('reports.excelDownloadSuccess'));
         } catch (error) {
             console.error('Error downloading XLSX:', error);
-            toast.error(error.response?.data?.message || 'Error al descargar reporte Excel');
+            toast.error(error.response?.data?.message || t('reports.excelDownloadError'));
         } finally {
             setReportLoading(false);
         }
@@ -986,10 +986,10 @@ const ShopContextProvider = ({ children }) => {
             link.remove();
             window.URL.revokeObjectURL(downloadUrl);
 
-            toast.success('Reporte de préstamos PDF descargado exitosamente');
+            toast.success(t('reports.loansPdfSuccess'));
         } catch (error) {
             console.error('Error downloading loans PDF:', error);
-            toast.error(error.response?.data?.message || 'Error al descargar reporte de préstamos');
+            toast.error(error.response?.data?.message || t('reports.loansPdfError'));
         } finally {
             setReportLoading(false);
         }
@@ -1020,10 +1020,10 @@ const ShopContextProvider = ({ children }) => {
             link.remove();
             window.URL.revokeObjectURL(downloadUrl);
 
-            toast.success('Reporte de préstamos Excel descargado exitosamente');
+            toast.success(t('reports.loansExcelSuccess'));
         } catch (error) {
             console.error('Error downloading loans XLSX:', error);
-            toast.error(error.response?.data?.message || 'Error al descargar reporte de préstamos');
+            toast.error(error.response?.data?.message || t('reports.loansExcelError'));
         } finally {
             setReportLoading(false);
         }
@@ -1038,11 +1038,11 @@ const ShopContextProvider = ({ children }) => {
                 return data.data || [];
             }
 
-            toast.error(data.message || 'Error al cargar datos de recursión');
+            toast.error(data.message || t('reports.recursionLoadError'));
             return [];
         } catch (error) {
             console.error('Error fetching recursion preview:', error);
-            toast.error(error.response?.data?.message || 'Error al cargar datos de recursión');
+            toast.error(error.response?.data?.message || t('reports.recursionLoadError'));
             return [];
         }
     }
@@ -1059,11 +1059,11 @@ const ShopContextProvider = ({ children }) => {
                 return data.data || null;
             }
 
-            toast.error(data.message || 'Error al cargar preview optimizado');
+            toast.error(data.message || t('reports.optimizedPreviewError'));
             return null;
         } catch (error) {
             console.error('Error fetching optimized preview:', error);
-            toast.error(error.response?.data?.message || 'Error al cargar preview optimizado');
+            toast.error(error.response?.data?.message || t('reports.optimizedPreviewError'));
             return null;
         }
     };

@@ -217,7 +217,11 @@
         "lifoInfo3": "Each loan has a <strong>14-day</strong> due date from the loan date",
         "lifoInfo4": "When you return a book, our system <strong>instantly verifies</strong> the loan and updates availability",
         "lifoInfo5": "Overdue books may incur late fees",
-        "stackNote": "Showing most recent loan first"
+        "stackNote": "Showing most recent loan first",
+        "loadError": "Error loading loans",
+        "statsError": "Error loading loan stats",
+        "createError": "Error creating loan",
+        "returnError": "Error returning book"
     },
     "reservations": {
         "title": "Reservations",
@@ -249,7 +253,11 @@
         "fifoInfo3": "When someone returns the book, our system <strong>automatically assigns it</strong> to the first person waiting",
         "fifoInfo4": "Your priority number shows your <strong>position in the waiting list</strong> (1 = you're next)",
         "fifoInfo5": "Reservations expire after <strong>30 days</strong> if not fulfilled",
-        "fifoInfo6": "Browse books on the <strong>Shop</strong> page and click \"Reserve\" on out-of-stock items"
+        "fifoInfo6": "Browse books on the <strong>Shop</strong> page and click \"Reserve\" on out-of-stock items",
+        "statsError": "Error loading reservation stats",
+        "loadError": "Error loading reservations",
+        "createError": "Error creating reservation",
+        "cancelError": "Error cancelling reservation"
     },
     "profile": {
         "title": "Profile",
@@ -276,7 +284,12 @@
         "saving": "Saving...",
         "cancel": "Cancel",
         "profileImage": "Profile Image",
-        "uploadImage": "Upload Image"
+        "uploadImage": "Upload Image",
+        "linkedAccounts": "Linked Accounts",
+        "googleLinked": "Google account linked",
+        "googleNotLinked": "Not linked yet",
+        "linked": "Linked",
+        "currentPasswordRequired": "Please enter your current password"
     },
     "address": {
         "title1": "Delivery",
@@ -305,7 +318,12 @@
         "clickHere": "click here",
         "loginSuccess": "Login Successfully",
         "registerSuccess": "Account Created",
-        "showPassword": "Show"
+        "showPassword": "Show",
+        "or": "or",
+        "continueWithGoogle": "Continue with Google",
+        "authenticating": "Authenticating...",
+        "authFailed": "Authentication failed",
+        "invalidCredentials": "Invalid credentials"
     },
     "forgotPassword": {
         "title": "Forgot Password",
@@ -515,7 +533,8 @@
         "topProducts": "Top Products",
         "logout": "Logout",
         "predictions": "AI Predictions",
-        "anomalies": "AI Anomalies"
+        "anomalies": "AI Anomalies",
+        "loadAllLoansError": "Error loading all loans"
     },
     "validation": {
         "required": "This field is required",
@@ -591,6 +610,16 @@
             "pdf": "PDF",
             "excel": "Excel"
         },
+        "pdfDownloadSuccess": "PDF report downloaded successfully",
+        "pdfDownloadError": "Error downloading PDF report",
+        "excelDownloadSuccess": "Excel report downloaded successfully",
+        "excelDownloadError": "Error downloading Excel report",
+        "loansPdfSuccess": "Loan PDF report downloaded successfully",
+        "loansPdfError": "Error downloading loan report",
+        "loansExcelSuccess": "Loan Excel report downloaded successfully",
+        "loansExcelError": "Error downloading loan report",
+        "recursionLoadError": "Error loading recursion data",
+        "optimizedPreviewError": "Error loading optimized preview",
         "loans": {
             "title": "Loan Reports",
             "subtitle": "Detailed loan reports with statistics and return analysis.",
@@ -698,6 +727,12 @@
         "howItWorks": "How it works:",
         "howItWorksDesc": "The system automatically checks for expiring loans and reservations daily at 9:00 AM. You can also manually send reminders using the buttons above. The \"Process Now\" button triggers the same check immediately.",
         "loanReminderSubject": "Loan Reminder - {{bookName}}",
-        "reservationReminderSubject": "Reservation Reminder - {{bookName}}"
+        "reservationReminderSubject": "Reservation Reminder - {{bookName}}",
+        "updateError": "Error updating preferences"
+    },
+    "oauth": {
+        "authFailed": "Authentication failed. Please try again.",
+        "noTokenReceived": "Authentication failed. No token received.",
+        "processing": "Processing authentication..."
     }
 }

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpStatus, Post, Put, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Get, HttpStatus, Post, Put, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { ApiBody, ApiConsumes, ApiCookieAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { UserService } from './user.service';
 import { ConfigService } from '@nestjs/config';
@@ -14,6 +14,8 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { Throttle } from '@nestjs/throttler';
+import { UseGuards as UsePassportGuards } from '@nestjs/common';
+import { AuthGuard as PassportAuthGuard } from '@nestjs/passport';
 
 @ApiTags('Users')
 @Controller('user')
@@ -195,6 +197,30 @@ export class UserController {
         }
     }
 
+    @Get('link-status')
+    @UseGuards(AuthGuard)
+    @ApiCookieAuth('token')
+    @ApiOperation({ summary: 'Get user account link status' })
+    @ApiResponse({ status: 200, description: 'Returns linked accounts status' })
+    async getLinkStatus(
+        @UserId() userId: string,
+        @Res() res: express.Response,
+    ) {
+        try {
+            const result = await this.userService.getLinkStatus(userId);
+
+            return res.status(HttpStatus.OK).json({
+                success: true,
+                ...result,
+            });
+        } catch (error: any) {
+            return res.status(error.status || HttpStatus.INTERNAL_SERVER_ERROR).json({
+                success: false,
+                message: error.message,
+            });
+        }
+    }
+
     @Put('update-profile')
     @UseGuards(AuthGuard)
     @ApiCookieAuth('token')
@@ -334,6 +360,46 @@ export class UserController {
                 success: false,
                 message: error.message,
             });
+        }
+    }
+
+    @Get('google')
+    @UsePassportGuards(PassportAuthGuard('google'))
+    @ApiOperation({ summary: 'Redirect to Google OAuth consent screen' })
+    @ApiResponse({ status: 302, description: 'Redirects to Google' })
+    async googleAuth() {
+        // Passport redirige automáticamente al consent screen de Google
+        // Este método no se ejecuta directamente
+    }
+
+    @Get('google/callback')
+    @UsePassportGuards(PassportAuthGuard('google'))
+    @Throttle({ default: { limit: 10, ttl: 60000 } })
+    @ApiOperation({ summary: 'Google OAuth callback handler' })
+    @ApiResponse({ status: 302, description: 'Redirects to frontend with session' })
+    async googleAuthCallback(
+        @Req() req: any,
+        @Res() res: express.Response,
+    ) {
+        try {
+            const googleUser = req.user;
+
+            if (!googleUser || !googleUser.googleId) {
+                const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:5173');
+                return res.redirect(`${frontendUrl}/auth/callback?error=authentication_failed`);
+            }
+
+            const { token } = await this.userService.findOrCreateByGoogle(googleUser);
+
+            const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:5173');
+
+            // Establecer cookie y redirigir al frontend con el token como query param
+            // El frontend leerá el token y lo guardará en localStorage
+            res.cookie('token', token, this.getCookieOptions());
+            return res.redirect(`${frontendUrl}/auth/callback?token=${token}`);
+        } catch (error: any) {
+            const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:5173');
+            return res.redirect(`${frontendUrl}/auth/callback?error=authentication_failed`);
         }
     }
 }

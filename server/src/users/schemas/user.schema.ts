@@ -11,14 +11,17 @@ export class User {
     @Prop({ required: true, unique: true })
     email: string;
 
-    @Prop({ required: true })
-    password: string;
+    @Prop({ type: String, required: false, default: null })
+    password: string | null;
 
-    @Prop({ required: true })
-    phone: string;
+    @Prop({ type: String, required: false, default: null })
+    phone: string | null;
 
     @Prop({ type: String, default: null })
     profileImage: string | null;
+
+    @Prop({ type: String, default: null, sparse: true, unique: true })
+    googleId: string | null;
 
     @Prop({ type: Object, default: {} })
     cartData: Record<string, any>;

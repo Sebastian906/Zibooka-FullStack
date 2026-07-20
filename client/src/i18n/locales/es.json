@@ -217,7 +217,11 @@
         "lifoInfo3": "Cada préstamo tiene una fecha de vencimiento de <strong>14 días</strong> desde la fecha del préstamo",
         "lifoInfo4": "Cuando devuelves un libro, nuestro sistema <strong>verifica instantáneamente</strong> el préstamo y actualiza la disponibilidad",
         "lifoInfo5": "Los libros vencidos pueden incurrir en cargos por mora",
-        "stackNote": "Mostrando el préstamo más reciente primero"
+        "stackNote": "Mostrando el préstamo más reciente primero",
+        "loadError": "Error al cargar préstamos",
+        "statsError": "Error al cargar estadísticas de préstamos",
+        "createError": "Error al crear préstamo",
+        "returnError": "Error al devolver libro"
     },
     "reservations": {
         "title": "Reservaciones",
@@ -249,7 +253,11 @@
         "fifoInfo3": "Cuando alguien devuelve el libro, nuestro sistema <strong>lo asigna automáticamente</strong> a la primera persona en espera",
         "fifoInfo4": "Tu número de prioridad muestra tu <strong>posición en la lista de espera</strong> (1 = eres el siguiente)",
         "fifoInfo5": "Las reservaciones expiran después de <strong>30 días</strong> si no se completan",
-        "fifoInfo6": "Explora libros en la página <strong>Tienda</strong> y haz clic en \"Reservar\" en artículos agotados"
+        "fifoInfo6": "Explora libros en la página <strong>Tienda</strong> y haz clic en \"Reservar\" en artículos agotados",
+        "statsError": "Error al cargar estadísticas de reservas",
+        "loadError": "Error al cargar reservaciones",
+        "createError": "Error al crear reservación",
+        "cancelError": "Error al cancelar reservación"
     },
     "profile": {
         "title": "Perfil",
@@ -275,8 +283,13 @@
         "saveChanges": "Guardar Cambios",
         "saving": "Guardando...",
         "cancel": "Cancelar",
+        "linkedAccounts": "Cuentas Vinculadas",
+        "googleLinked": "Cuenta de Google vinculada",
+        "googleNotLinked": "Aún no vinculada",
+        "linked": "Vinculada",
         "profileImage": "Imagen de Perfil",
-        "uploadImage": "Subir Imagen"
+        "uploadImage": "Subir Imagen",
+        "currentPasswordRequired": "Por favor, ingresa tu contraseña actual"
     },
     "address": {
         "title1": "Información",
@@ -305,7 +318,12 @@
         "clickHere": "clic aquí",
         "loginSuccess": "Inicio de sesión exitoso",
         "registerSuccess": "Cuenta creada",
-        "showPassword": "Mostrar"
+        "showPassword": "Mostrar",
+        "or": "o",
+        "continueWithGoogle": "Continuar con Google",
+        "authenticating": "Autenticando...",
+        "authFailed": "Autenticación fallida",
+        "invalidCredentials": "Credenciales inválidas"
     },
     "forgotPassword": {
         "title": "Olvidé mi Contraseña",
@@ -515,7 +533,8 @@
         "topProducts": "Productos Destacados",
         "logout": "Cerrar Sesión",
         "predictions": "Predicciones IA",
-        "anomalies": "Anomalias IA"
+        "anomalies": "Anomalias IA",
+        "loadAllLoansError": "Error al cargar todos los préstamos"
     },
     "validation": {
         "required": "Este campo es requerido",
@@ -591,6 +610,16 @@
             "pdf": "PDF",
             "excel": "Excel"
         },
+        "pdfDownloadSuccess": "Reporte PDF descargado exitosamente",
+        "pdfDownloadError": "Error al descargar reporte PDF",
+        "excelDownloadSuccess": "Reporte Excel descargado exitosamente",
+        "excelDownloadError": "Error al descargar reporte Excel",
+        "loansPdfSuccess": "Reporte de préstamos PDF descargado exitosamente",
+        "loansPdfError": "Error al descargar reporte de préstamos",
+        "loansExcelSuccess": "Reporte de préstamos Excel descargado exitosamente",
+        "loansExcelError": "Error al descargar reporte de préstamos",
+        "recursionLoadError": "Error al cargar datos de recursión",
+        "optimizedPreviewError": "Error al cargar preview optimizado",
         "loans": {
             "title": "Reportes de Préstamos",
             "subtitle": "Reportes detallados de préstamos con estadísticas y análisis de devoluciones.",
@@ -698,6 +727,12 @@
         "howItWorks": "¿Cómo funciona?",
         "howItWorksDesc": "El sistema verifica automáticamente préstamos y reservas por vencer todos los días a las 9:00 AM. También puedes enviar recordatorios manualmente usando los botones de arriba. El botón \"Procesar Ahora\" ejecuta la misma verificación de forma inmediata.",
         "loanReminderSubject": "Recordatorio de Préstamo - {{bookName}}",
-        "reservationReminderSubject": "Recordatorio de Reserva - {{bookName}}"
+        "reservationReminderSubject": "Recordatorio de Reserva - {{bookName}}",
+        "updateError": "Error al actualizar preferencias"
+    },
+    "oauth": {
+        "authFailed": "Autenticación fallida. Por favor, inténtalo de nuevo.",
+        "noTokenReceived": "Autenticación fallida. No se recibió token.",
+        "processing": "Procesando autenticación..."
     }
 }
