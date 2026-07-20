@@ -74,6 +74,11 @@ export class UserService {
             const user = await this.userModel.findOne({ email });
             if (!user) throw new UnauthorizedException('Invalid credentials');
 
+            // Usuarios OAuth sin contraseña no pueden logear con email/password
+            if (!user.password) {
+                throw new UnauthorizedException('This account uses Google authentication. Please log in with Google.');
+            }
+
             const isPasswordValid = await bcrypt.compare(password, user.password);
             if (!isPasswordValid) throw new UnauthorizedException('Invalid credentials');
 
@@ -236,11 +241,21 @@ export class UserService {
 
             // Handle password change
             if (updateProfileDto.newPassword) {
-                user.password = await this.validatePasswordChange(
-                    updateProfileDto.currentPassword,
-                    updateProfileDto.newPassword,
-                    user.password,
-                );
+                // Si el usuario no tiene contraseña (OAuth), verificar que proporciona una actual
+                if (!user.password && !updateProfileDto.currentPassword) {
+                    throw new BadRequestException('Please enter a new password to set up password authentication');
+                }
+
+                // Si tiene contraseña actual, validarla; si no, solo hashear la nueva
+                if (user.password) {
+                    user.password = await this.validatePasswordChange(
+                        updateProfileDto.currentPassword,
+                        updateProfileDto.newPassword,
+                        user.password,
+                    );
+                } else {
+                    user.password = await bcrypt.hash(updateProfileDto.newPassword, 10);
+                }
             }
 
             // Handle profile image upload
@@ -393,6 +408,125 @@ export class UserService {
                 throw error;
             }
             throw new InternalServerErrorException('Error resetting password');
+        }
+    }
+
+    /**
+     * Busca un usuario por googleId o email, o crea uno nuevo.
+     * Si el usuario existe por email (sin googleId), vincula la cuenta Google automáticamente.
+     * Si el usuario existe por googleId, retorna el usuario existente.
+     * Si no existe, crea un nuevo usuario con los datos de Google.
+     */
+    async findOrCreateByGoogle(googleProfile: {
+        googleId: string;
+        email: string;
+        name: string;
+        profileImage: string | null;
+    }): Promise<{ token: string; user: UserResponseDto }> {
+        try {
+            const { googleId, email, name, profileImage } = googleProfile;
+
+            // 1. Buscar por googleId (usuario ya vinculado)
+            let user = await this.userModel.findOne({ googleId });
+
+            if (user) {
+                // Usuario existente con Google vinculado - actualizar datos si es necesario
+                const updates: any = {};
+                if (profileImage && user.profileImage !== profileImage) {
+                    updates.profileImage = profileImage;
+                }
+                if (Object.keys(updates).length > 0) {
+                    await this.userModel.findByIdAndUpdate(user._id, updates);
+                }
+                return this.generateOAuthResponse(user);
+            }
+
+            // 2. Buscar por email (usuario existente sin Google vinculado)
+            user = await this.userModel.findOne({ email });
+
+            if (user) {
+                // Vincular cuenta Google automáticamente
+                await this.userModel.findByIdAndUpdate(user._id, {
+                    googleId,
+                    ...(profileImage && !user.profileImage ? { profileImage } : {}),
+                });
+                console.log(`[UserService] Google account linked for user: ${email}`);
+                return this.generateOAuthResponse(user);
+            }
+
+            // 3. Crear nuevo usuario con datos de Google
+            const newUser = new this.userModel({
+                name,
+                email,
+                password: null, // Sin contraseña - solo autenticación OAuth
+                phone: null,    // Teléfono opcional, se agrega desde el perfil
+                googleId,
+                profileImage,
+            });
+
+            const savedUser = await newUser.save();
+            console.log(`[UserService] New user created via Google: ${email}`);
+
+            return this.generateOAuthResponse(savedUser);
+        } catch (error: any) {
+            console.error('[UserService] Error in findOrCreateByGoogle:', error);
+            throw new InternalServerErrorException('Error processing Google authentication');
+        }
+    }
+
+    /**
+     * Genera la respuesta estándar de autenticación OAuth (JWT + datos de usuario).
+     * Replica la lógica del método login() para mantener consistencia.
+     */
+    private async generateOAuthResponse(user: UserDocument): Promise<{ token: string; user: UserResponseDto }> {
+        const jwtSecret = this.configService.getOrThrow<string>('JWT_SECRET');
+        const tokenExpiry = '7d';
+
+        // Generar session token único
+        const sessionToken = jwt.sign(
+            { session: new Date().getTime() },
+            jwtSecret,
+        );
+
+        // Token de acceso con expiración de 7 días
+        const token = jwt.sign(
+            { id: user._id, session: sessionToken },
+            jwtSecret,
+            { expiresIn: tokenExpiry },
+        );
+
+        // Actualizar última actividad y sesión
+        await this.userModel.findByIdAndUpdate(user._id, {
+            lastLogin: new Date(),
+            lastActivity: new Date(),
+            sessionToken,
+        });
+
+        return {
+            token,
+            user: {
+                email: user.email,
+                name: user.name,
+                profileImage: user.profileImage ?? '',
+            },
+        };
+    }
+
+    /**
+     * Retorna el estado de vinculación de cuentas del usuario.
+     */
+    async getLinkStatus(userId: string): Promise<{ hasPassword: boolean; googleLinked: boolean }> {
+        try {
+            const user = await this.userModel.findById(userId).select('password googleId');
+            if (!user) throw new NotFoundException('User not found');
+
+            return {
+                hasPassword: !!user.password,
+                googleLinked: !!user.googleId,
+            };
+        } catch (error: any) {
+            if (error instanceof NotFoundException) throw error;
+            throw new InternalServerErrorException(error.message);
         }
     }
 

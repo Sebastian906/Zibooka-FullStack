@@ -2,6 +2,7 @@ import { useContext, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ShopContext } from '../context/ShopContext'
 import toast from 'react-hot-toast'
+import { FcGoogle } from 'react-icons/fc'
 
 const Login = () => {
 
@@ -131,7 +132,7 @@ const Login = () => {
         } catch (error) {
             console.error('Error en login:', error.response || error);
             if (error.response && error.response.status === 401) {
-                toast.error(error.response.data.message || 'Invalid credentials');
+                toast.error(error.response.data.message || t('auth.invalidCredentials'));
             } else {
                 toast.error(error.message);
             }
@@ -141,6 +142,11 @@ const Login = () => {
     const handleForgotPassword = () => {
         setShowUserLogin(false);
         navigate('/forgot-password');
+    }
+
+    const handleGoogleLogin = () => {
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:4000'
+        window.location.href = `${backendUrl}/api/user/google`
     }
 
     return (
@@ -268,6 +274,23 @@ const Login = () => {
                     className='bg-secondary w-full rounded py-2.5! text-white cursor-pointer'
                 >
                     {state === "login" ? t('auth.login') : t('auth.register')}
+                </button>
+
+                {/* Separator */}
+                <div className='w-full flex items-center gap-3 my-1'>
+                    <div className='flex-1 h-px bg-gray-200'></div>
+                    <span className='text-xs text-gray-400'>{t('auth.or')}</span>
+                    <div className='flex-1 h-px bg-gray-200'></div>
+                </div>
+
+                {/* Google OAuth Button */}
+                <button
+                    type='button'
+                    onClick={handleGoogleLogin}
+                    className='w-full flex items-center justify-center gap-2 rounded py-2.5! border border-gray-300 bg-white hover:bg-gray-50 cursor-pointer transition-colors'
+                >
+                    <FcGoogle className='text-xl' />
+                    <span className='text-sm text-gray-700'>{t('auth.continueWithGoogle')}</span>
                 </button>
             </form>
         </div>

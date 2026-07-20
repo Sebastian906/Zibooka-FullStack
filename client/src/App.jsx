@@ -31,6 +31,7 @@ import InventoryAnomalies from './pages/admin/InventoryAnomalies'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import Notifications from './pages/admin/Notifications'
+import OAuthCallback from './pages/OAuthCallback'
 
 const App = () => {
 
@@ -62,6 +63,7 @@ const App = () => {
         <Route path='/profile' element={<Profile />} />
         <Route path='/forgot-password' element={<ForgotPassword />} />
         <Route path='/reset-password' element={<ResetPassword />} />
+        <Route path='/auth/callback' element={<OAuthCallback />} />
         <Route path='/admin' element={isAdmin ? <Sidebar /> : <AdminLogin />}>
           <Route index element={isAdmin ? <AddProduct /> : null} />
           <Route path='list' element={<ProductList/>} />

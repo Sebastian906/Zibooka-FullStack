@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { ShopContext } from '../context/ShopContext'
 import Title from '../components/Title'
 import uploadIcon from '../assets/upload_icon.png'
+import { FcGoogle } from 'react-icons/fc'
 
 const Profile = () => {
 
@@ -12,6 +13,11 @@ const Profile = () => {
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [notifPrefs, setNotifPrefs] = useState({ emailReminders: true })
     const [notifPrefsLoading, setNotifPrefsLoading] = useState(false);
+
+    const [linkedAccounts, setLinkedAccounts] = useState({
+        hasPassword: true,
+        googleLinked: false,
+    })
 
     // Validation errors state
     const [errors, setErrors] = useState({
@@ -63,6 +69,24 @@ const Profile = () => {
             }
         }
         if (user) loadNotifPrefs()
+    }, [user])
+
+    useEffect(() => {
+        const loadLinkedAccounts = async () => {
+            try {
+                const { data } = await axios.get('/api/user/link-status')
+                if (data.success) {
+                    setLinkedAccounts({
+                        hasPassword: data.hasPassword,
+                        googleLinked: data.googleLinked,
+                    })
+                }
+            } catch (error) {
+                // Silently fail - this is optional info
+                console.error('Error loading link status:', error)
+            }
+        }
+        if (user) loadLinkedAccounts()
     }, [user])
 
     return (
@@ -179,7 +203,7 @@ const Profile = () => {
                                             toast.success(newValue ? t('notifications.enabled') : t('notifications.disabled'))
                                         }
                                     } catch (error) {
-                                        toast.error(error.response?.data?.message || 'Error updating preferences')
+                                        toast.error(error.response?.data?.message || t('notifications.updateError'))
                                     } finally {
                                         setNotifPrefsLoading(false)
                                     }
@@ -191,6 +215,30 @@ const Profile = () => {
                                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notifPrefs.emailReminders ? 'translate-x-6' : 'translate-x-1'
                                     }`} />
                             </button>
+                        </div>
+                    </div>
+
+                    {/* LINKED ACCOUNTS */}
+                    <div className='space-y-3'>
+                        <h5 className='h5'>{t('profile.linkedAccounts')}</h5>
+                        <div className='flex items-center justify-between p-3 bg-white rounded-lg ring-1 ring-slate-900/10'>
+                            <div className='flex items-center gap-3'>
+                                <FcGoogle className='text-2xl' />
+                                <div>
+                                    <p className='medium-14'>Google</p>
+                                    <p className='text-xs text-gray-500'>
+                                        {linkedAccounts.googleLinked
+                                            ? t('profile.googleLinked')
+                                            : t('profile.googleNotLinked')
+                                        }
+                                    </p>
+                                </div>
+                            </div>
+                            {linkedAccounts.googleLinked && (
+                                <span className='text-xs text-green-600 font-medium px-2 py-1 bg-green-50 rounded'>
+                                    {t('profile.linked')}
+                                </span>
+                            )}
                         </div>
                     </div>
 
