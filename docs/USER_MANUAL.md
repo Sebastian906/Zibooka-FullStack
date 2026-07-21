@@ -17,8 +17,11 @@ Welcome to ZiBooka, your online platform for purchasing, borrowing, and reservin
 7. [Reservations](#7-reservations)
 8. [Profile Management](#8-profile-management)
 9. [Order Tracking](#9-order-tracking)
-10. [Language Change](#10-language-change)
-11. [Frequently Asked Questions](#11-frequently-asked-questions)
+10. [Notifications](#10-notifications)
+11. [Language Change](#11-language-change)
+12. [Admin: Demand Predictions](#12-admin-demand-predictions)
+13. [Admin: Inventory Anomalies](#13-admin-inventory-anomalies)
+14. [Frequently Asked Questions](#14-frequently-asked-questions)
 
 ---
 
@@ -388,7 +391,38 @@ Each order shows:
 
 ---
 
-## 10. Language Change
+## 10. Notifications
+
+ZiBooka sends automatic email notifications to keep you informed about your loans and reservations.
+
+### 10.1 Automatic Notifications
+
+The system automatically sends email reminders at 9:00 AM daily for:
+
+- **Loan reminders**: Books approaching their due date
+- **Reservation updates**: Reserved books becoming available
+
+### 10.2 Viewing Your Notifications
+
+1. Click on the user icon
+2. Select "Notifications"
+3. You will see a list of all notifications with:
+   - Subject and message
+   - Type (loan reminder, reservation reminder, or manual)
+   - Date sent
+   - Status (sent, pending, or failed)
+
+### 10.3 Notification Preferences
+
+You can manage your notification preferences in your profile:
+
+1. Go to your Profile
+2. Find the notification preferences section
+3. Toggle email reminders on or off
+
+---
+
+## 11. Language Change
 
 ZiBooka is available in English and Spanish.
 
@@ -402,7 +436,63 @@ ZiBooka is available in English and Spanish.
 
 ---
 
-## 11. Frequently Asked Questions
+## 12. Admin: Demand Predictions
+
+Administrators can use Machine Learning predictions to plan inventory and anticipate book demand.
+
+### 12.1 Accessing Demand Predictions
+
+1. Log in as administrator
+2. Navigate to the admin panel
+3. Click on "Demand Predictions" in the sidebar
+
+### 12.2 Viewing Predictions
+
+The predictions page shows:
+
+- **Book title and category**
+- **Demand probability**: Percentage likelihood of high demand
+- **Recommendation**: Whether to increase stock for that book
+
+### 12.3 Retraining Models
+
+Administrators can retrain the ML models with the latest data:
+
+1. Click "Retrain Models" button
+2. Wait for the training process to complete
+3. The system will use updated predictions from that point forward
+
+---
+
+## 13. Admin: Inventory Anomalies
+
+The system uses Machine Learning to detect anomalous patterns in shelf distribution and user borrowing behavior.
+
+### 13.1 Accessing Anomaly Detection
+
+1. Log in as administrator
+2. Navigate to the admin panel
+3. Click on "Inventory Anomalies" in the sidebar
+
+### 13.2 Viewing Shelf Anomalies
+
+The anomalies page shows:
+
+- **Shelf code and location**
+- **Anomaly score**: How unusual the shelf distribution is
+- **Status**: Whether the shelf requires attention
+
+### 13.3 Understanding Anomaly Scores
+
+| Score Range | Interpretation |
+|-------------|---------------|
+| -1.0 to -0.5 | Strong anomaly - requires immediate review |
+| -0.5 to 0.0 | Mild anomaly - worth investigating |
+| 0.0 to 1.0 | Normal distribution - no action needed |
+
+---
+
+## 14. Frequently Asked Questions
 
 ### Account and Access
 
@@ -443,7 +533,23 @@ A: You can check the status in "My Reservations". Active reservations show your 
 A: Reservations expire automatically after 30 days if the book is not available.
 
 **Q: Will I be notified when the book is available?**
-A: Yes, the system automatically assigns the book when available and updates your reservation.
+A: Yes, the system automatically assigns the book when available and updates your reservation. You will also receive an email notification.
+
+### Notifications
+
+**Q: How do I receive notifications?**
+A: The system sends automatic email reminders at 9:00 AM daily for approaching due dates and reservation updates. You can manage your notification preferences in your profile.
+
+**Q: Can I turn off email notifications?**
+A: Yes, go to your Profile and toggle the email reminders setting off.
+
+### Machine Learning Predictions (Admin)
+
+**Q: What are demand predictions?**
+A: Demand predictions use Machine Learning to forecast which books are likely to have high demand, helping administrators plan inventory.
+
+**Q: What are inventory anomalies?**
+A: The system detects unusual patterns in shelf distributions and borrowing behavior that may indicate organizational issues.
 
 ---
 
