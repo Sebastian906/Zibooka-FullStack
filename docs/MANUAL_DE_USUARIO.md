@@ -17,8 +17,11 @@ Bienvenido a ZiBooka, su plataforma en linea para la compra, prestamo y reservac
 7. [Reservaciones](#7-reservaciones)
 8. [Gestion del Perfil](#8-gestion-del-perfil)
 9. [Seguimiento de Pedidos](#9-seguimiento-de-pedidos)
-10. [Cambio de Idioma](#10-cambio-de-idioma)
-11. [Preguntas Frecuentes](#11-preguntas-frecuentes)
+10. [Notificaciones](#10-notificaciones)
+11. [Cambio de Idioma](#11-cambio-de-idioma)
+12. [Admin: Predicciones de Demanda](#12-admin-predicciones-de-demanda)
+13. [Admin: Anomalias de Inventario](#13-admin-anomalias-de-inventario)
+14. [Preguntas Frecuentes](#14-preguntas-frecuentes)
 
 ---
 
@@ -388,7 +391,38 @@ Cada pedido muestra:
 
 ---
 
-## 10. Cambio de Idioma
+## 10. Notificaciones
+
+ZiBooka envia notificaciones automaticas por correo electronico para mantenerle informado sobre sus prestamos y reservaciones.
+
+### 10.1 Notificaciones Automaticas
+
+El sistema envia recordatorios automaticos por correo electronico a las 9:00 AM diariamente para:
+
+- **Recordatorios de prestamos**: Libros proximos a vencer
+- **Actualizaciones de reservaciones**: Libros reservados que se vuelven disponibles
+
+### 10.2 Ver Sus Notificaciones
+
+1. Haga clic en el icono de usuario
+2. Seleccione "Notificaciones"
+3. Vera una lista de todas las notificaciones con:
+   - Asunto y mensaje
+   - Tipo (recordatorio de prestamo, recordatorio de reservacion o manual)
+   - Fecha de envio
+   - Estado (enviado, pendiente o fallido)
+
+### 10.3 Preferencias de Notificacion
+
+Puede gestionar sus preferencias de notificacion en su perfil:
+
+1. Vaya a su Perfil
+2. Encuentre la seccion de preferencias de notificacion
+3. Active o desactive los recordatorios por correo
+
+---
+
+## 11. Cambio de Idioma
 
 ZiBooka esta disponible en Ingles y Español.
 
@@ -402,7 +436,63 @@ ZiBooka esta disponible en Ingles y Español.
 
 ---
 
-## 11. Preguntas Frecuentes
+## 12. Admin: Predicciones de Demanda
+
+Los administradores pueden usar predicciones de Machine Learning para planificar el inventario y anticipar la demanda de libros.
+
+### 12.1 Acceder a Predicciones de Demanda
+
+1. Inicie sesion como administrador
+2. Navegue al panel de administracion
+3. Haga clic en "Predicciones de Demanda" en la barra lateral
+
+### 12.2 Ver Predicciones
+
+La pagina de predicciones muestra:
+
+- **Titulo y categoria del libro**
+- **Probabilidad de demanda**: Porcentaje de probabilidad de alta demanda
+- **Recomendacion**: Si se debe aumentar el stock para ese libro
+
+### 12.3 Reentrenar Modelos
+
+Los administradores pueden reentrenar los modelos ML con los datos mas recientes:
+
+1. Haga clic en el boton "Reentrenar Modelos"
+2. Espere a que se complete el proceso de entrenamiento
+3. El sistema usara predicciones actualizadas a partir de ese momento
+
+---
+
+## 13. Admin: Anomalias de Inventario
+
+El sistema usa Machine Learning para detectar patrones anomalias en la distribucion de estantes y el comportamiento de prestamo de usuarios.
+
+### 13.1 Acceder a Deteccion de Anomalias
+
+1. Inicie sesion como administrador
+2. Navegue al panel de administracion
+3. Haga clic en "Anomalias de Inventario" en la barra lateral
+
+### 13.2 Ver Anomalias de Estantes
+
+La pagina de anomalias muestra:
+
+- **Codigo y ubicacion del estante**
+- **Puntuacion de anomalia**: Que tan inusual es la distribucion del estante
+- **Estado**: Si el estante requiere atencion
+
+### 13.3 Entender las Puntuaciones de Anomalia
+
+| Rango de Puntuacion | Interpretacion |
+|---------------------|----------------|
+| -1.0 a -0.5 | Anomalia fuerte - requiere revision inmediata |
+| -0.5 a 0.0 | Anomalia leve - vale la pena investigar |
+| 0.0 a 1.0 | Distribucion normal - no se necesita accion |
+
+---
+
+## 14. Preguntas Frecuentes
 
 ### Cuenta y Acceso
 
@@ -443,7 +533,23 @@ R: Puede verificar el estado en "Mis Reservaciones". Las reservaciones activas m
 R: Las reservaciones expiran automaticamente despues de 30 dias si el libro no esta disponible.
 
 **P: Me notificaran cuando el libro este disponible?**
-R: Si, el sistema asigna automaticamente el libro cuando esta disponible y actualiza su reservacion.
+R: Si, el sistema asigna automaticamente el libro cuando esta disponible y actualiza su reservacion. Tambien recibira una notificacion por correo electronico.
+
+### Notificaciones
+
+**P: Como recibo notificaciones?**
+R: El sistema envia recordatorios automaticos por correo electronico a las 9:00 AM diariamente para fechas de vencimiento proximas y actualizaciones de reservaciones. Puede gestionar sus preferencias de notificacion en su perfil.
+
+**P: Puedo desactivar las notificaciones por correo?**
+R: Si, vaya a su Perfil y desactive la configuracion de recordatorios por correo.
+
+### Predicciones de Machine Learning (Admin)
+
+**P: Que son las predicciones de demanda?**
+R: Las predicciones de demanda usan Machine Learning para pronosticar cuales libros probablemente tendran alta demanda, ayudando a los administradores a planificar el inventario.
+
+**P: Que son las anomalias de inventario?**
+R: El sistema detecta patrones inusuales en la distribucion de estantes y el comportamiento de prestamo que pueden indicar problemas organizativos.
 
 ---
 
