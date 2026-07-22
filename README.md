@@ -85,6 +85,8 @@ Develop a library management system that allows:
 
 ## System Architecture
 
+[GENERAL ARCHITECTURE DIAGRAM](docs/images/diagrams/exports/architecture.png)
+
 ### Architectural Pattern
 
 The system implements a **distributed architecture** with three core services:

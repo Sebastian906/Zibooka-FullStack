@@ -85,6 +85,8 @@ Desarrollar un sistema de gestion de libreria que permita:
 
 ## Arquitectura del Sistema
 
+[DIAGRAMA GENERAL DE LA ARQUITECTURA](docs/images/diagrams/exports/architecture.png)
+
 ### Patron Arquitectonico
 
 El sistema implementa una **arquitectura distribuida** con tres servicios principales:
